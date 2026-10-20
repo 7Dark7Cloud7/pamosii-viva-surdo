@@ -188,6 +188,7 @@ const FONTES_PUBLICAS = {
 const ESTADO_GLOSSARIO = {
   'a-validar': { rotulo: 'A validar', nota: 'Associação entre a palavra e o sinal ainda não validada por utilizadores de LGA.' },
   'confirmado': { rotulo: 'Confirmado', nota: 'Validado pela equipa / comunidade surda.' },
+  'demonstracao': { rotulo: 'Demonstração', nota: 'Palavra de exemplo, para mostrar como o painel funciona. Não corresponde a sinal gravado nem a LGA validada — retirar ou substituir por sinal filmado.' },
 };
 
 const GLOSSARIO = [
@@ -204,11 +205,20 @@ const GLOSSARIO = [
   { tema: 'Casa', termos: ['casa', 'porta', 'janela', 'cama', 'mesa', 'cadeira', 'cozinha', 'quarto', 'sala', 'casa de banho', 'teto', 'chão', 'família', 'mãe', 'pai', 'filho', 'filha', 'avó', 'avô', 'irmão', 'irmã'] },
   { tema: 'Tempos e meses', termos: ['hoje', 'amanhã', 'ontem', 'agora', 'depois', 'semana', 'mês', 'ano', 'dia', 'hora', ...MESES] },
   { tema: 'Partes do corpo', termos: ['cabeça', 'olho', 'mão', 'dedo', 'boca', 'nariz', 'orelha', 'ombro', 'braço', 'perna', 'pé', 'barriga', 'dente', 'cabelo'] },
+  /* ⚠️ TEMA DE DEMONSTRAÇÃO — palavras de exemplo para o painel conseguir mostrar
+     frases do dia a dia. NÃO são LGA: não têm vídeo, não foram vistas por ninguém
+     surdo, e saem do site no dia em que o glossário validado chegar (README, item 19). */
+  { tema: 'Demonstração (sem vídeo)', estado: 'demonstracao', termos: [
+    'mercado', 'autocarro', 'dinheiro', 'telefone', 'amigo', 'amiga', 'computador', 'hospital',
+    'médico', 'igreja', 'futebol', 'música', 'dança', 'roupa', 'sapato', 'cartão',
+    'comprar', 'vender', 'pagar', 'esperar', 'chegar', 'precisar', 'poder', 'dever',
+    'cedo', 'tarde', 'sempre', 'nunca', 'muito', 'pouco', 'aqui', 'ali', 'devagar'
+  ] },
 ].map(g => ({
   tema: g.tema,
   termos: g.termos.map(t => ({
     palavra: typeof t === 'string' ? t : String(t),
-    estado: 'a-validar',
+    estado: g.estado || 'a-validar',
     sinal: null, // ID de vídeo próprio do sinal, quando existir e for aprovado
   })),
 }));
@@ -429,67 +439,193 @@ const PAMOSSI_MAPA = {};
   ['interrogativo', ['quem', 'onde', 'quando', 'como', 'qual', 'quais', 'quanto', 'quanta']],
 ].forEach(([tipo, palavras]) => palavras.forEach(p => { if (!(p in PAMOSSI_MAPA)) PAMOSSI_MAPA[p] = tipo; }));
 
-/* índice palavra → entrada do glossário (forma normalizada, sem pontuação final) */
+const tokenizar = (frase) => (frase.match(/[\p{L}\p{M}][\p{L}\p{M}'’-]*|\p{N}+/gu) || []);
+
+/* "chamo-me" → ["chamo", "me"] — o glossário conhece as partes, não o bloco. */
+const dividirPalavra = (tk) => String(tk).split(/[-'’]/).filter(Boolean);
+
+/* Forma conjugada → forma de dicionário. Só verbos que existem no glossário, e
+   só quando a palavra não é também uma palavra pequena ("da" fica preposição). */
+const PAMOSSI_LEMAS = {};
+[
+  ['querer', ['quero', 'queres', 'queremos', 'querem', 'queria', 'queriamos', 'queriam', 'quis', 'quiseram']],
+  ['comer', ['comes', 'come', 'comemos', 'comem', 'comia', 'comiamos', 'comi', 'comeu', 'comeram']],
+  ['beber', ['bebes', 'bebe', 'bebemos', 'bebem', 'bebia', 'bebi', 'bebeu']],
+  ['dormir', ['dormes', 'dorme', 'dormimos', 'dormem', 'dormi', 'dormiu']],
+  ['acordar', ['acordo', 'acordas', 'acorda', 'acordamos', 'acordam']],
+  ['andar', ['ando', 'andas', 'anda', 'andamos', 'andam', 'andei', 'andou']],
+  ['correr', ['corro', 'corres', 'corre', 'corremos', 'correm', 'corri', 'correu']],
+  ['ver', ['ves', 've', 'vemos', 'veem', 'viram', 'vi', 'viu']],
+  ['escrever', ['escrevo', 'escreves', 'escreve', 'escrevemos', 'escrevem', 'escrevi']],
+  ['ler', ['le', 'les', 'le', 'lemos', 'leem', 'leram', 'li', 'leu']],
+  ['trabalhar', ['trabalho', 'trabalhas', 'trabalha', 'trabalhamos', 'trabalham']],
+  ['estudar', ['estudo', 'estudas', 'estuda', 'estudamos', 'estudam']],
+  ['gostar', ['gosto', 'gostas', 'gosta', 'gostamos', 'gostam']],
+  ['ter', ['tenho', 'tens', 'tem', 'temos', 'tem', 'tinhas', 'tinha', 'tivemos', 'tive', 'teve']],
+  ['dar', ['dou', 'damos', 'dao', 'dam', 'dei', 'deu']],
+  ['fazer', ['faco', 'fazes', 'faz', 'fazemos', 'fazem', 'fiz', 'fez']],
+  ['ajudar', ['ajudo', 'ajudas', 'ajuda', 'ajudamos', 'ajudam']],
+  ['brincar', ['brinco', 'brincas', 'brinca', 'brincamos', 'brincam']],
+].forEach(([base, formas]) => formas.forEach(f => { if (!(f in PAMOSSI_LEMAS)) PAMOSSI_LEMAS[f] = base; }));
+
+/* índice palavra → entrada do glossário; e índice de expressões ("bom dia",
+   "onde fica", "casa de banho") — um sinal pode cobrir várias palavras. */
 const PAMOSSI_INDICE = new Map();
+const PAMOSSI_EXPRESSOES = new Map();
+let PAMOSSI_EXP_MAX = 1;
 GLOSSARIO.forEach(g => g.termos.forEach(t => {
   const chave = norm(t.palavra).replace(/[….:;?!]/g, '').trim();
-  if (chave && !PAMOSSI_INDICE.has(chave)) PAMOSSI_INDICE.set(chave, { palavra: t.palavra, tema: g.tema, estado: t.estado });
+  if (!chave) return;
+  const entrada = { palavra: t.palavra, tema: g.tema, estado: t.estado };
+  if (!PAMOSSI_INDICE.has(chave)) PAMOSSI_INDICE.set(chave, entrada);
+  const partes = [];
+  tokenizar(chave).forEach(tk => dividirPalavra(tk).forEach(p => partes.push(norm(p))));
+  if (partes.length > 1) {
+    const k = partes.join(' ');
+    if (!PAMOSSI_EXPRESSOES.has(k)) PAMOSSI_EXPRESSOES.set(k, entrada);
+    PAMOSSI_EXP_MAX = Math.max(PAMOSSI_EXP_MAX, partes.length);
+  }
 }));
 
-function procurarSinal(palavra) {
-  const c = norm(palavra).replace(/[….:;?!]/g, '').trim();
-  if (!c) return null;
+/* hit exacto, com a forma de dicionário por baixo (plural ou conjugação) */
+const PAMOSSI_DESINENCIAS = ['o', 'as', 'a', 'amos', 'am', 'ava', 'avam', 'ei', 'ou',
+  'e', 'es', 'emos', 'em', 'eu', 'ia', 'iam', 'imos', 'iu'];
+function procurarSinal(c) {
   if (PAMOSSI_INDICE.has(c)) return PAMOSSI_INDICE.get(c);
-  if (c.length > 3 && c.endsWith('s') && PAMOSSI_INDICE.has(c.slice(0, -1))) return PAMOSSI_INDICE.get(c.slice(0, -1));
+  if (c.length > 3 && c.endsWith('s') && PAMOSSI_INDICE.has(c.slice(0, -1))) {
+    return { ...PAMOSSI_INDICE.get(c.slice(0, -1)), plural: true, termo: PAMOSSI_INDICE.get(c.slice(0, -1)).palavra };
+  }
+  const base = PAMOSSI_LEMAS[c];
+  if (base && PAMOSSI_INDICE.has(base)) {
+    return { ...PAMOSSI_INDICE.get(base), lema: base, termo: PAMOSSI_INDICE.get(base).palavra };
+  }
+  /* verbo regular conjugado: "compra" → comprar, "venda" → vender. Só funciona
+     quando a raiz + infinitivo existe mesmo no glossário, e nunca para palavras
+     pequenas ("da", "em"), que são preposições antes de serem qualquer verbo. */
+  if (PAMOSSI_MAPA[c]) return null;
+  for (const suf of PAMOSSI_DESINENCIAS) {
+    if (c.length <= suf.length + 3 || !c.endsWith(suf)) continue;
+    const raiz = c.slice(0, -suf.length);
+    for (const inf of ['ar', 'er', 'ir']) {
+      const found = PAMOSSI_INDICE.get(raiz + inf);
+      if (found) return { ...found, lema: raiz + inf, termo: found.palavra };
+    }
+  }
   return null;
 }
 
-const tokenizar = (frase) => (frase.match(/[\p{L}\p{M}][\p{L}\p{M}'’-]*|\p{N}+/gu) || []);
+/* Frases com o terminador, para saber o que foi pergunta. */
+function dividirFrases(texto) {
+  const re = /([^[\n.!?…]+)([.!?…\n]*)/g;
+  const out = [];
+  let m;
+  while ((m = re.exec(String(texto || '')))) {
+    const frase = m[1].trim();
+    if (frase) out.push({ frase, terminador: m[2] || '' });
+  }
+  return out;
+}
 
-/* analisas texto → [{ frase, itens:[{tipo, ...}] }] */
+/* analisas texto → [{ frase, itens, sinais, datilologias, marcadores, omitidas }] */
 function analisarTexto(texto, opts = {}) {
-  const frases = String(texto || '').split(/[.!?\n…]+/).map(s => s.trim()).filter(Boolean);
-  return frases.map((frase) => {
-    const tokens = tokenizar(frase);
+  const unidadesDe = (frase) => {
+    const u = [];
+    tokenizar(frase).forEach(tk => dividirPalavra(tk).forEach(p => u.push({ chave: norm(p), parte: p })));
+    return u;
+  };
+  const aulaAbc = aulasDeTema('Alfabeto')[0] || null;
+
+  return dividirFrases(texto).map(({ frase, terminador }) => {
+    const pergunta = /[?]/.test(terminador + frase);
+    const unidades = unidadesDe(frase);
     const itens = [];
+
     if (opts.soletrar) {
-      const aulaAbc = aulasDeTema('Alfabeto')[0] || null;
-      tokens.forEach(tk => {
-        [...tk].forEach(letra => {
+      unidades.forEach(u => {
+        [...u.chave].forEach(letra => {
           if (!/[\p{L}\p{N}]/u.test(letra)) return;
-          const entrada = PAMOSSI_INDICE.get(norm(letra));
-          if (entrada) itens.push({ tipo: 'soletracao', palavra: letra.toUpperCase(), entrada, aula: aulaAbc });
+          const entrada = PAMOSSI_INDICE.get(letra);
+          if (entrada) itens.push({ tipo: 'sinal', palavra: letra.toUpperCase(), entrada, aula: aulaAbc, datilologia: true });
           else itens.push({ tipo: 'desconhecida', palavra: letra });
         });
       });
     } else {
-      tokens.forEach(tk => {
-        const entrada = procurarSinal(tk);
-        const func = PAMOSSI_MAPA[norm(tk)];
-        const tipoFunc = func ? PAMOSSI_TIPOS[func] : null;
-        /* "a", "o", "e" são artigos — não se convertem no sinal da letra */
-        const prefereSinal = entrada && !(tipoFunc && tipoFunc.acao === 'omitir' && tk.length <= 2);
-        if (prefereSinal) {
-          itens.push({ tipo: 'sinal', palavra: tk, entrada, aula: aulasDeTema(entrada.tema)[0] || null });
-        } else if (tipoFunc) {
-          itens.push({ tipo: func, palavra: tk, rotulo: tipoFunc.rotulo, acao: tipoFunc.acao, nota: tipoFunc.nota });
-        } else {
-          itens.push({ tipo: 'desconhecida', palavra: tk });
+      let i = 0;
+      while (i < unidades.length) {
+        /* 1) a expressão mais longa que o glossário conhece, antes das palavras soltas */
+        let achado = null;
+        for (let n = Math.min(PAMOSSI_EXP_MAX, unidades.length - i); n >= 2 && !achado; n--) {
+          const k = unidades.slice(i, i + n).map(u => u.chave).join(' ');
+          if (PAMOSSI_EXPRESSOES.has(k)) achado = { entrada: PAMOSSI_EXPRESSOES.get(k), cobre: n };
         }
-      });
+        if (achado) {
+          const e = achado.entrada;
+          itens.push({ tipo: 'sinal', palavra: e.palavra, entrada: e, aula: aulasDeTema(e.tema)[0] || null, expressao: true });
+          i += achado.cobre;
+          continue;
+        }
+
+        const { chave, parte } = unidades[i];
+        const func = PAMOSSI_MAPA[chave];
+        const tipoFunc = func ? PAMOSSI_TIPOS[func] : null;
+        /* "como", "onde", "qual" fora de uma pergunta são outra coisa — não se
+           marcam como interrogação; a pergunta é que lhes dá esse valor. */
+        const contaComoMarcador = tipoFunc && !(func === 'interrogativo' && !pergunta);
+        /* "a", "o", "e" são artigos — não se convertem no sinal da letra */
+        const artigoCurto = contaComoMarcador && tipoFunc.acao === 'omitir' && chave.length <= 2;
+        const entrada = artigoCurto ? null : procurarSinal(chave);
+
+        if (entrada) {
+          itens.push({ tipo: 'sinal', palavra: entrada.palavra, entrada, aula: aulasDeTema(entrada.tema)[0] || null, origem: entrada.termo && entrada.termo !== parte.toLowerCase() ? parte : null });
+        } else if (contaComoMarcador) {
+          itens.push({ tipo: func, palavra: parte, rotulo: tipoFunc.rotulo, acao: tipoFunc.acao, nota: tipoFunc.nota });
+        } else {
+          /* Sem entrada no glossário: em sinalização usa-se o alfabeto manual.
+             Não é um sinal — é a letra, e a página diz isso. */
+          const ehProprio = i > 0 && /^\p{Lu}/u.test(parte);
+          itens.push({
+            tipo: 'datilologia',
+            palavra: parte,
+            letras: [...parte].filter(l => /[\p{L}\p{N}]/u.test(l)).map(l => l.toUpperCase()),
+            nome: ehProprio,
+            nota: ehProprio
+              ? 'Nome próprio: vai em alfabeto manual (datilologia), não é um sinal de LGA.'
+              : 'Ainda sem sinal no glossário: mostrada em alfabeto manual para poderes seguir a frase.',
+          });
+        }
+        i += 1;
+      }
+      if (pergunta) itens.push({ tipo: 'marcador-pergunta', palavra: '?', rotulo: 'Pergunta', acao: 'marcador', nota: 'Enquanto sinalizas a pergunta, as sobrancelas franzem e a cabeça inclina-se ligeiramente — é isso que marca a interrogação, não a palavra.' });
     }
+
+    const sinais = itens.filter(ii => ii.tipo === 'sinal');
+    const datilologias = itens.filter(ii => ii.tipo === 'datilologia');
     return {
       frase,
       itens,
-      sinais: itens.filter(i => i.tipo === 'sinal' || i.tipo === 'soletracao'),
-      marcadores: itens.filter(i => i.acao === 'marcador'),
-      omitidas: itens.filter(i => i.acao === 'omitir'),
-      desconhecidas: itens.filter(i => i.tipo === 'desconhecida'),
+      unidades: unidades.length,
+      sinais,
+      datilologias,
+      marcadores: itens.filter(ii => ii.acao === 'marcador'),
+      omitidas: itens.filter(ii => ii.acao === 'omitir'),
+      desconhecidas: datilologias.map(d => ({ palavra: d.palavra, nome: d.nome })),
     };
   });
 }
 
-const glosaTexto = (r) => r.sinais.map(i => String(i.palavra || '').toUpperCase()).join(' · ');
+const PM_EXEMPLOS = [
+  'Bom dia! Chamo-me Ana e sou de Luanda.',
+  'Onde fica a escola? Eu quero água, por favor.',
+  'O professor escreve a lição no caderno e o aluno estuda.',
+  'Eu preciso de dinheiro para comprar peixe no mercado. Quanto custa?',
+  'A minha mãe trabalha no hospital. Eu gosto de estudar.',
+];
+
+const glosaTexto = (r) => r.itens
+  .filter(i => i.tipo === 'sinal' || i.tipo === 'datilologia')
+  .map(i => i.tipo === 'datilologia' ? [...i.palavra].map(l => l.toUpperCase()).join('-')
+    : String(i.palavra || '').replace(/[…]/g, '').trim().toUpperCase().replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, ''))
+  .join(' · ');
 
 /* ----------------------------------------------------------------------------
    Ilustrações vectoriais animadas. São GLIFOS DE MOVIMENTO (famílias de gesto),
@@ -1019,6 +1155,7 @@ on('/aprender-lga', () => {
 on('/dicionario', () => {
   const state = { q: '', tema: 'todos' };
   const temas = GLOSSARIO.map(g => g.tema);
+  const demo = GLOSSARIO.reduce((t, g) => t + g.termos.filter(x => x.estado === 'demonstracao').length, 0);
   return {
     active: '/dicionario',
     h: shell(`
@@ -1048,6 +1185,10 @@ on('/dicionario', () => {
       ${I.users}
       <p><strong>Entradas "A validar":</strong> a associação entre a palavra e a aula foi feita a partir do programa público do mini-curso, mas ainda não foi revista por uma pessoa surda utilizadora de LGA. Se fores, <a href="#/contacto">diz-nos o que está certo ou errado</a> — uma entrada só passa a "Confirmado" depois dessa validação.</p>
     </div>
+    ${demo ? `<div class="note-band is-demo" style="margin-top:14px">
+      ${I.info}
+      <p><strong>Tema "Demonstração (sem vídeo)":</strong> as ${demo} palavras desse tema são <em>só exemplo</em> — servem para o painel conseguir mostrar frases do dia a dia (mercado, autocarro, hospital…). Não são LGA: não têm vídeo, não vêm de nenhuma aula e não foram vistas por ninguém surdo. Saem do site no dia em que o glossário validado chegar.</p>
+    </div>` : ''}
   </div>
 </section>`, '/dicionario'),
     bind: bindDicionario,
@@ -1117,7 +1258,7 @@ let pmCam = null;
 
 /* O estado vive fora da vista: a frase escrita e a sequência de sinais não desaparecem
    quando o utilizador navega para ver um vídeo ou um tema. */
-const pmEstado = { modo: 'pt-lga', texto: '', soletrar: false, tema: 'Saudações', chain: [], quadros: 0 };
+const pmEstado = { modo: 'pt-lga', texto: 'Onde fica a escola? Eu quero água, por favor.', soletrar: false, tema: 'Saudações', chain: [], quadros: 0 };
 
 function desligarCamara() {
   if (!pmCam) return;
@@ -1127,19 +1268,34 @@ function desligarCamara() {
   pmCam = null;
 }
 
-function pmCard(it) {
+function pmCard(it, n) {
   const e = it.entrada || {};
-  const abc = it.tipo === 'soletracao' ? String(it.palavra).charAt(0) : 'A';
+  const estado = ESTADO_GLOSSARIO[e.estado || 'a-validar'];
+  const num = `<span class="pm-num">${n === undefined ? '' : n}</span>`;
+  if (it.tipo === 'datilologia') {
+    return `<li class="pm-card pm-card-dati">
+      <div class="pm-facade pm-dati">${it.letras.map(l => `<span class="pm-letra">${esc(l)}</span>`).join('')}</div>
+      <p class="pm-word">${num}<span class="pm-word-t">${esc(it.palavra)}</span></p>
+      <p class="pm-tag">${it.nome ? 'Nome próprio' : 'Sem sinal no glossário'}<span class="pm-badge-dati">Alfabeto manual</span></p>
+      <p class="pm-nota">${esc(it.nota)}</p>
+    </li>`;
+  }
+  const abc = it.datilologia ? String(it.palavra).charAt(0) : 'A';
+  const notas = [];
+  if (it.expressao) notas.push('Um só sinal para várias palavras.');
+  if (it.origem) notas.push(`Forma de «${it.origem}» no dicionário.`);
+  if (e.plural) notas.push('Plural: repete-se o sinal.');
   const midia = it.aula
     ? `<div class="vfacade pm-facade"><button class="vplay" type="button" data-play="${it.aula.id}" data-titulo="${esc(it.aula.titulo)}"
          aria-label="Ver o vídeo do sinal de ${esc(it.palavra)} na aula ${esc(it.aula.titulo)}">
          <img src="https://i.ytimg.com/vi/${it.aula.id}/hqdefault.jpg" alt="Quadro da aula «${esc(it.aula.titulo)}»" loading="lazy" decoding="async" width="480" height="360">
          <span class="vbtn">${I.play}</span></button></div>`
     : `<div class="pm-facade pm-novideo">${pmGlifo(e.tema, '', abc)}<span class="pm-sem-video">${I.info} Ainda sem vídeo deste sinal</span></div>`;
-  return `<li class="pm-card">
+  return `<li class="pm-card${e.estado === 'demonstracao' ? ' pm-card-demo' : ''}">
     ${midia}
-    <p class="pm-word">${it.aula ? pmGlifo(e.tema, '', abc) : ''}<span class="pm-word-t">${esc(it.palavra)}</span></p>
-    <p class="pm-tag">${esc(e.tema || 'Glossário')}<span class="dic-badge is-${e.estado || 'a-validar'}" title="${esc(ESTADO_GLOSSARIO[e.estado || 'a-validar'].nota)}">${esc(ESTADO_GLOSSARIO[e.estado || 'a-validar'].rotulo)}</span></p>
+    <p class="pm-word">${num}${it.aula ? pmGlifo(e.tema, '', abc) : ''}<span class="pm-word-t">${esc(it.palavra)}</span></p>
+    ${notas.length ? `<p class="pm-nota">${notas.map(esc).join(' ')}</p>` : ''}
+    <p class="pm-tag">${esc(e.tema || 'Glossário')}<span class="dic-badge is-${e.estado || 'a-validar'}" title="${esc(estado.nota)}">${esc(estado.rotulo)}</span></p>
   </li>`;
 }
 
@@ -1147,6 +1303,11 @@ function pmSentenca(r, i) {
   const marcos = r.marcadores;
   const grupos = {};
   r.omitidas.forEach(o => { (grupos[o.tipo] ||= []).push(o.palavra); });
+  const total = r.unidades || r.itens.length;
+  const pct = total ? Math.round((r.sinais.length / total) * 100) : 0;
+  const cartoes = r.itens.filter(x => x.tipo === 'sinal' || x.tipo === 'datilologia');
+  const nomes = r.datilologias.filter(d => d.nome).map(d => d.palavra);
+  const lacunas = r.datilologias.filter(d => !d.nome).map(d => d.palavra);
   return `<article class="pm-sent">
   <header class="pm-sent-head">
     <h3>Frase ${i + 1} — <em>“${esc(r.frase)}”</em></h3>
@@ -1156,16 +1317,18 @@ function pmSentenca(r, i) {
     </span>
   </header>
   <p class="pm-gloss"><strong>Glosa (sequência de sinais):</strong> ${esc(glosaTexto(r) || '—')}</p>
-  <ul class="pm-cards" data-no-read>${r.sinais.map(pmCard).join('')}</ul>
-  ${marcos.length ? `<div class="pm-marcas">${marcos.map(m => `<p>${I.access}<strong>${esc(m.palavra)}</strong> · ${esc(m.rotulo)} — ${esc(m.nota)}</p>`).join('')}</div>` : ''}
+  <p class="pm-meter"><span class="pm-meter-bar" aria-hidden="true"><span class="pm-meter-fill" style="width:${pct}%"></span></span><span class="pm-meter-t">${r.sinais.length}/${total} com sinal${r.datilologias.length ? ` · ${r.datilologias.length} em alfabeto manual` : ''} · ${pct}% do glossário</span></p>
+  <ul class="pm-cards" data-no-read>${cartoes.map((x, n) => pmCard(x, n + 1)).join('')}</ul>
+  ${marcos.length ? `<div class="pm-marcas">${marcos.map(m => `<p>${I.access}<strong>${esc(m.rotulo || m.palavra)}</strong> · ${esc(m.palavra)} — ${esc(m.nota)}</p>`).join('')}</div>` : ''}
   ${Object.keys(grupos).length ? `<div class="pm-omit">${Object.entries(grupos).map(([tipo, palavras]) =>
     `<p>${I.close} <strong>${esc(PAMOSSI_TIPOS[tipo].rotulo)}</strong> não se traduz palavra a palavra (${esc(palavras.join(', '))}) — ${esc(PAMOSSI_TIPOS[tipo].nota)}</p>`).join('')}</div>` : ''}
-  ${r.desconhecidas.length ? `<p class="pm-desconhecidas">${I.info} <strong>Ainda sem sinal no glossário:</strong> ${r.desconhecidas.map(d => `<span class="pm-chip-bad">${esc(d.palavra)}</span>`).join('')} Sabes o sinal? <a href="#/contacto">Diz-nos</a> — não inventamos glosas. Para nomes próprios usa “Soletrar letras” (datilologia).</p>` : ''}
-  <p class="pm-cobertura">${r.sinais.length} de ${r.itens.length} ${r.itens.length === 1 ? 'elemento' : 'elementos'} com sinal no glossário${marcos.length ? `, ${marcos.length} por marcadores de corpo/espaço` : ''}.</p>
+  ${nomes.length || lacunas.length ? `<p class="pm-desconhecidas">${I.info} <strong>Em alfabeto manual:</strong> ${nomes.map(n => `<span class="pm-chip-nome">${esc(n)}</span>`).join('')}${lacunas.map(l => `<span class="pm-chip-bad">${esc(l)}</span>`).join('')}${lacunas.length ? ' Estas palavras ainda não estão no glossário. Sabes o sinal? <a href="#/contacto">Diz-nos</a> — não inventamos glosas.' : ' Nomes próprios seguem sempre em datilologia.'}</p>` : ''}
+  <p class="pm-cobertura">${r.sinais.length} de ${total} ${total === 1 ? 'palavra' : 'palavras'} com sinal no glossário${r.datilologias.length ? `, ${r.datilologias.length} em alfabeto manual` : ''}${marcos.length ? `, ${marcos.length} por marcadores de corpo/espaço` : ''}.</p>
 </article>`;
 }
 
 function pamosiiHTML(state) {
+  const demo = GLOSSARIO.reduce((t, g) => t + g.termos.filter(x => x.estado === 'demonstracao').length, 0);
   return `
 <div class="wrap page-head">
   <h1>Pamosii — traduzir entre português e Língua Gestual Angolana</h1>
@@ -1176,6 +1339,18 @@ function pamosiiHTML(state) {
     <div class="note-band">
       ${I.info}
       <p><strong>Como funciona, sem promessas.</strong> O Pamosii faz uma <em>glosa</em>: decompõe a frase, procura cada palavra no dicionário e mostra os sinais por ordem, mais os marcadores que a LGA pede no lugar das palavras pequenas (apontar, expressão facial, pausa). <strong>Não é tradução automática</strong> — a LGA tem gramática própria, e nenhum site pode escrever uma frase gramaticalmente correcta em LGA a partir do português sem revisão de pessoas suras. Cada entrada aparece com o estado de validação; o vídeo da aula é sempre a fonte.</p>
+    </div>
+    ${demo ? `<div class="note-band is-demo">
+      ${I.info}
+      <p><strong>Como ver o motor a trabalhar hoje:</strong> as frases de exemplo e parte do vocabulário (mercado, autocarro, hospital…) pertencem ao tema <em>Demonstração</em> — ${demo} palavras de treino, sem vídeo e sem validação, para se perceber o mecanismo. Cada cartão diz o que é: sinal de aula, palavra em alfabeto manual, ou demonstração. O tema sai quando o glossário confirmado chegar.</p>
+    </div>` : ''}
+
+    <div class="pm-dirs" role="group" aria-label="As quatro direcções de tradução">
+      <p class="pm-dirs-t">${I.spark} As quatro direcções — carrega para abrir:</p>
+      <button class="pm-dir" type="button" data-atalho="texto-sinais">${I.doc}<span><strong>Texto → Sinais</strong><em>Escreves uma frase e recebes a sequência de sinais, com o vídeo de cada um.</em></span></button>
+      <button class="pm-dir" type="button" data-atalho="voz-sinais">${I.video}<span><strong>Voz → Sinais</strong><em>Ditas a frase; o ditado do browser enche o campo de texto.</em></span></button>
+      <button class="pm-dir" type="button" data-atalho="sinais-texto">${I.book}<span><strong>Sinais → Texto</strong><em>Escolhes os sinais por ordem e o Pamosii escreve a frase em português.</em></span></button>
+      <button class="pm-dir" type="button" data-atalho="sinais-voz">${I.play}<span><strong>Sinais → Voz</strong><em>Escolhes os sinais e ouves a frase em voz alta, em português.</em></span></button>
     </div>
 
     <div class="pm-modes" role="group" aria-label="Direcção da tradução">
@@ -1190,6 +1365,12 @@ function pamosiiHTML(state) {
         <div class="f-field pm-field-lg">
           <label for="pm-in">Frase em português — uma ou várias</label>
           <textarea id="pm-in" rows="3" autocomplete="off" placeholder="Bom dia! Onde fica a escola? Eu quero água. Chamo-me Ana.">${esc(state.texto)}</textarea>
+        </div>
+      </div>
+      <div class="pm-exemplos" role="group" aria-label="Frases de exemplo prontas a testar">
+        <p class="pm-exemplos-t">${I.spark} Exemplos prontos — carregas e a glosa aparece:</p>
+        <div class="pm-exemplos-l">
+          ${PM_EXEMPLOS.map(f => `<button class="pm-ex" type="button" data-frase="${esc(f)}" aria-pressed="false">${esc(f)}</button>`).join('')}
         </div>
       </div>
       <div class="pm-tools pm-tools-row">
@@ -1286,6 +1467,23 @@ function bindPamosii(state) {
   };
   $$('.pm-mode').forEach(b => b.addEventListener('click', () => mudarModo(b.dataset.modo)));
 
+  /* atalhos das quatro direcções: abrem o painel certo e põem o foco onde
+     a pessoa actuou — sem fingir reconhecimento de gestos nem tradução automática */
+  const abrirAtalho = (dir) => {
+    if (dir === 'texto-sinais' || dir === 'voz-sinais') {
+      mudarModo('pt-lga');
+      const mic = $('#pm-mic');
+      if (dir === 'voz-sinais' && mic) { mic.focus(); micMsg(''); return; }
+      inBox.focus();
+    } else {
+      mudarModo('lga-pt');
+      const alvo = (dir === 'sinais-voz' && state.chain.length) ? $('#pm-speak')
+        : ($('.pm-wadd') || $('#pm-tema-titulo'));
+      if (alvo) alvo.focus();
+    }
+  };
+  $$('.pm-dir').forEach(b => b.addEventListener('click', () => abrirAtalho(b.dataset.atalho)));
+
   /* ---------- painel A: português → glosa ---------- */
   const correr = () => {
     state.texto = inBox.value;
@@ -1297,18 +1495,30 @@ function bindPamosii(state) {
       return;
     }
     const s = resultados.reduce((t, r) => t + r.sinais.length, 0);
-    const e = resultados.reduce((t, r) => t + r.itens.length, 0);
-    status.textContent = `${resultados.length} ${resultados.length === 1 ? 'frase analisada' : 'frases analisadas'} · ${s} de ${e} elementos com sinal no glossário`;
+    const e = resultados.reduce((t, r) => t + (r.unidades || r.itens.length), 0);
+    const d = resultados.reduce((t, r) => t + r.datilologias.length, 0);
+    status.textContent = `${resultados.length} ${resultados.length === 1 ? 'frase analisada' : 'frases analisadas'} · ${s} de ${e} ${e === 1 ? 'palavra com sinal' : 'palavras com sinal no glossário'}${d ? ` · ${d} em alfabeto manual` : ''}`;
     out.innerHTML = resultados.map(pmSentenca).join('') + `
       <p class="pm-hint">A glosa é uma ajuda de estudo, não uma frase de LGA correcta. Para confirmar ordem e marcadores, fala com <a href="#/dicionario">o dicionário</a> e com a comunidade surda.</p>`;
   };
   let tDebounce = 0;
-  inBox.addEventListener('input', () => { clearTimeout(tDebounce); tDebounce = setTimeout(correr, 350); });
+  inBox.addEventListener('input', () => { marcarChip(inBox.value); clearTimeout(tDebounce); tDebounce = setTimeout(correr, 350); });
+
+  /* frases de exemplo: mostram o motor a trabalhar sem a pessoa ter de inventar texto */
+  const chips = $$('.pm-ex');
+  const marcarChip = (frase) => chips.forEach(x => x.setAttribute('aria-pressed', String(x.dataset.frase === frase)));
+  chips.forEach(b => b.addEventListener('click', () => {
+    marcarChip(b.dataset.frase);
+    inBox.value = b.dataset.frase;
+    correr();
+  }));
+  /* primeira visita: o campo já traz uma frase de exemplo, para se ver o motor a trabalhar */
+  if (state.texto) { marcarChip(state.texto); correr(); }
   const chkSoletrar = $('#pm-soletrar');
   chkSoletrar.checked = state.soletrar;
   chkSoletrar.addEventListener('change', () => { state.soletrar = chkSoletrar.checked; correr(); });
   $('#pm-run').addEventListener('click', correr);
-  $('#pm-clear').addEventListener('click', () => { inBox.value = ''; state.texto = ''; out.innerHTML = ''; $('#pm-status').textContent = 'Escreve ou dita uma frase para veres a sequência de sinais.'; inBox.focus(); });
+  $('#pm-clear').addEventListener('click', () => { inBox.value = ''; state.texto = ''; out.innerHTML = ''; marcarChip(''); $('#pm-status').textContent = 'Escreve ou dita uma frase para veres a sequência de sinais.'; inBox.focus(); });
 
   out.addEventListener('click', e => {
     const spk = e.target.closest('[data-speak]');

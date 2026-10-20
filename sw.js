@@ -15,7 +15,7 @@
    Se mudares app.js ou styles.css sem mudar o `?v=` do index.html, o offline continua a
    servir a versão antiga. Por isso a VERSÃO abaixo acompanha sempre o `?v=`.          */
 
-const VERSAO = 'vs38';
+const VERSAO = 'vs39';
 const CASULO = 'casulo-' + VERSAO;
 const EXTERNO = 'externo-' + VERSAO;
 
