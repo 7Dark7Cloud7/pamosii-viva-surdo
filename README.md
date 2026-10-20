@@ -25,6 +25,14 @@ npx http-server app -p 8080
 
 Abrir <http://127.0.0.1:8123> (ou a porta escolhida). (Abrir o `index.html` directamente em `file://` também funciona, mas um servidor local é o cenário de teste recomendado — é também o que o módulo de câmara do Pamosii precisa: `getUserMedia` só funciona em contexto seguro.)
 
+O motor de glosa do Pamosii é JavaScript puro, sem dependências, por isso testa-se fora do browser:
+
+```bash
+node tools/engine-test.cjs app/app.js   # corre as frases de exemplo e mostra glosa, cobertura, marcadores e alfabeto manual
+```
+
+O script corta as partes puras de `app.js` (glossário + motor) e executa-as em Node com `LGA_AULAS` simulado. Serve para ver o que o motor devolve por frase, para vigiar falsos positivos da regra de verbos regulares (a lista no fim da saída) e para confirmar que nenhuma palavra sem sinal é inventada. Não substitui a revisão humana do conteúdo — valida o mecanismo, não a LGA.
+
 Na mesma rede Wi-Fi o servidor fica acessível no telemóvel em `http://192.168.8.18:8123` (o `tools/serve.cjs` escuta em todas as interfaces). Atenção: em `http://192.168.x.x` o browser **não** instala o service worker (só `https://` ou `127.0.0.1`), por isso o modo aplicação/sem rede só se pode confirmar no URL publicado ou em `127.0.0.1`.
 
 ---
@@ -85,6 +93,7 @@ app/
 tools/
 ├── parse-yt.cjs        # utilitário usado para extrair os dados reais da playlist
 ├── make-icons.cjs      # gera os PNGs do manifest a partir da marca (node tools/make-icons.cjs)
+├── engine-test.cjs     # corre o motor de glosa do Pamosii em Node (node tools/engine-test.cjs)
 └── serve.cjs           # servidor estático de teste (porta 8123)
 docs/
 └── colheita-sinais-lga.md   # protocolo de gravação/validação necessário para alguma vez
@@ -102,7 +111,7 @@ Fora do repositório de trabalho: `.deploy-gh/` é o clone ligado ao repo public
 | `#/cursos/:slug`  | Detalhe de curso              | `mini-curso-lga` (17 aulas reais por tema, `<details>` nativo), detalhes laterais, notas honestas sobre inscrição/certificado |
 | `#/aprender-lga`  | Aprender LGA                  | As 17 aulas organizadas por tema, com navegação por âncoras |
 | `#/dicionario`    | Dicionário LGA                | Glossário pesquisável português → tema → aula onde o sinal é ensinado; estado de validação em cada entrada |
-| `#/pamosii`       | Pamosii (português ↔ LGA)     | Glosa de uma ou várias frases com vídeo e glifo animado por sinal; ditado por voz; construção de sequência de sinais → frase escrita e falada; módulo de câmara para gravar e rever o próprio sinal |
+| `#/pamosii`       | Pamosii (português ↔ LGA)     | As quatro direcções em atalhos + frases de exemplo; glosa de uma ou várias frases com vídeo e glifo animado por sinal, barra de cobertura e alfabeto manual para o que não tem sinal; ditado por voz; construção de sequência de sinais → frase escrita e falada; módulo de câmara para gravar e rever o próprio sinal |
 | `#/professores`   | Recursos para professores     | Aulas de referência (real) + recursos "Em breve" |
 | `#/biblioteca`    | Biblioteca                    | Pesquisável; itens reais (vídeos) + itens planeados "Em breve" |
 | `#/sobre`         | Sobre                         | Missão, modelo (fontes públicas), reconhecimento com atribuição de fonte, valores |
@@ -174,7 +183,9 @@ Os vídeos usam o modo `youtube-nocookie` e **só carregam o leitor depois de o 
 
 | Painel | Como funciona (de verdade) |
 |--------|----------------------------|
-| **Português → LGA** | O texto é dividido em frases (`[.!?…]`), tokenizado por caracteres Unicode (acentos, hyphens e números são preservados), e cada palavra é procurada no `GLOSSARIO` (ignora acentos maiúsculas; tenta o singular quando não há forma exacta). Para cada sinal encontrado aparece um cartão com **o quadro real da aula** (fachade de YouTube, carregado só ao clique) e um **glifo vectorial animado** da família de movimento do tema. O resultado mostra a **glosa** em maiúsculas separada por `·`, os **marcadores** que a LGA pede no lugar das palavras pequenas (possessivos, pronomes, perguntas → apontar/espaço/expressão), as **palavras omitidas** com a razão, as **desconhecidas** e a cobertura ("N de M elementos com sinal no glossário"). |
+| **Português → LGA** | O texto é dividido em frases (`[.!?…]`), tokenizado por caracteres Unicode (acentos, apóstrofos, hyphens e números preservados) e analisado por ordem: primeiro a **expressão** mais longa que o glossário conhece (`bom dia`, `onde fica?`, `por favor`, `quanto custa?`, `chamo-me…`, `casa de banho` — um só sinal para várias palavras), depois a **palavra** exacta, depois o **plural** (`-s`), depois o **lema** (`quero → querer`, `escreve → escrever`) e, para verbos regulares que estão no glossário, a raiz + infinitivo (`compra → comprar`, `trabalha → trabalhar`, `preciso → precisar`). Só quando nada disto existe é que a palavra vai para **alfabeto manual**, e o cartão diz que são letras, não um sinal. Nomes próprios com maiúscula no meio da frase vão sempre em datilologia. As palavras pequenas (`a`, `de`, `eu`, `meu`, `se`) são **omitidas** com a razão escrita, e os **marcadores** que a LGA pede no lugar delas (apontar, espaço, expressão facial) aparecem como itens próprios; o `?` acrescenta o marcador de pergunta (sobrancelas + cabeça). Cada frase mostra a **glosa**, uma **barra de cobertura** ("5/9 com sinal · 56% do glossário"), os cartões numerados por ordem e a nota honesta. |
+| **As quatro direcções** | Quatro atalhos no topo do painel — Texto → Sinais, Voz → Sinais, Sinais → Texto, Sinais → Voz — abrem o painel certo e põem o foco no controlo onde a pessoa actua. São mesmo os quatro caminhos, cada um com o seu motor real: digitação/ditado para sinais, e escolha de sinais para texto escrito e `speechSynthesis`. |
+| **Frases de exemplo** | Cinco frases prontas (saudação com nome próprio, pergunta na rua, sala de aula, mercado, família/escola) que preenchem o campo e correm a análise no clique. É a forma de ver o mecanismo a funcionar sem ter de inventar texto. |
 | **Soletrar (datilologia)** | Modo para nomes próprios: cada letra vira o grafema do alfabeto manual, com o `<text>` do glifo a mostrar **a letra certa** e a aula do Abecedário por baixo. |
 | **Ditar por voz → LGA** | `SpeechRecognition` do browser, em `pt-PT`. O ditado escreve no mesmo campo de texto e relança a glosa. Se o browser não tiver o serviço, o painel mostra essa limitação e sugere o ditado por teclado do telemóvel; os erros (`not-allowed`, `no-speech`, `network`…) têm mensagem própria em português. |
 | **LGA → português (voz e escrita)** | O utilizador escolhe um tema e carrega nos sinais por ordem; a sequência pode ser reordenada (◀ ▶), removida e ouvida em voz alta (`speechSynthesis`, voz `pt-PT` → `pt-BR` → qualquer `pt`) ou copiada. É o caminho inverso feito **pela escolha da pessoa**, não por reconhecimento de gestos. |
@@ -373,6 +384,7 @@ O site **já está publicado** em <https://7dark7cloud7.github.io/pamosii-viva-s
 16. **Nome aprovado para a aplicação instalada** — hoje o manifest usa `Pamosii Viva Surdo — Língua Gestual Angolana` (nome completo) e `Pamosii` (atalho de ecrã); o nome curto é o que aparece debaixo do ícone no telemóvel.
 17. **Logótipo oficial nos três formatos de ícone** (`icon-192.png`, `icon-512.png`, `icon-maskable-512.png`) ou autorização para gerar a partir do SVG com `node tools/make-icons.cjs` — ver "Substituir a marca provisória".
 18. **Domínio e alojamento da marca** — o alojamento actual (GitHub Pages, `https://7dark7cloud7.github.io/pamosii-viva-surdo/`) já cumpre os três requisitos técnicos que o `tools/serve.cjs` cumpre no local: `https` (obrigatório para o service worker, o microfone e a câmara), `sw.js` na raiz do site e `manifest.webmanifest` com `Content-Type: application/manifest+json` — os três verificados no URL ao vivo. O que falta é a decisão da equipa: um domínio próprio (por ex. `pamosii.ao` / `vivasurdo.ao`) apontado para o mesmo conteúdo estático, e a conta que o controla. Trocar de alojamento não muda uma linha de código; muda só o `CNAME`/DNS e onde se faz `git push`.
+19. **Remover o tema de demonstração do glossário** — o último grupo do `GLOSSARIO` (`'Demonstração (sem vídeo)'`, 33 palavras: `mercado`, `autocarro`, `dinheiro`, `hospital`, `comprar`, `cedo`…) **não é LGA**. Foi acrescentado só para o painel conseguir mostrar frases do dia a dia — o motor, os cartões, a cobertura e os marcadores — antes de haver glossário validado. Não tem vídeo, não vem de nenhuma aula da Viva Surdo e não foi visto por ninguém surdo. Está marcado em três sítios para ninguém o ler como confirmado: o estado `'demonstracao'` (rótulo "Demonstração" em cada entrada do dicionário), o cartão tracejado âmbar nos resultados do Pamosii, e duas faixas de aviso (`note-band is-demo`) no dicionário e no painel. **Para o retirar:** apagar o objecto do tema em `GLOSSARIO` (app/app.js) — as faixas de aviso, os cartões e as etiquetas desaparecem sozinhos, porque são derivados do estado das entradas; depois trocar as frases de exemplo `PM_EXEMPLOS` por frases feitas só com vocabulário validado e actualizar `app/sw.js` + `index.html` (`?v=`). As frases que hoje tocam esse vocabulário são as do mercado e do hospital.
 
 Sem 13, 14 e 15 **não há** reconhecimento de gestos a prometer: o site continuaria a dizer "glosa de estudo" e "a tua escolha de sinais", que é o que faz hoje.
 
