@@ -27,8 +27,9 @@ jobs:
             "https://api.github.com/repos/$GITHUB_REPOSITORY/pages" \
             -d '{"source":{"branch":"main","path":"/public"}}')
           echo "POST /pages -> HTTP $code"
+          echo "::notice::http=$code body=$(head -c 300 /tmp/resp | tr -d '\r\n')"
           case "$code" in
             201|200) echo "Pages criado." ;;
-            409) echo "Pages já existia." ;;
-            *) cat /tmp/resp; exit 1 ;;
+            409) echo "Pages ja existia." ;;
+            *) exit 1 ;;
           esac
