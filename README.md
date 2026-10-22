@@ -43,31 +43,53 @@ Na mesma rede Wi-Fi o servidor fica acessível no telemóvel em `http://192.168.
 
 O que serve o site é a **branch `gh-pages`**, com os ficheiros na raiz (é o conteúdo de `app/`, copiado sem qualquer transformação). A branch `main` guarda o código com o `README` e não é publicada.
 
-Verificado no URL ao vivo (2026-10-20):
+Verificado no URL ao vivo (2026-10-22, publicação `vs56` — mesma verificação feita a 2026-10-20 na versão anterior):
 
 | Verificação | Resultado |
 | --- | --- |
-| 10 ficheiros de `dist/` vs. servidos | **byte a byte iguais** (SHA-256), PNGs incluídos |
+| 14 ficheiros publicados vs. `app/` | **byte a byte iguais** (SHA-256 de cada um), PNGs e o ZIP da extensão incluídos |
+| `sw.js` e `index.html` ao vivo | `const VERSAO = 'vs56'` e `app.js?v=vs56` — o par de versões bate certo no host |
+| `extensao/pamosii-signer.zip` | `200`, 16.367 B, `application/x-zip-compressed` (antes faltava na `gh-pages` e a ligação de download dava 404) |
 | `Content-Type` de `sw.js` | `application/javascript; charset=utf-8` |
 | `Content-Type` de `manifest.webmanifest` | `application/manifest+json; charset=utf-8` |
-| Service worker | instalado e a controlar; scope `…/pamosii-viva-surdo/` |
-| Casulo sem rede | 10 entradas, 183.705 B; o pedido de navegação (`/pamosii-viva-surdo/`) **existe no cache** e devolve `text/html` |
-| 10 rotas a 390×844 (mobile, DPR 2) | texto 1.575–5.325 caracteres, `overflow-x = 0`, barra inferior 65px, menor alvo de toque 64px |
-| Quatro direcções de tradução | texto→sinais (4 blocos, 17 glifos, "3 frases analisadas · 4 de 7 elementos com sinal"), sinais→texto ("Olá bom dia boa tarde."), sinais→voz (`speechSynthesis` activo), voz→sinais (API de reconhecimento disponível; ditado exige microfone real) |
-| Consola | nenhuma mensagem |
+| Service worker | activo e a controlar no host publicado; scope `…/pamosii-viva-surdo/`; cache `casulo-vs56` com **13 entradas**, incluindo o pedido de navegação da raiz (2026-10-22) |
+| `#/colher` no host publicado | a pista da sessão existe (`sess-palavra`, `sess-comecar`, `sess-msg`, `ch-sess-pista`); com a câmara negada aparece **«A câmara não abriu (permissão negada ou indisponível). A descrição escrita continua a funcionar.»** e o botão volta a ficar activo (2026-10-22) |
+| Consola no host publicado | nenhuma mensagem (2026-10-22) |
+| 10 rotas a 390×844 (mobile, DPR 2) | texto 1.575–5.325 caracteres, `overflow-x = 0`, barra inferior 65px, menor alvo de toque 64px **(2026-10-20, versão anterior — ainda não repetido em `vs56`)** |
+| Quatro direcções de tradução | texto→sinais (4 blocos, 17 glifos, "3 frases analisadas · 4 de 7 elementos com sinal"), sinais→texto ("Olá bom dia boa tarde."), sinais→voz (`speechSynthesis` activo), voz→sinais (API de reconhecimento disponível; ditado exige microfone real) **(2026-10-20; o motor não mudou desde então)** |
+| Casulo sem rede (medida antiga) | 10 entradas, 183.705 B em `vs47` — o total em bytes não é legível neste ambiente para `vs56`, por isso só contamos as entradas |
 
-Limites honestos: a emulação "Offline" do DevTools **não bloqueia pedidos neste ambiente** (`navigator.onLine` fica `true` e os JPEGs do YouTube continuam a carregar), portanto a queda para o cache sem rede foi comprovada (a) matando o servidor local com o mesmo `sw.js` e (b) lendo as entradas do cache no host ao vivo — não por emulação. O reconhecimento de gestos continua inexistente: depende do corpus descrito em `docs/colheita-sinais-lga.md`.
+Limites honestos: a emulação "Offline" do DevTools **não bloqueia pedidos neste ambiente** (`navigator.onLine` fica `true` e os JPEGs do YouTube continuam a carregar), portanto a queda para o cache sem rede foi comprovada (a) matando o servidor local com o mesmo `sw.js` e (b) lendo as entradas do cache no host ao vivo — não por emulação. A sessão de gravação **não foi corrida até ao fim no host publicado**: neste ambiente a câmara está negada, pelo que só o caminho de falha é verificável ao vivo; a corrida completa (4 repetições, 12 quadros, 4 clipes, `dur_ms` 4000/4000/4000/8000 e o JSONL aceite pelo `tools/ingerir-colheita.cjs`) foi verificada em `127.0.0.1:8123`. O reconhecimento de gestos continua inexistente: depende do corpus descrito em `docs/colheita-sinais-lga.md`.
 
 ### Actualizar o site publicado
 
 ```bash
 cd .deploy-gh                     # clone de trabalho ligado ao repo
 git checkout gh-pages
-rm -rf app.js styles.css index.html sw.js manifest.webmanifest assets
-cp -r ../app/. .                  # .nojekyll permanece
-git add -A && git commit -m "actualizar o site publicado"
+cp -r ../app/. .                  # app/ é um superconjunto da árvore publicada; .nojekyll permanece
+# (se algum ficheiro publicado deixou de existir em app/, remover esse ficheiro à mão antes do add)
+git add -A && git status --short  # confirmar que não há nada de mais
+git -c user.name="Pamosii Viva Surdo" -c user.email="deploy@pamosii.local" \
+    commit -m "vsNN no site publicado: <o que mudou>"
 git push origin gh-pages
 ```
+
+A identidade é dada **no comando**, com `-c user.name=`/`-c user.email=`: não se corre `git config` neste projecto, para não alterar a configuração global da máquina.
+
+Depois publica-se o código-fonte na branch `main` (que não é servida), para que o repo e o site não divirjam:
+
+```bash
+git checkout main
+cp -r ../app/. app/ && cp ../README.md . && cp -r ../extension . 
+cp ../docs/*.md docs/ && cp ../tools/*.cjs ../tools/*.html tools/ && cp -r ../tools/exemplos tools/
+git add -A && git status --short && git diff --cached --stat   # rever o que entra
+git -c user.name="Pamosii Viva Surdo" -c user.email="deploy@pamosii.local" commit -m "vsNN: <o que mudou>"
+git push origin main
+```
+
+Antes do `git add -A` na `main`, verificar que não há segredos nos ficheiros novos (`grep -rniE "(ghp_|token|password|api[_-]?key)"` sobre as pastas a adicionar) e que `tools/serve.log` ou outros artefactos locais não entram.
+
+Depois do push, confirmar no URL publicado: `curl -s …/sw.js | grep VERSAO` → `vsNN`, `curl -s …/index.html | grep 'app.js?v='` → `?v=vsNN`, e o SHA-256 de cada ficheiro publicado igual ao de `app/`.
 
 Se o `?v=` em `index.html`/`sw.js` for alterado (nova versão), a primeira visita ainda usa o casulo antigo; a segunda já abre a nova. Nunca publicar a partir de `dist/` sem reconstruir o `dist/` a partir de `app/` — a cópia é literal, não é um build.
 
