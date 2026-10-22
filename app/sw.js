@@ -15,7 +15,7 @@
    Se mudares app.js ou styles.css sem mudar o `?v=` do index.html, o offline continua a
    servir a versão antiga. Por isso a VERSÃO abaixo acompanha sempre o `?v=`.          */
 
-const VERSAO = 'vs39';
+const VERSAO = 'vs45';
 const CASULO = 'casulo-' + VERSAO;
 const EXTERNO = 'externo-' + VERSAO;
 
@@ -31,6 +31,8 @@ const FICHEIROS = [
   './assets/icon-512.png',
   './assets/icon-maskable-512.png',
   './assets/pattern-angola.svg',
+  './assets/biblia.json',
+  './assets/glossario-extra.json',
 ];
 
 const eExterno = u => /^(fonts\.googleapis\.com|fonts\.gstatic\.com|i\.ytimg\.com)$/.test(new URL(u).hostname);
@@ -110,6 +112,22 @@ self.addEventListener('fetch', ev => {
      worker velho serviu o styles.css da versão anterior a quem já carregava o vs33.
      Com o casulo pré-guardado nas chaves versionadas (FICHEIROS acima) isso não acontece. */
   if (url.origin === self.location.origin) {
+    /* O dicionário publicado não tem ?v=: muda quando a equipa ingere um pacote, e quem
+       está com ligação deve ver os sinais novos sem desinstalar nada. Rede primeiro,
+       casulo se não houver ligação — por isso o offline continua com o último que viste. */
+    if (/\/glossario-extra\.json$/.test(url.pathname)) {
+      ev.respondWith((async () => {
+        const c = await caches.open(CASULO);
+        try {
+          const res = await fetch(req);
+          if (res && res.ok) await c.put('./assets/glossario-extra.json', res.clone());
+          return res;
+        } catch (e) {
+          return (await c.match('./assets/glossario-extra.json')) || Response.error();
+        }
+      })());
+      return;
+    }
     ev.respondWith((async () => {
       const c = await caches.open(CASULO);
       const guardado = await c.match(req);

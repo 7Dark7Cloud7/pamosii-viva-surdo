@@ -189,6 +189,7 @@ const ESTADO_GLOSSARIO = {
   'a-validar': { rotulo: 'A validar', nota: 'Associação entre a palavra e o sinal ainda não validada por utilizadores de LGA.' },
   'confirmado': { rotulo: 'Confirmado', nota: 'Validado pela equipa / comunidade surda.' },
   'demonstracao': { rotulo: 'Demonstração', nota: 'Palavra de exemplo, para mostrar como o painel funciona. Não corresponde a sinal gravado nem a LGA validada — retirar ou substituir por sinal filmado.' },
+  'colhido': { rotulo: 'Colhido', nota: 'Registado por alguém da comunidade via Colheita. Ninguém aqui validou: continua a precisar de confirmação de um sinalizador surdo antes de ser ensinado como LGA.' },
 };
 
 const GLOSSARIO = [
@@ -228,7 +229,790 @@ const aulasDeTema = (tema) => LGA_AULAS.filter(a => a.tema === tema);
 const slugTema = (t) => 'tema-' + norm(t).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 /* ============================================================================
-   8. PREFERÊNCIAS DE ACESSIBILIDADE — guardadas apenas neste dispositivo
+   8. BÍBLIA — espaço reservado: texto real, áudio para pessoas cegas e
+   sinais de teste. LER ANTES DE EDITAR (regras de integridade):
+     - O texto vem de `assets/biblia.json`, gerado por `tools/fetch-biblia.cjs`
+       a partir da tradução João Ferreira de Almeida (domínio público). Nunca
+       escrever versículos à mão: regenerar o JSON com o script.
+     - Não existe uma Bíblia traduzida e publicada em Língua Gestual Angolana
+       (verificado em 2026-10-22 no YouTube e na web: só há Bíblias em Libras
+       e em ASL). A glosa ao lado do texto é gerada pelo motor Pamosii a partir
+       do glossário do site e é SEMPRE "a validar" — não é tradução bíblica
+       oficial em LGA, e a página diz isso.
+     - O áudio é síntese de voz do próprio dispositivo (Web Speech API), não
+       uma locução humana gravada.
+     - Libras (Brasil) aparece apenas como modo de teste, claramente separado.
+     - VLibras é um serviço público brasileiro de terceiros: só é carregado se
+       a pessoa carregar no botão, com aviso de que o texto visível nesta
+       página é processado por esse serviço.
+   ============================================================================ */
+const BIBLIA_FICHEIRO = 'assets/biblia.json';
+const BIBLIA_FONTES = {
+  traducao: 'João Ferreira de Almeida',
+  licenca: 'Domínio público',
+  servico: 'bible-api.com (identificador de tradução "almeida")',
+};
+
+/* Títulos-resumo e notas editoriais (texto nosso, não escritura) por passagem */
+const BIBLIA_EDIT = {
+  'genesis-1': { resumo: 'Os primeiros trinta e um versículos da Bíblia: a criação, a luz, o mar, os animais e o ser humano.', cor: 'aurora' },
+  'joao-3-16': { resumo: 'Dois versículos: o amor de Deus pelo mundo e a razão desse amor.', cor: 'luz' },
+  'salmos-23': { resumo: 'O salmo do pastor — inclui o vale da sombra da morte.', cor: 'campo' },
+  'marcos-7-31': { resumo: 'Jesus cura um homem surdo: toca os ouvidos e a língua, olha para o céu e diz «Efatá — abre-te».', cor: 'encontro' },
+};
+
+/* Vídeos em LIBRAS (Brasil) verificados — modo de teste, NÃO é LGA */
+const LIBRAS_TESTE = [
+  { id: 'FVGXVAk-bIc', titulo: 'Libras Génesis CAP 1', canal: 'AMO LIBRAS (Brasil)', para: 'genesis-1', verificado: '2026-10-22' },
+  { id: 'NOvTs_erB00', titulo: 'Sinalário Bíblico III — Antigo Testamento', canal: 'Comunicar — Ministério com Surdos (Brasil)', para: null, verificado: '2026-10-22' },
+];
+const VLIBRAS_APP = 'https://vlibras.gov.br/app';
+const VLIBRAS_SCRIPT = VLIBRAS_APP + '/vlibras-plugin.js';
+
+let BIBLIA = null;
+let bibErro = null;
+
+async function carregarBiblia() {
+  if (BIBLIA) return BIBLIA;
+  try {
+    const r = await fetch(BIBLIA_FICHEIRO, { cache: 'default' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    if (!j || !Array.isArray(j.passagens) || !j.passagens.length) throw new Error('ficheiro vazio');
+    BIBLIA = {
+      traducao: j.traducao || BIBLIA_FONTES.traducao,
+      licenca: j.licenca || BIBLIA_FONTES.licenca,
+      obtidoEm: j.obtidoEm || '',
+      passagens: j.passagens.map(p => ({
+        ...p,
+        versos: (p.versos || []).map(v => ({ n: v.n, texto: String(v.texto).replace(/\s+/g, ' ').trim() })),
+      })),
+    };
+    bibErro = null;
+  } catch (e) {
+    bibErro = e;
+  }
+  return BIBLIA;
+}
+
+const bibPassagem = (chave) => BIBLIA && BIBLIA.passagens.find(p => p.chave === chave);
+const bibTemas = () => [...new Set((BIBLIA ? BIBLIA.passagens : []).map(p => p.tema))];
+const librasPara = (chave) => LIBRAS_TESTE.filter(v => v.para === chave);
+
+/* ---------------- progresso: fica apenas neste aparelho ---------------- */
+const BIB_KEY = 'vs.biblia';
+const BIB_PATRAO = { lidos: [], marcados: [], quiz: null, dias: [] };
+function lerBibProgresso() {
+  try { return { ...BIB_PATRAO, ...(JSON.parse(localStorage.getItem(BIB_KEY) || '{}')) }; }
+  catch (e) { return { ...BIB_PATRAO }; }
+}
+function guardarBibProgresso(p) {
+  try {
+    const hoje = new Date().toISOString().slice(0, 10);
+    const novo = { ...p, dias: p.dias.includes(hoje) ? p.dias : [hoje, ...p.dias].slice(0, 60) };
+    localStorage.setItem(BIB_KEY, JSON.stringify(novo));
+    return novo;
+  } catch (e) { return p; }
+}
+function bibSequencia(dias) {
+  const ordem = [...new Set(dias)].sort().reverse();
+  if (!ordem.length) return 0;
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  let n = 0;
+  for (let i = 0; i < ordem.length; i++) {
+    const d = new Date(ordem[i] + 'T00:00:00');
+    const dif = Math.round((hoje - d) / 86400000) - i;
+    if (dif === 0) n++; else break;
+  }
+  return n;
+}
+
+/* versículo do dia: estável por data, sem servidor e sem aleatório */
+function bibFlat() {
+  const lista = [];
+  (BIBLIA ? BIBLIA.passagens : []).forEach(p => p.versos.forEach(v => lista.push({ chave: p.chave, referencia: p.referencia, n: v.n, texto: v.texto })));
+  return lista;
+}
+function bibDoDia(data = new Date()) {
+  const plano = bibFlat();
+  if (!plano.length) return null;
+  const dias = Math.floor(Date.UTC(Number(String(data.getFullYear()).slice(-2)), data.getMonth(), data.getDate()) / 86400000);
+  return plano[Math.abs(dias) % plano.length];
+}
+
+/* ---------------- áudio da passagem (Web Speech API) ---------------- */
+const bibAudio = { i: 0, ativo: false, chave: null };
+
+function bibPintarVersoActivo() {
+  $$('.bib-v').forEach(el => {
+    const on = String(el.dataset.v) === String(bibAudio.i) && bibAudio.ativo;
+    el.classList.toggle('is-on', on);
+    el.setAttribute('aria-current', on ? 'true' : 'false');
+  });
+  const alvo = $(`.bib-v[data-v="${bibAudio.i}"]`);
+  if (alvo && !movReduzido()) alvo.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function bibDizer(chave, i) {
+  const p = bibPassagem(chave);
+  if (!p || !p.versos[i]) {
+    if (p && bibAudio.ativo) {
+      const prog = lerBibProgresso();
+      if (!prog.lidos.includes(chave)) {
+        prog.lidos = [...prog.lidos, chave];
+        guardarBibProgresso(prog);
+      }
+      bibParar(`Terminei de ler ${p.referencia} (${p.versos.length} versículos).`);
+      const cont = $('.bib-stats-l');
+      if (cont) cont.children[0] && (cont.children[0].textContent = `${prog.lidos.length} passagens ouvidas`);
+    } else bibParar();
+    return;
+  }
+  bibAudio.chave = chave; bibAudio.i = i; bibAudio.ativo = true;
+  const u = new SpeechSynthesisUtterance(`Versículo ${p.versos[i].n}. ${p.versos[i].texto}`);
+  const voz = escolherVoz();
+  if (voz) { u.voice = voz; u.lang = voz.lang; } else { u.lang = 'pt-PT'; }
+  const vel = Number(($('#bib-vel') || { value: 1 }).value || 1);
+  u.rate = vel;
+  u.onend = () => { if (bibAudio.ativo && bibAudio.chave === chave) bibDizer(chave, i + 1); };
+  u.onerror = () => { bibParar('A leitura parou. Podes voltar a carregar em Ouvir.'); };
+  bibPintarVersoActivo();
+  const live = $('#bib-live');
+  if (live) live.textContent = `A ler ${p.referencia}, versículo ${p.versos[i].n} de ${p.versos.length}.`;
+  window.speechSynthesis.speak(u);
+}
+
+function bibParar(msg) {
+  bibAudio.ativo = false;
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  bibPintarVersoActivo();
+  const btn = $('#bib-play');
+  if (btn) { btn.setAttribute('aria-pressed', 'false'); btn.innerHTML = `${I.play} Ouvir esta passagem`; }
+  const live = $('#bib-live');
+  if (live) live.textContent = msg || 'Leitura parada.';
+}
+
+function bibIniciarLeitura(chave) {
+  if (!('speechSynthesis' in window)) { $('#bib-live').textContent = 'Este browser não tem síntese de voz. Podes usar o teu leitor de ecrã: o texto está aqui em versículos separados.'; return false; }
+  guardarBibProgresso(lerBibProgresso());   /* conta o dia de hoje, só neste aparelho */
+  window.speechSynthesis.cancel();
+  bibDizer(chave, 0);
+  return true;
+}
+
+function movReduzido() {
+  return document.documentElement.hasAttribute('data-movimento-reduzido') ||
+    (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+
+/* ---------------- quiz: perguntas construídas a partir do texto real ---------------- */
+function bibRand(seed) {
+  let t = seed >>> 0;
+  return () => { t = (t * 1664525 + 1013904223) >>> 0; return t / 4294967296; };
+}
+function bibSeedDoDia() {
+  const d = new Date();
+  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+}
+const bibPalavra = (txt) => {
+  const m = String(txt).match(/[\p{L}\p{M}]{5,}/gu) || [];
+  return m.sort((a, b) => b.length - a.length)[0] || null;
+};
+
+function gerarQuiz(seed) {
+  if (!BIBLIA) return [];
+  const rnd = bibRand(seed);
+  const perguntas = [];
+  const palavras = [];
+  BIBLIA.passagens.forEach(p => p.versos.forEach(v => (String(v.texto).match(/[\p{L}\p{M}]{5,}/gu) || []).forEach(w => {
+    if (!palavras.includes(w)) palavras.push(w);
+  })));
+  /* sorteia versículos de qualquer passagem — por isso "outras perguntas" muda mesmo */
+  const plano = bibFlat();
+  const usados = new Set();
+  let tent = 0;
+  while (perguntas.length < 4 && tent++ < 40) {
+    const item = plano[Math.floor(rnd() * plano.length) % plano.length];
+    if (usados.has(`${item.chave}:${item.n}`)) continue;
+    usados.add(`${item.chave}:${item.n}`);
+    const p = bibPassagem(item.chave);
+    const alvo = bibPalavra(item.texto);
+    if (!alvo) continue;
+    const pos = item.texto.indexOf(alvo);
+    const antes = item.texto.slice(0, pos), depois = item.texto.slice(pos + alvo.length);
+    const erradas = [];
+    let guarda = 0;
+    while (erradas.length < 3 && guarda++ < 60) {
+      const c = palavras[Math.floor(rnd() * palavras.length) % palavras.length];
+      if (norm(c) !== norm(alvo) && !erradas.includes(c) && !c.toLowerCase().includes(alvo.toLowerCase())) erradas.push(c);
+    }
+    if (erradas.length < 3) continue;
+    const opts = [alvo, ...erradas].sort(() => rnd() - 0.5);
+    perguntas.push({
+      tipo: 'completar',
+      chave: item.chave,
+      pergunta: `Complete — ${p.referencia}, versículo ${item.n}:`,
+      texto: `${antes.trim()} _____ ${depois.trim()}`.replace(/\s+/g, ' ').trim(),
+      resposta: alvo,
+      opcoes: opts,
+    });
+  }
+  return perguntas;
+}
+
+/* ---------------- vista: /biblia ---------------- */
+const bibEstado = { chave: 'genesis-1', seed: bibSeedDoDia(), respostas: {}, quizFeito: false };
+
+function bibVersoHTML(p, v, idx) {
+  const prog = lerBibProgresso();
+  const marcado = prog.marcados.includes(`${p.chave}:${v.n}`);
+  const r = analisarTexto(v.texto)[0];
+  const cartoes = r.itens.filter(x => x.tipo === 'sinal' || x.tipo === 'datilologia');
+  const total = r.unidades || r.itens.length;
+  const pct = total ? Math.round((r.sinais.length / total) * 100) : 0;
+  const lacunas = r.datilologias.map(d => d.palavra);
+  return `<li class="bib-v" data-v="${idx}" data-chave="${esc(p.chave)}">
+    <span class="bib-vn" aria-hidden="true">${v.n}</span>
+    <p class="bib-vt"><span class="sr-only">Versículo ${v.n}. </span>${esc(v.texto)}</p>
+    <span class="bib-vact">
+      <button class="bib-ico" type="button" data-verse="${idx}" aria-label="Ouvir só o versículo ${v.n}">${I.play}</button>
+      <button class="bib-ico" type="button" data-star="${v.n}" aria-pressed="${marcado}" aria-label="${marcado ? 'Remover' : 'Guardar'} o versículo ${v.n} deste aparelho">${marcado ? I.spark : I.heart}</button>
+      <button class="bib-ico" type="button" data-copyv="${idx}" aria-label="Copiar o versículo ${v.n}">${I.doc}</button>
+      <button class="bib-ico" type="button" data-signer data-texto="${esc(v.texto)}" aria-label="Mostrar os sinais deste versículo no Signer">${I.video}</button>
+    </span>
+    <details class="bib-glosa">
+      <summary>Sinais deste versículo — glosa de estudo <span class="dic-badge is-a-validar">A validar</span></summary>
+      <p class="bib-gloss"><strong>Glosa:</strong> ${esc(glosaTexto(r) || '—')}</p>
+      <p class="pm-meter"><span class="pm-meter-bar" aria-hidden="true"><span class="pm-meter-fill" style="width:${pct}%"></span></span><span class="pm-meter-t">${r.sinais.length}/${total} palavras com sinal no glossário do site · ${pct}%</span></p>
+      <ul class="pm-cards" data-no-read>${cartoes.slice(0, 12).map((x, n) => pmCard(x, n + 1)).join('')}</ul>
+      ${cartoes.length > 12 ? `<p class="pm-hint">Mostrados os primeiros 12 de ${cartoes.length} cartões.</p>` : ''}
+      ${lacunas.length ? `<p class="bib-falta">${I.info} <strong>Sem sinal no glossário:</strong> ${lacunas.slice(0, 14).map(l => `<span class="pm-chip-bad">${esc(l)}</span>`).join(' ')} Estas palavras é que a equipa precisa de gravar e validar — é esta a lista de trabalho para a Bíblia em LGA.</p>` : ''}
+      ${pct < 25 ? `<p class="pm-hint">Cobertura baixa: o texto bíblico usa vocabulário que ainda não está no mini-curso. Não é um erro da pessoa que lê — é o glossário que está incompleto.</p>` : ''}
+    </details>
+  </li>`;
+}
+
+function bibLeitorHTML(p) {
+  const vid = librasPara(p.chave)[0];
+  return `
+<div class="bib-leitor" id="bib-leitor">
+  <header class="bib-head">
+    <p class="bib-tema">${I.book} ${esc(p.tema)}</p>
+    <h2 id="bib-ref">${esc(p.referencia)} — ${esc(p.titulo)}</h2>
+    <p class="bib-res">${esc((BIBLIA_EDIT[p.chave] || {}).resumo || '')}</p>
+    <p class="bib-lic">${I.check} Texto: <strong>${esc(BIBLIA.traducao)}</strong>, ${esc(BIBLIA.licenca)} · obtido em ${esc(BIBLIA.obtidoEm)} a partir de ${esc(BIBLIA_FONTES.servico)}. ${vid ? '' : 'Versão em vídeo LGA: ainda não existe.'}</p>
+  </header>
+
+  <div class="bib-audio" role="group" aria-label="Leitura em voz alta desta passagem">
+    <button class="btn btn-p" type="button" id="bib-play" aria-pressed="false">${I.play} Ouvir esta passagem</button>
+    <button class="btn btn-o" type="button" id="bib-stop">${I.close} Parar</button>
+    <label class="bib-vel">Velocidade
+      <select id="bib-vel"><option value="0.8">mais devagar</option><option value="1" selected>normal</option><option value="1.15">mais rápido</option></select>
+    </label>
+    <span class="bib-verso-cont">${p.versos.length} versículos</span>
+  </div>
+  <p class="bib-live" id="bib-live" role="status">Pronto para ler em voz alta. A voz é a síntese do teu dispositivo, não uma gravação.</p>
+
+  <ol class="bib-versos" start="1">${p.versos.map((v, i) => bibVersoHTML(p, v, i)).join('')}</ol>
+  ${(() => { const sem = p.versos.reduce((t, v) => t.concat(analisarTexto(v.texto)[0].datilologias.map(d => d.palavra)), []);
+    registrarLacunas(sem);
+    return sem.length ? `<p class="bib-falta">${I.info} <strong>${new Set(sem.map(norm)).size} palavra(s) desta passagem ainda sem sinal em LGA</strong> — ficaram no contador deste aparelho. Regista-as na <a href="#/colher">Colheita</a> se souberes o sinal: é assim que o glossário cresce sem equipa nem servidor.</p>` : '';
+  })() }
+  ${vid ? `
+  <section class="bib-libras" aria-labelledby="bib-libras-h">
+    <h3 id="bib-libras-h">${I.video} Teste em Libras (Brasil) — não é LGA</h3>
+    <p class="muted" style="max-width:66ch">Há Bíblias sinalizadas em <strong>Libras</strong>, a língua de sinais do Brasil, e em ASL. <strong>Não são Língua Gestual Angolana</strong>: os sinais são outros. Serve para comparar e para a equipa decidir como gravar a versão angolana.</p>
+    <div class="vfacade bib-libras-video">
+      <button class="vplay" type="button" data-play="${vid.id}" data-titulo="${esc(vid.titulo)} — ${esc(vid.canal)}"
+        aria-label="Ver o vídeo em Libras: ${esc(vid.titulo)}">
+        <img src="https://i.ytimg.com/vi/${vid.id}/hqdefault.jpg" alt="Quadro do vídeo em Libras «${esc(vid.titulo)}», canal ${esc(vid.canal)}" loading="lazy" decoding="async" width="480" height="360">
+        <span class="vbtn">${I.play}</span>
+      </button>
+    </div>
+    <p class="bib-lic"><strong>${esc(vid.titulo)}</strong> · ${esc(vid.canal)} · verificado a ${esc(vid.verificado)} · precisa de ligação à Internet</p>
+  </section>` : ''}
+</div>`;
+}
+
+function bibQuizHTML() {
+  const perguntas = gerarQuiz(bibEstado.seed);
+  const prog = lerBibProgresso();
+  if (!perguntas.length) return '';
+  return `
+<section class="bib-quiz" id="bib-quiz" aria-labelledby="bib-quiz-h">
+  <h3 id="bib-quiz-h">${I.spark} Testa o que guardaste — 4 perguntas de hoje</h3>
+  <p class="muted" style="max-width:66ch">As perguntas são geradas a partir do texto real que está nesta página. A pontuação fica guardada <strong>só neste aparelho</strong>: não há contas, não há ranking, não há certificado.</p>
+  <form class="bib-qform" id="bib-qform">
+    ${perguntas.map((q, i) => `
+      <fieldset class="bib-q" data-q="${i}">
+        <legend>${i + 1}. ${esc(q.pergunta)}</legend>
+        <p class="bib-q-t">${esc(q.texto)}</p>
+        <div class="bib-q-opts">${q.opcoes.map(o => `
+          <label class="bib-qo"><input type="radio" name="q${i}" value="${esc(o)}"><span>${esc(o)}</span></label>`).join('')}
+        </div>
+        <p class="bib-q-fb" role="status" data-fb="${i}"></p>
+      </fieldset>`).join('')}
+    <div class="bib-q-actions">
+      <button class="btn btn-p btn-sm" type="submit">Ver o resultado</button>
+      <button class="btn btn-o btn-sm" type="button" id="bib-qnew">Outras perguntas ${I.arrow}</button>
+      <span class="bib-q-score" id="bib-qscore" role="status">${prog.quiz ? `Melhor de hoje: ${prog.quiz.best}/${prog.quiz.total}` : 'Ainda não respondeste hoje.'}</span>
+    </div>
+  </form>
+</section>`;
+}
+
+function bibGlifo() {
+  return `<svg class="bib-glifo" viewBox="0 0 120 110" aria-hidden="true" focusable="false">
+    <path class="pm-mao" d="M32 86c-8-6-12-15-12-25V44a5 5 0 0110 0v9M30 52V27a5 5 0 0110 0v25M40 52V22a5 5 0 0110 0v30M50 52V27a5 5 0 0110 0v25M60 56v-8a5 5 0 0110 0v18c0 14-9 24-22 24-8 0-13-3-16-8"/>
+    <path class="bib-livro" d="M78 30c8-4 18-4 26 0v38c-8-4-18-4-26 0z"/>
+    <path class="bib-livro" d="M78 30c-8-4-18-4-26 0"/>
+    <circle class="bib-estrela" cx="91" cy="16" r="4"/>
+  </svg>`;
+}
+
+function bibliaHTML() {
+  const p = bibPassagem(bibEstado.chave) || BIBLIA.passagens[0];
+  const prog = lerBibProgresso();
+  const dia = bibDoDia();
+  const temas = bibTemas();
+  return `
+<div class="wrap page-head bib-head-page">
+  <div class="bib-head-in">
+    <div>
+      <p class="eyebrow">${I.book} Espaço reservado · LGA, áudio e texto</p>
+      <h1>Bíblia — ler, ouvir e ver em sinais</h1>
+      <p class="lead">Texto bíblico real em português, leitura em voz alta para quem não vê, e a sequência de sinais gerada pelo Pamosii para cada versículo — claramente marcada como <strong>a validar</strong>.</p>
+    </div>
+    ${bibGlifo()}
+  </div>
+</div>
+<section class="section tight bib-seccao">
+  <div class="wrap">
+    <div class="note-band is-biblia">
+      ${I.shield}
+      <p><strong>O que isto é e o que não é.</strong> O texto vem da tradução João Ferreira de Almeida (domínio público), copiado sem alterações. <strong>Não existe uma Bíblia traduzida e publicada em Língua Gestual Angolana</strong> — verificado nos canais públicos: há Bíblias sinalizadas em Libras (Brasil) e em ASL, não em LGA. A glosa que mostramos ao lado de cada versículo é feita pelo motor do Pamosii com o glossário deste site e serve para <em>preparar e pedir a validação</em>, nunca para apresentar uma tradução oficial em LGA. O áudio é a síntese de voz do teu dispositivo, não uma locução gravada.</p>
+    </div>
+
+    ${dia ? `
+    <article class="bib-dia rv">
+      <p class="bib-dia-t">${I.spark} Versículo de hoje</p>
+      <p class="bib-dia-v">“${esc(dia.texto)}”</p>
+      <p class="bib-dia-r">${esc(dia.referencia)}, versículo ${dia.n}</p>
+      <div class="bib-dia-act">
+        <a class="btn btn-p btn-sm" href="#/biblia/${esc(dia.chave)}">Abrir a passagem ${I.arrow}</a>
+        <button class="btn btn-o btn-sm" type="button" data-dia="${esc(dia.texto)}">${I.video} Ouvir</button>
+        <button class="btn btn-o btn-sm" type="button" data-diadit="${esc(`${dia.texto} ${dia.referencia}, versículo ${dia.n}.`)}">${I.doc} Copiar com a referência</button>
+      </div>
+    </article>` : ''}
+
+    <div class="f-chips bib-nav" role="group" aria-label="Escolher passagem">
+      ${BIBLIA.passagens.map(x => `<button type="button" class="f-chip bib-chip" data-chave="${esc(x.chave)}" aria-pressed="${x.chave === p.chave}">${esc(x.referencia)}<small>${esc(x.tema)}</small></button>`).join('')}
+    </div>
+
+    ${bibLeitorHTML(p)}
+
+    <section class="bib-stats" aria-label="O teu progresso neste aparelho">
+      <h3>${I.check} O teu progresso (só neste aparelho)</h3>
+      <p class="bib-stats-l">
+        <span class="bib-stat">${prog.lidos.length} passagens ouvidas</span>
+        <span class="bib-stat">${prog.marcados.length} versículos guardados</span>
+        <span class="bib-stat">${bibSequencia(prog.dias)} dia(s) seguidos</span>
+        ${prog.quiz ? `<span class="bib-stat">quiz: ${prog.quiz.best}/${prog.quiz.total}</span>` : ''}
+      </p>
+      ${prog.marcados.length ? `<p class="bib-stars">${prog.marcados.map(m => {
+        const [ch, n] = m.split(':'); const pp = bibPassagem(ch);
+        return pp ? `<a class="bib-star-chip" href="#/biblia/${esc(ch)}">★ ${esc(pp.referencia)} · ${esc(n)}</a>` : '';
+      }).join(' ')}</p>` : ''}
+      <p class="muted" style="max-width:64ch">Sem contas e sem servidor: nada é enviado. Limpar os dados do browser apaga o progresso.</p>
+      <button class="btn btn-o btn-sm" type="button" id="bib-reset">Apagar o meu progresso</button>
+    </section>
+
+    ${bibQuizHTML()}
+
+    ${vlibrasBlocoHTML({
+      h: 'bib-vlibras-h', on: 'bib-vl-on', off: 'bib-vl-off', msg: 'bib-vl-msg',
+      rotulo: 'Ligar o avatar VLibras',
+      titulo: 'Modo de teste: avatar em Libras (VLibras)',
+      texto: 'O <strong>VLibras</strong> é um serviço público do governo brasileiro que traduz texto escrito para Libras e mostra um avatar a sinalizar. É <strong>Libras, não LGA</strong>. Só é carregado se carregares no botão — e, ao ligá-lo, o texto visível desta página passa por esse serviço externo. Neste site nada mais é enviado.',
+    })}
+
+    <section class="bib-falta-box rv" aria-labelledby="bib-falta-h">
+      <h3 id="bib-falta-h">O que falta para a Bíblia estar em LGA</h3>
+      <ul class="bib-falta-l">
+        <li>${I.info} Gravar os sinais bíblicos usados pelas comunidades surdas angolanas (Deus, Jesus, orar, cruz, graça, criação…). Cada versículo precisa de sinal visto e aprovado por pessoas suras.</li>
+        <li>${I.info} Decidir o vocabulário teológico que ainda não está no mini-curso — é a lista "sem sinal" que aparece em cada versículo.</li>
+        <li>${I.info} Nenhum vídeo nosso ainda mostra um sinal bíblico: os vídeos existentes são do mini-curso, e os que estão aqui como Libras são de terceiros, para teste.</li>
+      </ul>
+      <p class="muted" style="max-width:66ch">Sabes um destes sinais? <a href="#/contacto">Fala com a equipa</a> — a gravação e a validação seguem o protocolo do projecto.</p>
+    </section>
+  </div>
+</section>`;
+}
+
+function bindBiblia() {
+  const p = bibPassagem(bibEstado.chave) || BIBLIA.passagens[0];
+
+  /* chips de passagem */
+  $$('.bib-chip').forEach(c => c.addEventListener('click', () => {
+    bibParar();
+    bibEstado.chave = c.dataset.chave;
+    go('/biblia/' + encodeURIComponent(c.dataset.chave));
+  }));
+
+  /* delegação: sobrevive à re-renderização do leitor */
+  const raiz = $('#bib-leitor');
+  if (raiz) raiz.addEventListener('click', e => {
+    const play = e.target.closest('#bib-play');
+    if (play) {
+      if (bibAudio.ativo) { bibParar(); return; }
+      if (bibIniciarLeitura(bibEstado.chave)) {
+        play.setAttribute('aria-pressed', 'true');
+        play.innerHTML = `${I.close} A ler… (parar)`;
+      }
+      return;
+    }
+    if (e.target.closest('#bib-stop')) { bibParar(); return; }
+    const only = e.target.closest('[data-verse]');
+    if (only) {
+      const i = Number(only.dataset.verse);
+      bibParar();
+      bibDizer(bibEstado.chave, i);
+      const btn = $('#bib-play');
+      if (btn) { btn.setAttribute('aria-pressed', 'true'); btn.innerHTML = `${I.close} A ler… (parar)`; }
+      return;
+    }
+    const star = e.target.closest('[data-star]');
+    if (star) {
+      const li = star.closest('.bib-v');
+      const chave = li.dataset.chave, n = star.dataset.star;
+      const id = `${chave}:${n}`;
+      const prog = lerBibProgresso();
+      prog.marcados = prog.marcados.includes(id) ? prog.marcados.filter(x => x !== id) : [...prog.marcados, id];
+      guardarBibProgresso(prog);
+      star.setAttribute('aria-pressed', String(prog.marcados.includes(id)));
+      star.innerHTML = prog.marcados.includes(id) ? I.spark : I.heart;
+      star.setAttribute('aria-label', `${prog.marcados.includes(id) ? 'Remover' : 'Guardar'} o versículo ${n} deste aparelho`);
+      return;
+    }
+    const cp = e.target.closest('[data-copyv]');
+    if (cp) {
+      const li = cp.closest('.bib-v');
+      const vv = bibPassagem(li.dataset.chave).versos[Number(li.dataset.v)];
+      copiarTexto(`${vv.texto} — ${bibPassagem(li.dataset.chave).referencia} ${vv.n}`, cp);
+    }
+  });
+
+  /* botão "ouvir" do versículo do dia + copiar */
+  const diaBtn = $('[data-dia]');
+  if (diaBtn) diaBtn.addEventListener('click', () => falarTexto(diaBtn.dataset.dia, diaBtn));
+  const diaCopy = $('[data-diadit]');
+  if (diaCopy) diaCopy.addEventListener('click', () => copiarTexto(diaCopy.dataset.diadit, diaCopy));
+
+  /* quiz (as perguntas novas trocam-se sozinhas — ver bindQuiz) */
+  bindQuiz($('#bib-quiz'));
+
+  /* progresso: apagar */
+  const reset = $('#bib-reset');
+  if (reset) reset.addEventListener('click', () => {
+    try { localStorage.removeItem(BIB_KEY); } catch (e) { /* sem armazenamento */ }
+    const alvo = $('.bib-stats');
+    if (alvo) { alvo.innerHTML = `<h3>${I.check} O teu progresso (só neste aparelho)</h3><p class="muted">Dados apagados deste aparelho. Ao voltares a usar a secção, a contagem recomeça.</p>`; }
+  });
+
+  /* VLibras (serviço externo, só com consentimento explícito) */
+  bindVLibras({ h: 'bib-vlibras-h', on: 'bib-vl-on', off: 'bib-vl-off', msg: 'bib-vl-msg' });
+}
+
+/* VLibras — serviço público brasileiro. Nada é carregado nem pedido a terceiros
+   até a pessoa carregar no botão; o aviso sobre o texto visível é sempre mostrado.
+   Usado na Bíblia e no Pamosii (mesmo comportamento, ids diferentes).           */
+function vlibrasBlocoHTML(o) {
+  return `
+<section class="${o.classe || 'bib-vlibras'}" aria-labelledby="${o.h}">
+  <h3 id="${o.h}">${I.video} ${esc(o.titulo)}</h3>
+  <p class="muted" style="max-width:66ch">${o.texto}</p>
+  <div class="bib-vlibras-act">
+    <button class="btn btn-a" type="button" id="${o.on}" aria-pressed="false">${I.play} ${esc(o.rotulo)}</button>
+    <button class="btn btn-o" type="button" id="${o.off}" hidden>${I.close} Desligar</button>
+  </div>
+  <p class="bib-vlibras-msg" id="${o.msg}" role="status">Desligado. Nenhum pedido é feito a serviços externos.</p>
+</section>`;
+}
+
+function desligarVLibras() {
+  const w = $('#vlibras-widget');
+  if (w) w.remove();
+  /* o plugin cria um segundo contentor fora do nosso #vlibras-widget — sem o retirar
+     aqui, o botão flutuante do avatar ficava visível depois do "Desligar" */
+  const acc = $('#vlibras-access-wrapper');
+  if (acc) acc.remove();
+  $$('[vw]').forEach(x => x.remove());
+  $$('script[src^="' + VLIBRAS_SCRIPT + '"]').forEach(x => x.remove());
+  window.__vsVLibrasInst = null;
+}
+function bindVLibras(o) {
+  const on = $('#' + o.on), off = $('#' + o.off), msg = $('#' + o.msg);
+  if (!on || !off || !msg) return;
+  on.addEventListener('click', async () => {
+    on.setAttribute('aria-pressed', 'true');
+    msg.textContent = 'A carregar o avatar VLibras (vlibras.gov.br)…';
+    try {
+      if (!window.VLibras) {
+        await new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = VLIBRAS_SCRIPT; s.async = true;
+          s.onload = res; s.onerror = () => rej(new Error('script'));
+          document.body.appendChild(s);
+        });
+      }
+      const alvo = $('#vlibras-widget') || (() => {
+        const d = document.createElement('div');
+        d.id = 'vlibras-widget'; d.setAttribute('vw', ''); d.className = 'enabled';
+        d.innerHTML = '<div vw-access-button class="active"></div><div vw-plugin-wrapper><div class="vw-plugin-top-wrapper"></div></div>';
+        document.body.appendChild(d);
+        return d;
+      })();
+      alvo.hidden = false;
+      if (!window.__vsVLibrasInst) window.__vsVLibrasInst = new window.VLibras.Widget(VLIBRAS_APP);
+      msg.textContent = 'Avatar ligado. Usa o botão de acessibilidade do VLibras para ver esta página sinalizada em Libras (serviço do Brasil, não LGA).';
+      on.hidden = true; off.hidden = false;
+    } catch (e) {
+      msg.textContent = 'O VLibras não carregou — é um serviço externo e pode estar indisponível ou bloqueado na tua rede. O texto e o áudio deste site continuam a funcionar.';
+      on.setAttribute('aria-pressed', 'false');
+    }
+  });
+  off.addEventListener('click', () => {
+    desligarVLibras();
+    off.hidden = true; on.hidden = false;
+    on.setAttribute('aria-pressed', 'false');
+    msg.textContent = 'Desligado. O avatar e os pedidos ao VLibras param aqui; recarrega a página para limpar tudo.';
+  });
+}
+function bindQuiz(seccao) {
+  const form = seccao && seccao.querySelector('.bib-qform');
+  if (!form) return;
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const perguntas = gerarQuiz(bibEstado.seed);
+    let acertos = 0;
+    perguntas.forEach((q, i) => {
+      const escolheu = form.querySelector(`input[name="q${i}"]:checked`);
+      const fb = form.querySelector(`[data-fb="${i}"]`);
+      if (!escolheu) { fb.textContent = 'Escolhe uma opção.'; fb.className = 'bib-q-fb is-vazio'; return; }
+      const certo = escolheu.value === q.resposta;
+      if (certo) acertos++;
+      fb.textContent = certo ? `Exacto — «${q.resposta}».` : `Não é esta. A palavra do texto é «${q.resposta}».`;
+      fb.className = 'bib-q-fb ' + (certo ? 'is-ok' : 'is-bad');
+      fb.dataset.noRead = '1';
+    });
+    const hoje = new Date().toISOString().slice(0, 10);
+    const prog = lerBibProgresso();
+    const total = perguntas.length;
+    const melhor = (prog.quiz && prog.quiz.dia === hoje ? prog.quiz.best : 0);
+    const recorde = Math.max(acertos, melhor);
+    guardarBibProgresso({ ...prog, quiz: { best: recorde, total, dia: hoje } });
+    const score = form.querySelector('#bib-qscore');
+    if (score) score.textContent = `Acertaste ${acertos} em ${total}` + (recorde > acertos ? ` · melhor de hoje: ${recorde}/${total}` : '');
+    if (!movReduzido() && acertos === total && total) {
+      form.classList.add('is-celebra');
+      setTimeout(() => form.classList.remove('is-celebra'), 900);
+    }
+  });
+  const qnew = seccao.querySelector('#bib-qnew');
+  if (qnew) qnew.addEventListener('click', () => {
+    bibEstado.seed = bibEstado.seed + 1;
+    const temp = document.createElement('div');
+    temp.innerHTML = bibQuizHTML();
+    const novo = temp.firstElementChild;
+    if (novo) { seccao.replaceWith(novo); bindQuiz(novo); }
+    const aviso = $('#bib-live');
+    if (aviso) aviso.textContent = 'Novas perguntas carregadas.';
+  });
+}
+
+async function vistaBiblia(chave) {
+  const dados = await carregarBiblia();
+  if (!dados) {
+    return {
+      active: '/biblia',
+      h: shell(`
+<div class="wrap page-head">
+  <h1>Bíblia</h1>
+  <div class="note-band">${I.info}<p><strong>O texto bíblico não está disponível neste momento.</strong> O ficheiro <code>assets/biblia.json</code> não abriu (${esc(bibErro ? String(bibErro.message) : 'erro')}). Recarrega a página; se estiveres sem internet e já visitaste esta secção antes, o texto volta a partir da cache.</p></div>
+</div>`, '/biblia'),
+    };
+  }
+  if (chave && !bibPassagem(chave)) chave = null;
+  bibEstado.chave = chave || bibEstado.chave;
+  if (!bibPassagem(bibEstado.chave)) bibEstado.chave = dados.passagens[0].chave;
+  const p = bibPassagem(bibEstado.chave);
+  return {
+    active: '/biblia',
+    meta: { t: `${p.referencia} — Bíblia em português, áudio e sinais | Pamosii Viva Surdo`, d: `Ler e ouvir ${p.referencia} em português (Almeida, domínio público), com glosa de sinais por versículo e teste em Libras. Não é uma tradução bíblica em Língua Gestual Angolana.` },
+    h: shell(bibliaHTML(), '/biblia'),
+    bind: bindBiblia,
+  };
+}
+
+/* as rotas /biblia e /biblia/:chave registam-se mais abaixo, junto das outras
+   (o helper `on` só existe a partir da secção do router) */
+
+/* ============================================================================
+   9. EVANGELISMO — roteiro de partilha para usar COM uma pessoa surda.
+   LER ANTES DE EDITAR (regras de integridade):
+     - Não há "conversões" nem resultados simulados: esta página ensina a
+       comunicar, não promete efeitos.
+     - Cada frase é português real + a glosa do motor Pamosii (sempre "a
+       validar") + áudio do dispositivo. Não existe tradução automática PT↔LGA.
+     - Os versículos vêm do mesmo `assets/biblia.json` (Almeida, domínio
+       público). Escrever texto bíblico à mão neste ficheiro é proibido.
+     - A secção "como comunicar" é conselho prático consensuado (contacto
+       visual, falar de frente, sem gritar, confirmar o que se entendeu); não é
+       doutrina nem orientação médica.
+   ============================================================================ */
+
+/* kit de frases: texto nosso (não escritura) + referência para cada uma */
+const EV_KIT = [
+  { pt: 'Deus te ama.', ref: 'joao-3-16', nota: 'A frase mais curta que abre a conversa.' },
+  { pt: 'Não tenhas medo.', ref: null, nota: 'Serve para descontrair antes de começar.' },
+  { pt: 'Quero aprender a comunicar contigo.', ref: null, nota: 'Gesto de respeito: aprendes tu, não apenas falas tu.' },
+  { pt: 'Jesus ouviu a tua dor.', ref: 'marcos-7-31', nota: 'Ligado à cura do homem surdo — Marcos 7.' },
+  { pt: 'O Senhor é o meu pastor.', ref: 'salmos-23', nota: 'Salmo 23; mostra os sinais um de cada vez.' },
+  { pt: 'No princípio Deus criou os céus e a terra.', ref: 'genesis-1', nota: 'Génesis 1:1 — bom ponto de partida.' },
+  { pt: 'Podes ler comigo no telemóvel?', ref: null, nota: 'Alternativa imediata quando falta o sinal.' },
+];
+
+/* roteiro em 5 passos, cada um com o que fazer e o que evitar */
+const EV_ROTEIRO = [
+  { t: '1. Chamar a atenção, sem toque brusco', d: 'Acena suavemente, toca de leve no ombro só se estiveres perto, ou acende/apaga a luz. Nunca atires objectos nem grites.', evita: 'Falar de costas ou começar a falar enquanto ela ainda te olha para o lado.' },
+  { t: '2. Ficar de frente e à luz', d: 'Mesma altura, rosto iluminado pela frente, boca visível, fundo calmo. Se usas máscara, escreve ou usa sinais.', evita: 'Luz forte por trás de ti (o rosto fica escuro) e falar com a mão a cobrir a boca.' },
+  { t: '3. Começar pelo cumprimento em LGA', d: 'Usa a saudação da aula 1 do mini-curso e o sinal de «nome» para pedir/presentar nomes.', evita: 'Entrar directamente num sermão: primeiro estabelecem que estão a comunicar.' },
+  { t: '4. Uma ideia de cada vez', d: 'Frase curta, sinal por sinal, e confirma com «percebeste?». Apoia-te no texto no ecrã, no dedo a escrever ou a apontar as palavras.', evita: 'Frases compostas e abstracções longas — perde-se o fio e ninguém ganha.' },
+  { t: '5. Fechar com o que fica', d: 'Deixa o versículo copiado ou guardado, aponta o link desta página e combina o próximo contacto.', evita: 'Terminar sem nada escrito: a memória visual esmorece depressa.' },
+];
+
+/* postura: o essencial, sem inventar autoridade */
+const EV_POSTURA = [
+  { t: 'Falar COM a pessoa, não DELA', d: 'Se houver um intérprete ou amigo ouvinte junto, dirige os sinais e o olhar à pessoa surda, não ao intérprete.' },
+  { t: 'Não assumes o que ela sabe', d: 'Muitas pessoas surdas não tiveram acesso à Bíblia na sua língua. Explica termos (graça, cruz, ressurreição) com sinais concretos e pede confirmação.' },
+  { t: 'A língua dela é a LGA', d: 'Sinais de Libras ou de ASL podem ajudar como ponte, mas não são a língua angolana — diz sempre de onde vem o sinal que estás a usar.' },
+  { t: 'Sem pressão', d: 'Dá tempo para responder. O silêncio não é rejeição; é parte da conversa em sinais.' },
+];
+
+function evFraseHTML(f, i) {
+  const r = analisarTexto(f.pt)[0];
+  registrarLacunas(r.datilologias.filter(x => !x.nome).map(x => x.palavra));
+  const cartoes = r.itens.filter(x => x.tipo === 'sinal' || x.tipo === 'datilologia');
+  const total = r.unidades || r.itens.length;
+  const pct = total ? Math.round((r.sinais.length / total) * 100) : 0;
+  const passagem = f.ref && bibPassagem(f.ref);
+  return `<article class="ev-card rv" data-i="${i}">
+    <p class="ev-pt">${esc(f.pt)}</p>
+    ${f.nota ? `<p class="ev-nota">${I.info} ${esc(f.nota)}</p>` : ''}
+    <p class="ev-gloss"><strong>Glosa (a validar):</strong> ${esc(glosaTexto(r) || '—')}</p>
+    <p class="pm-meter"><span class="pm-meter-bar" aria-hidden="true"><span class="pm-meter-fill" style="width:${pct}%"></span></span><span class="pm-meter-t">${r.sinais.length}/${total} palavras com sinal no glossário · ${pct}%</span></p>
+    ${cartoes.length ? `<ul class="pm-cards" data-no-read>${cartoes.map((x, n) => pmCard(x, n + 1)).join('')}</ul>` : '<p class="pm-hint">Nenhuma palavra desta frase tem sinal no glossário ainda — usa datilologia ou escreve.</p>'}
+    <div class="ev-act">
+      <button class="btn btn-p btn-sm" type="button" data-evdit="${esc(f.pt)}">${I.play} Ouvir</button>
+      <button class="btn btn-o btn-sm" type="button" data-evcopy="${esc(f.pt + (passagem ? ' — ' + passagem.referencia : ''))}">${I.doc} Copiar</button>
+      ${passagem ? `<a class="btn btn-o btn-sm" href="#/biblia/${esc(passagem.chave)}">${I.book} ${esc(passagem.referencia)}</a>` : ''}
+    </div>
+  </article>`;
+}
+
+function evangelismoHTML() {
+  const versos = [];
+  BIBLIA && BIBLIA.passagens.forEach(p => p.versos.forEach(v => {
+    if (v.texto.length > 40 && v.texto.length < 150) versos.push({ chave: p.chave, ref: p.referencia, n: v.n, texto: v.texto });
+  }));
+  const destaque = versos.slice(0, 3);
+  return `
+<div class="wrap page-head">
+  <p class="eyebrow">${I.heart} Evangelismo · comunicar antes de discursar</p>
+  <h1>Partilhar a fé com uma pessoa surda</h1>
+  <p class="lead">Um roteiro curto, frases prontas a usar com sinais e áudio, e a postura que faz a diferença. Tudo o que aqui aparece em sinais é <strong>glosa de estudo gerada pelo Pamosii</strong> e está marcada como <em>a validar</em> — não é uma tradução automática de português para Língua Gestual Angolana.</p>
+</div>
+<section class="section tight">
+  <div class="wrap">
+    <div class="note-band">
+      ${I.info}
+      <p><strong>Por que é diferente.</strong> Uma pessoa surda angolana cresceu, quase sempre, sem acesso à Bíblia na sua língua — a LGA não tem uma Bíblia traduzida e publicada (verificado em 2026-10-22). Isso não é falta de interesse: é falta de acesso. Por isso esta página começa pela <em>comunicação</em>, e o texto bíblico vem da Almeida em português, visível no ecrã.</p>
+    </div>
+
+    <h2 class="ev-h">${I.check} Roteiro em 5 passos</h2>
+    <ol class="ev-roteiro">
+      ${EV_ROTEIRO.map(s => `<li class="ev-passo rv">
+        <h3>${esc(s.t)}</h3>
+        <p>${esc(s.d)}</p>
+        <p class="ev-evita">${I.close} <strong>Evitar:</strong> ${esc(s.evita)}</p>
+      </li>`).join('')}
+    </ol>
+
+    <h2 class="ev-h">${I.book} Versículos prontos a usar</h2>
+    <p class="muted" style="max-width:66ch">Três versículos curtos do texto real que está na secção <a href="#/biblia">Bíblia</a>. Carrega em Ouvir para o teu dispositivo ler, ou abre a passagem para ver sinal a sinal.</p>
+    <div class="ev-grid">
+      ${destaque.map(v => `<article class="ev-verso-card rv">
+        <p class="ev-verso-t">“${esc(v.texto)}”</p>
+        <p class="ev-verso-r">${esc(v.ref)} ${v.n}</p>
+        <div class="ev-act">
+          <button class="btn btn-o btn-sm" type="button" data-evdit="${esc(v.texto)}">${I.play} Ouvir</button>
+          <a class="btn btn-o btn-sm" href="#/biblia/${esc(v.chave)}">Ver em sinais ${I.arrow}</a>
+        </div>
+      </article>`).join('')}
+    </div>
+
+    <h2 class="ev-h">${I.spark} Kit de frases</h2>
+    <p class="muted" style="max-width:66ch">Cada frase tem o português, a glosa em sinais, a cobertura do glossário e os cartões um a um. Se a cobertura for baixa, usa datilologia (alfabeto manual, aula 3) ou escreve no ecrã — o site diz exatamente que palavras ainda não têm sinal.</p>
+    <div class="ev-grid">${EV_KIT.map((f, i) => evFraseHTML(f, i)).join('')}</div>
+
+    <h2 class="ev-h">${I.heart} Postura que abre portas</h2>
+    <div class="ev-postura">${EV_POSTURA.map(p => `<article class="ev-post rv"><h3>${esc(p.t)}</h3><p>${esc(p.d)}</p></article>`).join('')}</div>
+
+    <h2 class="ev-h">${I.video} Quando não sabes o sinal</h2>
+    <ul class="ev-tips">
+        <li>Datilologia: soletra com o alfabeto manual a palavra que falta — é o que a própria comunidade usa quando não há sinal.</li>
+        <li>Escreve: abre este site no telemóvel, escreve a frase e mostra o ecrã. A leitura em ecrã é uma ponte legítima, não uma derrota.</li>
+        <li>Pede: «como se faz este sinal?» — as pessoas surdas ensinam; é assim que o glossário do site vai crescer.</li>
+        <li>Regista: no fim da conversa, aponta no <a href="#/contacto">contacto</a> os sinais que aprendeste ou que faltaram.</li>
+    </ul>
+
+    ${vlibrasBlocoHTML({
+      h: 'ev-vlibras-h', on: 'ev-vl-on', off: 'ev-vl-off', msg: 'ev-vl-msg',
+      rotulo: 'Ligar o avatar VLibras',
+      titulo: 'Modo de teste: avatar em Libras (VLibras)',
+      texto: 'Para comparares como uma frase fica sinalizada por um avatar, o <strong>VLibras</strong> (serviço público brasileiro) pode mostrar esta página em Libras. É <strong>Libras, não LGA</strong>, e só é carregado se carregares no botão — a partir daí o texto visível desta página passa por esse serviço externo.',
+    })}
+
+    <div class="bib-falta-box rv">
+      <h3>Em preparação</h3>
+      <ul class="bib-falta-l">
+        <li>${I.info} Roteiros por público (jovens, crianças, famílias ouvintes de uma pessoa surda) — precisam de revisão da equipa.</li>
+        <li>${I.info} Sinais bíblicos em LGA gravados e validados: é o trabalho listado na secção <a href="#/biblia">Bíblia</a>.</li>
+        <li>${I.info} Encontros presenciais de evangelismo acessível: só serão publicados com data e local confirmados.</li>
+      </ul>
+    </div>
+  </div>
+</section>`;
+}
+
+function bindEvangelismo() {
+  $$('[data-evdit]').forEach(b => b.addEventListener('click', () => falarTexto(b.dataset.evdit, b)));
+  $$('[data-evcopy]').forEach(b => b.addEventListener('click', () => copiarTexto(b.dataset.evcopy, b)));
+  bindVLibras({ h: 'ev-vlibras-h', on: 'ev-vl-on', off: 'ev-vl-off', msg: 'ev-vl-msg' });
+}
+
+async function vistaEvangelismo() {
+  await carregarBiblia();   /* best-effort: sem o JSON, os cards de versículo simples não aparecem */
+  return {
+    active: '/evangelismo',
+    h: shell(evangelismoHTML(), '/evangelismo'),
+    bind: bindEvangelismo,
+  };
+}
+/* a rota /evangelismo regista-se na secção do router, junto das outras */
+
+/* ============================================================================
+   10. PREFERÊNCIAS DE ACESSIBILIDADE — guardadas apenas neste dispositivo
    ============================================================================ */
 const A11Y_KEY = 'vs.a11y';
 const A11Y_PADRAO = { escala: 100, contraste: false, temaEscuro: false, movimento: false, simples: false };
@@ -407,7 +1191,7 @@ function montarPainelA11y() {
 }
 
 /* ============================================================================
-   9. PAMOSSI — tradutor de bolso português ↔ LGA
+   11. PAMOSSI — tradutor de bolso português ↔ LGA
    ----------------------------------------------------------------------------
    O que faz de verdade: divide frases, procura cada palavra no GLOSSARIO e
    devolve uma GLOSA — a sequência de sinais, com a imagem e o vídeo da aula
@@ -685,7 +1469,10 @@ const META = {
   '/dicionario': { t: 'Dicionário português ↔ LGA — Pamosii Viva Surdo', d: 'Procura palavras em português e descobre em que aula de Língua Gestual Angolana o sinal é ensinado. Glossário por tema, com estado de validação visível em cada entrada.' },
   '/professores': { t: 'Recursos para professores — Pamosii Viva Surdo', d: 'Materiais de ensino para professores e profissionais que trabalham com alunos surdos: aulas de referência em LGA e recursos em preparação.' },
   '/biblioteca': { t: 'Biblioteca — Pamosii Viva Surdo', d: 'Biblioteca pesquisável de conteúdos gratuitos da Viva Surdo: aulas de LGA em vídeo e materiais em preparação.' },
+  '/biblia': { t: 'Bíblia em português, áudio e sinais — Pamosii Viva Surdo', d: 'Texto bíblico real (João Ferreira de Almeida, domínio público), leitura em voz alta para pessoas cegas e glosa de sinais por versículo. Não existe Bíblia publicada em Língua Gestual Angolana; há testes em Libras.' },
+  '/evangelismo': { t: 'Evangelismo acessível — Pamosii Viva Surdo', d: 'Roteiros curtos de partilha da Bíblia para usar com pessoas surdas: frases em português com glosa de sinais, áudio e copiar. Conteúdo de estudo, sem promessas de tradução automática.' },
   '/sobre': { t: 'Sobre — Pamosii Viva Surdo', d: 'Pamosii é a plataforma da Viva Surdo, iniciativa angolana de inclusão das pessoas surdas através da educação, da formação e da Língua Gestual Angolana (LGA).' },
+  '/colher': { t: 'Colheita participada de sinais LGA — Pamosii Viva Surdo', d: 'Registar sinais de Língua Gestual Angolana com método (configuração da mão, lugar, movimento, expressão). Tudo fica no aparelho de quem regista e é exportado num ficheiro para a equipa validar.' },
   '/contacto': { t: 'Contacto — Pamosii Viva Surdo', d: 'Canais oficiais verificados da Viva Surdo: Facebook, Instagram e YouTube. Telefone e e-mail serão divulgados após confirmação.' },
 };
 
@@ -703,6 +1490,13 @@ const go = (path) => { location.hash = '#' + path; };
 
 const REDIRECTS = { '/catalogo': '/cursos' }; // rotas antigas do site anterior
 
+/* As rotas das duas secções novas têm de ser registadas aqui: o helper `on` só
+   existe a partir desta linha, e os ficheiros são avaliados de cima para baixo.
+   Os próprios painéis vivem nas secções 8 (Bíblia) e 9 (Evangelismo). */
+on('/biblia', () => vistaBiblia(null));
+on('/biblia/:chave', ({ args }) => vistaBiblia(args.chave));
+on('/evangelismo', vistaEvangelismo);
+
 function matchRoute(hash) {
   for (const r of routes) {
     const pattern = r.path.replace(/:[^/]+/g, '([^/]+)');
@@ -717,7 +1511,11 @@ function matchRoute(hash) {
   return null;
 }
 
-/* ---------------- estrutura (header / footer) ---------------- */
+/* ---------------- estrutura (header / footer) ----------------
+   `extra: true` = aparece no menu (hambúrguer e "Mais"), no rodapé e nas buscas,
+   mas NÃO na barra de cima acima de 1280px: os 11 rótulos medidos ocupam 910px
+   dentro dos 1076px da coluna e o 12.º ("Colheita") faria a barra partir-se em
+   duas linhas. Ver a explicação completa em styles.css, secção da navegação. */
 const NAV_ITENS = [
   { path: '/', rotulo: 'Início' },
   { path: '/cursos', rotulo: 'Cursos' },
@@ -726,6 +1524,9 @@ const NAV_ITENS = [
   { path: '/dicionario', rotulo: 'Dicionário' },
   { path: '/professores', rotulo: 'Professores' },
   { path: '/biblioteca', rotulo: 'Biblioteca' },
+  { path: '/biblia', rotulo: 'Bíblia' },
+  { path: '/evangelismo', rotulo: 'Evangelismo' },
+  { path: '/colher', rotulo: 'Colheita', extra: true },
   { path: '/sobre', rotulo: 'Sobre' },
   { path: '/contacto', rotulo: 'Contacto' },
 ];
@@ -737,16 +1538,18 @@ const logoHTML = (tam) => `<img src="assets/logo-mark.svg" alt="" width="${tam}"
 const TAB_ITENS = [
   { path: '/', rotulo: 'Início', icone: 'home' },
   { path: '/aprender-lga', rotulo: 'Aprender', icone: 'grad' },
-  { path: '/pamosii', rotulo: 'Pamosii', icone: 'chat' },
+  { path: '/pamosii', rotulo: 'Pamosii', icone: 'chat', figura: true },
   { path: '/dicionario', rotulo: 'Dicionário', icone: 'book' },
 ];
 
 function shell(content, active) {
   const links = NAV_ITENS.map(n =>
-    `<a href="#${n.path}"${n.path === active ? ' aria-current="page"' : ''}>${n.rotulo}</a>`).join('');
+    `<a href="#${n.path}"${n.extra ? ' class="nav-extra"' : ''}${n.path === active ? ' aria-current="page"' : ''}>${n.rotulo}</a>`).join('');
   const nasTabs = TAB_ITENS.some(n => n.path === active);
+  /* o Pamosii leva o boneco do Signer em vez da bolha de fala: na barra inferior do
+     telemóvel é o único destino que é "uma pessoa a sinalizar", e o rótulo continua lá. */
   const tabs = TAB_ITENS.map(n =>
-    `<a class="tab" href="#${n.path}"${n.path === active ? ' aria-current="page"' : ''}>${I[n.icone]}<span>${n.rotulo}</span></a>`).join('');
+    `<a class="tab" href="#${n.path}"${n.path === active ? ' aria-current="page"' : ''}>${n.figura ? `<span class="tab-sign">${sgFigura('Diálogos', 'A')}</span>` : I[n.icone]}<span>${n.rotulo}</span></a>`).join('');
   const ano = new Date().getFullYear();
   return `
 <header class="site-head">
@@ -876,6 +1679,7 @@ on('/', () => {
       <div class="hero-ctas">
         <a class="btn btn-p btn-lg" href="#/aprender-lga">Começar a aprender LGA ${I.arrow}</a>
         <a class="btn btn-o btn-lg" href="#/pamosii">Traduzir com o Pamosii</a>
+        <button class="btn btn-o btn-lg" type="button" data-signer data-texto="olá, como está?">Ver no Signer ${I.video}</button>
         <a class="btn btn-o btn-lg" href="#/cursos">Ver cursos</a>
       </div>
       <p class="hero-note">Aulas gratuitas em vídeo, no canal oficial da Viva Surdo. Sem registo, sem pagamento.</p>
@@ -923,6 +1727,20 @@ on('/', () => {
         <h3>Dicionário de LGA</h3>
         <p>${GLOSSARIO.reduce((t, g) => t + g.termos.length, 0)} palavras por tema, ligadas à aula onde o sinal é ensinado. Cada entrada diz se ainda está a validar ou se já foi confirmada.</p>
         <a class="btn btn-p btn-sm" href="#/dicionario">Procurar palavras ${I.arrow}</a>
+      </article>
+    </div>
+    <div class="grid g-2" style="margin-top:22px">
+      <article class="aud-card rv">
+        <span class="aud-ic a">${I.play}</span>
+        <h3>Bíblia — ler, ouvir e ver em sinais</h3>
+        <p>Texto real em português (Almeida, domínio público), leitura em voz alta para quem não vê, versículo a versículo com a glosa de sinais, e um quiz para fixar. Ainda não existe uma Bíblia publicada em LGA: o que falta está dito com honestidade.</p>
+        <a class="btn btn-p btn-sm" href="#/biblia">Abrir a Bíblia ${I.arrow}</a>
+      </article>
+      <article class="aud-card rv">
+        <span class="aud-ic t">${I.heart}</span>
+        <h3>Evangelismo acessível</h3>
+        <p>Um roteiro de 5 passos para partilhar a fé com uma pessoa surda sem gritar nem discursar, e um kit de frases prontas com sinais, áudio e copiar.</p>
+        <a class="btn btn-p btn-sm" href="#/evangelismo">Ver o roteiro ${I.arrow}</a>
       </article>
     </div>
   </div>
@@ -1216,6 +2034,7 @@ function bindDicionario(state) {
         ${termos.map(t => `<li>
           <span class="dic-w">${esc(t.palavra)}</span>
           <span class="dic-badge is-${t.estado}" title="${esc(ESTADO_GLOSSARIO[t.estado].nota)}">${esc(ESTADO_GLOSSARIO[t.estado].rotulo)}</span>
+          <button class="dic-ico" type="button" data-signer data-texto="${esc(t.palavra)}" aria-label="Mostrar ${esc(t.palavra)} no Signer">${I.video}</button>
         </li>`).join('')}
       </ul>
     </section>`;
@@ -1240,6 +2059,7 @@ function bindDicionario(state) {
           <h3>Nada encontrado</h3>
           <p>Esta palavra ainda não está no glossário. Diz-nos o que falta — ou explora as aulas por tema.</p>
           <a class="btn btn-p btn-sm" href="#/aprender-lga">Aprender LGA ${I.arrow}</a>
+          <a class="btn btn-o btn-sm" href="#/colher">Registar o sinal que conheço</a>
         </div>`;
   };
 
@@ -1314,6 +2134,7 @@ function pmSentenca(r, i) {
     <span class="pm-tools">
       <button class="btn btn-o btn-sm" type="button" data-speak="${esc(r.frase)}" aria-pressed="false">${I.video} Ouvir em português</button>
       <button class="btn btn-o btn-sm" type="button" data-copy="${esc(glosaTexto(r))}">${I.doc} Copiar glosa</button>
+      <button class="btn btn-o btn-sm" type="button" data-signer data-texto="${esc(r.frase)}">Sinais animados</button>
     </span>
   </header>
   <p class="pm-gloss"><strong>Glosa (sequência de sinais):</strong> ${esc(glosaTexto(r) || '—')}</p>
@@ -1322,7 +2143,8 @@ function pmSentenca(r, i) {
   ${marcos.length ? `<div class="pm-marcas">${marcos.map(m => `<p>${I.access}<strong>${esc(m.rotulo || m.palavra)}</strong> · ${esc(m.palavra)} — ${esc(m.nota)}</p>`).join('')}</div>` : ''}
   ${Object.keys(grupos).length ? `<div class="pm-omit">${Object.entries(grupos).map(([tipo, palavras]) =>
     `<p>${I.close} <strong>${esc(PAMOSSI_TIPOS[tipo].rotulo)}</strong> não se traduz palavra a palavra (${esc(palavras.join(', '))}) — ${esc(PAMOSSI_TIPOS[tipo].nota)}</p>`).join('')}</div>` : ''}
-  ${nomes.length || lacunas.length ? `<p class="pm-desconhecidas">${I.info} <strong>Em alfabeto manual:</strong> ${nomes.map(n => `<span class="pm-chip-nome">${esc(n)}</span>`).join('')}${lacunas.map(l => `<span class="pm-chip-bad">${esc(l)}</span>`).join('')}${lacunas.length ? ' Estas palavras ainda não estão no glossário. Sabes o sinal? <a href="#/contacto">Diz-nos</a> — não inventamos glosas.' : ' Nomes próprios seguem sempre em datilologia.'}</p>` : ''}
+  ${nomes.length || lacunas.length ? `<p class="pm-desconhecidas">${I.info} <strong>Em alfabeto manual:</strong> ${nomes.map(n => `<span class="pm-chip-nome">${esc(n)}</span>`).join('')}${lacunas.map(l => `<span class="pm-chip-bad">${esc(l)}</span>`).join('')}${lacunas.length ? ` Estas palavras ainda não estão no glossário. Sabes o sinal? <a href="#/contacto">Diz-nos</a> — não inventamos glosas.` : ' Nomes próprios seguem sempre em datilologia.'}</p>` : ''}
+  ${lacunas.length ? `<p class="pm-libras-hint">Para comparares, abre o <button class="pm-link" type="button" data-jump="pm-vlibras-h">modo de teste em Libras</button> — um avatar brasileiro; <strong>não é LGA</strong>.</p>` : ''}
   <p class="pm-cobertura">${r.sinais.length} de ${total} ${total === 1 ? 'palavra' : 'palavras'} com sinal no glossário${r.datilologias.length ? `, ${r.datilologias.length} em alfabeto manual` : ''}${marcos.length ? `, ${marcos.length} por marcadores de corpo/espaço` : ''}.</p>
 </article>`;
 }
@@ -1383,6 +2205,13 @@ function pamosiiHTML(state) {
       <p class="pm-hint" id="pm-mic-msg" role="status"></p>
       <p class="pm-cobertura" id="pm-status" role="status">Escreve ou dita uma frase para veres a sequência de sinais.</p>
       <div id="pm-out" class="pm-out"></div>
+
+      ${vlibrasBlocoHTML({
+        h: 'pm-vlibras-h', on: 'pm-vl-on', off: 'pm-vl-off', msg: 'pm-vl-msg', classe: 'bib-vlibras pm-teste',
+        rotulo: 'Ligar o avatar em Libras',
+        titulo: 'Modo de teste: e em Libras?',
+        texto: 'Quando o glossário LGA deste site <strong>não tem o sinal</strong> de uma palavra, o Pamosii mostra datilologia (alfabeto manual) — é o que a comunidade surda angolana usa à falta de sinal. Como <em>teste</em>, podes ligar o <strong>VLibras</strong>, um avatar do governo brasileiro que sinaliza o texto visível desta página em <strong>Libras</strong>. Serve para comparar, não para aprender LGA: <strong>são línguas de sinais diferentes</strong>. Só é carregado se carregares no botão, e a partir daí o texto visível desta página passa por um serviço externo.',
+      })}
     </div>
 
     <div id="pm-lga" hidden>
@@ -1497,6 +2326,9 @@ function bindPamosii(state) {
     const s = resultados.reduce((t, r) => t + r.sinais.length, 0);
     const e = resultados.reduce((t, r) => t + (r.unidades || r.itens.length), 0);
     const d = resultados.reduce((t, r) => t + r.datilologias.length, 0);
+    /* cada palavra que ficou em alfabeto manual por não estar no glossário entra no
+       contador local de lacunas (secção 13) — é assim que a Colheita sabe o gravar */
+    registrarLacunas(resultados.reduce((t, r) => t.concat(r.datilologias.filter(x => !x.nome).map(x => x.palavra)), []));
     status.textContent = `${resultados.length} ${resultados.length === 1 ? 'frase analisada' : 'frases analisadas'} · ${s} de ${e} ${e === 1 ? 'palavra com sinal' : 'palavras com sinal no glossário'}${d ? ` · ${d} em alfabeto manual` : ''}`;
     out.innerHTML = resultados.map(pmSentenca).join('') + `
       <p class="pm-hint">A glosa é uma ajuda de estudo, não uma frase de LGA correcta. Para confirmar ordem e marcadores, fala com <a href="#/dicionario">o dicionário</a> e com a comunidade surda.</p>`;
@@ -1690,6 +2522,19 @@ function bindPamosii(state) {
     $('#pm-frames').innerHTML = '';
     state.quadros = 0;
     aviso('Câmara desligada. Gravações e quadros apagados deste dispositivo.');
+  });
+
+  /* liga o bloco de teste em Libras (serviço externo, só com consentimento)
+     e o atalho "modo de teste em Libras" que aparece nos resultados */
+  bindVLibras({ h: 'pm-vlibras-h', on: 'pm-vl-on', off: 'pm-vl-off', msg: 'pm-vl-msg' });
+  out.addEventListener('click', e => {
+    const jump = e.target.closest('[data-jump="pm-vlibras-h"]');
+    if (!jump) return;
+    const alvo = $('#pm-vlibras-h');
+    if (!alvo) return;
+    alvo.scrollIntoView({ block: 'center', behavior: movReduzido() ? 'auto' : 'smooth' });
+    const botao = $('#pm-vl-on');
+    if (botao && !botao.hidden) botao.focus();
   });
 
   mudarModo(state.modo);
@@ -2047,7 +2892,11 @@ async function render() {
   if (REDIRECTS[hash]) { location.replace('#' + REDIRECTS[hash]); return; }
 
   pararLeitura();
+  bibParar();
   desligarCamara();
+  desligarVLibras();   /* o avatar externo vive fora do #app: sem isto ficaria a pairar na página nova */
+  signerParar();
+  desligarColheitaCam();
   const m = matchRoute(hash);
   const resultado = m ? await m.view({ args: m.args }) : notFound();
   const app = $('#app');
@@ -2129,10 +2978,798 @@ document.addEventListener('click', e => {
   holder.scrollIntoView({ block: 'nearest' });
 });
 
+/* ============================================================================
+   12. PAMOSSI SIGNER — o botão flutuante que sinaliza qualquer página
+   Regras de integridade (ler antes de editar):
+     - O boneco é um GLIFO DE MOVIMENTO: mostra a família de movimento e o
+       marcador, nunca a forma exacta do sinal. A forma exacta só existe no vídeo
+       da aula; onde não há vídeo, diz-se "ainda sem vídeo".
+     - Nada aqui traduz fala para LGA. O texto entra por escrita ou por ditado do
+       próprio browser; a sequência mostrada é a glossa do nosso glossário.
+     - Sem serviços externos, funciona offline, e nada se move antes de um toque.
+       `prefers-reduced-motion` desliga a animação (os passos continuam).
+   ============================================================================ */
+
+/* --- 12.1 a figura: duas mãos levantadas + cara, porque os marcadores não
+          manuais fazem parte do sinal e não são enfeite --- */
+const SG_MAOS = `
+  <g class="sg-mao"><circle cx="47" cy="31" r="5"/><path d="M44 28v-6M47 27v-7M50 28v-6"/></g>
+  <g class="sg-mao"><circle cx="113" cy="31" r="5"/><path d="M110 28v-6M113 27v-7M116 28v-6"/></g>`;
+function sgFigura(tema, letra) {
+  const mov = PM_MOVIMENTO[tema] || 'acao';
+  const marca = (PM_MARCAS[mov] || PM_MARCAS.acao).replace('>A<', '>' + esc(letra || 'A') + '<');
+  return `<svg class="pm-glyph sg-fig sg-mov-${mov}" viewBox="0 0 160 104" aria-hidden="true" focusable="false">
+  <g class="sg-corpo">
+    <circle class="sg-cabeca" cx="80" cy="24" r="13"/>
+    <path class="sg-feicao" d="M73 18h6M82 18h6"/>
+    <path class="sg-feicao sg-ponto-o" d="M76 23h.4M84 23h.4"/>
+    <path class="sg-feicao sg-boca" d="M76 30c2.6 2 5.4 2 8 0"/>
+    <path class="sg-line" d="M80 37v30M64 46h32M64 46 50 35M96 46 110 35M80 67 71 90M80 67 89 90M67 90h8M85 90h8"/>
+    <path class="sg-chao" d="M48 96h64"/>
+  </g>
+  <g class="sg-maos">${SG_MAOS}</g>
+  <g class="sg-marca" transform="translate(24,2)">${marca}</g>
+</svg>`;
+}
+
+/* --- 12.2 da frase aos passos: um sinal por palavra, uma letra por falta de sinal ---
+   analisarTexto() devolve uma entrada POR FRASE; o Signer tem de percorrer todas,
+   senão "Bom dia! Onde fica a escola?" sinalizava apenas as duas primeiras palavras. */
+function sgPassos(texto) {
+  const frases = analisarTexto(texto);
+  const passos = [];
+  frases.forEach(r => (r.itens || []).forEach(it => {
+    if (it.tipo === 'sinal') {
+      const e = it.entrada || {};
+      passos.push({ tipo: 'sinal', palavra: it.palavra, tema: e.tema || 'Verbos',
+        estado: e.estado || 'a-validar', aula: it.aula || null, letra: null,
+        nota: it.expressao ? 'Um só sinal para várias palavras.'
+          : it.origem ? 'Forma de «' + it.origem + '» no dicionário.'
+          : e.plural ? 'Plural: repete-se o sinal.' : '' });
+    } else if (it.tipo === 'datilologia') {
+      (it.letras || []).forEach(l => passos.push({ tipo: 'letra', palavra: String(l), letra: String(l),
+        tema: 'Alfabeto', estado: 'sem-sinal', aula: null, daPalavra: it.palavra,
+        nota: it.nome ? 'Nome próprio: sempre em alfabeto manual.' : 'Ainda sem sinal no glossário.' }));
+    }
+  }));
+  return passos;
+}
+
+const sgEstado = { aberto: false, modo: 'texto', texto: '', passos: [], i: 0, a: false, vel: 1, relogio: 0 };
+
+function sgPassoActual() { return sgEstado.passos[sgEstado.i] || null; }
+
+function sgDur() { return Math.round((sgPassoActual() && sgPassoActual().tipo === 'letra' ? 780 : 1150) / sgEstado.vel); }
+
+function sgPintar() {
+  const palco = $('#sg-palco'), live = $('#sg-live'), faixa = $('#sg-strip');
+  if (!palco) return;
+  const p = sgPassoActual();
+  const total = sgEstado.passos.length;
+  palco.innerHTML = total
+    ? `${sgFigura(p.tema, p.letra)}
+       <p class="sg-palavra">${esc(p.palavra)}${p.daPalavra ? `<span class="sg-de">de ${esc(p.daPalavra)}</span>` : ''}</p>
+       <p class="sg-meta">${p.tipo === 'letra' ? 'Alfabeto manual (letra a letra)'
+         : esc(p.tema) + ' · ' + esc(ESTADO_GLOSSARIO[p.estado] ? ESTADO_GLOSSARIO[p.estado].rotulo : 'A validar')}</p>
+       ${p.nota ? `<p class="sg-nota">${esc(p.nota)}</p>` : ''}
+       ${p.aula ? `<div class="vfacade pm-facade sg-video"><button class="vplay" type="button" data-play="${p.aula.id}"
+           data-titulo="${esc(p.aula.titulo)}" aria-label="Ver o vídeo real deste sinal: ${esc(p.aula.titulo)}">
+           <img src="https://i.ytimg.com/vi/${p.aula.id}/hqdefault.jpg" alt="" loading="lazy" decoding="async" width="480" height="360">
+           <span class="vbtn">${I.play}</span></button><p class="sg-vid-note">O vídeo é que faz fé: o boneco só mostra a família de movimento.</p></div>`
+         : `<p class="sg-sem-video">${I.info} Ainda sem vídeo deste sinal.</p>
+            <p class="sg-convite"><a href="#/colher/${encodeURIComponent(p.daPalavra || p.palavra)}">Conheces este sinal? Ajuda a registá-lo</a></p>`}`
+    : `<p class="sg-vazio">Escreve uma frase, ou pede “Sinalizar esta página”, e a sequência de sinais aparece aqui.</p>`;
+  palco.style.setProperty('--sg-d', String(1 / sgEstado.vel));
+  if (faixa) {
+    faixa.innerHTML = sgEstado.passos.map((x, n) =>
+      `<li><button class="sg-chip${n === sgEstado.i ? ' on' : ''}${x.tipo === 'letra' ? ' is-letra' : ''}" type="button" data-sg="${n}"${n === sgEstado.i ? ' aria-current="true"' : ''}>${esc(x.palavra)}</button></li>`).join('');
+  }
+  const cont = $('#sg-contador');
+  if (cont) cont.textContent = total ? `${sgEstado.i + 1} / ${total}` : '—';
+  if (live) live.textContent = total
+    ? `Sinal ${sgEstado.i + 1} de ${total}: ${p.palavra}${p.tipo === 'letra' ? ' (letra do alfabeto manual)' : ''}.`
+    : 'Sem sequência carregada.';
+  const play = $('#sg-play');
+  if (play) { play.innerHTML = sgEstado.a ? `${I.close} Pausar` : `${I.play} Reproduzir`; play.setAttribute('aria-pressed', sgEstado.a ? 'true' : 'false'); }
+  const falta = $('#sg-falta');
+  if (falta) {
+    const s = sgEstado.passos.filter(x => x.estado === 'sem-sinal');
+    const unicas = [...new Set(s.map(x => x.daPalavra || x.palavra))];
+    falta.hidden = !unicas.length;
+    if (unicas.length) falta.innerHTML = `${unicas.length} palavra${unicas.length > 1 ? 's' : ''} sem sinal neste texto: `
+      + unicas.slice(0, 8).map(w => `<a href="#/colher/${encodeURIComponent(w)}">${esc(w)}</a>`).join(', ')
+      + (unicas.length > 8 ? ' …' : '') + ' — podes registá-las tu.';
+  }
+}
+
+function sgParar() {
+  sgEstado.a = false;
+  if (sgEstado.relogio) { clearTimeout(sgEstado.relogio); sgEstado.relogio = 0; }
+  const b = $('#sg-play');
+  if (b) { b.setAttribute('aria-pressed', 'false'); b.innerHTML = `${I.play} Reproduzir`; }
+}
+
+function sgAvancar() {
+  if (!sgEstado.a) return;
+  if (sgEstado.i >= sgEstado.passos.length - 1) { sgParar(); sgPintar(); $('#sg-live') && ($('#sg-live').textContent = 'Fim da sequência.'); return; }
+  sgEstado.i++;
+  sgPintar();
+  sgEstado.relogio = setTimeout(sgAvancar, sgDur());
+}
+
+function sgReproduzir() {
+  if (!sgEstado.passos.length) return;
+  if (sgEstado.a) { sgParar(); return; }
+  if (sgEstado.i >= sgEstado.passos.length - 1) sgEstado.i = -1;
+  sgEstado.a = true;
+  sgAvancar();
+  if (sgEstado.i === -1) { sgEstado.i = 0; sgPintar(); }
+}
+
+function sgCarregar(texto, modo) {
+  sgEstado.texto = String(texto || '').trim();
+  sgEstado.modo = modo || 'texto';
+  sgPassar();
+}
+function sgPassar() { sgParar(); sgEstado.passos = sgPassos(sgEstado.texto); sgEstado.i = 0; sgPintar(); }
+
+function sgTextoPagina() {
+  const main = $('#conteudo');
+  if (!main) return '';
+  const texto = (main.innerText || '').replace(/\s+/g, ' ').trim();
+  const palavras = texto.split(' ').slice(0, 120).join(' ');
+  return palavras + (texto.split(' ').length > 120 ? ' …' : '');
+}
+
+function sgAbrir(textoInicial) {
+  sgEstado.aberto = true;
+  const painel = $('#sg-painel'), fab = $('#sg-fab');
+  if (!painel) return;
+  painel.hidden = false;
+  document.documentElement.classList.add('sg-on');
+  if (fab) fab.setAttribute('aria-expanded', 'true');
+  if (typeof textoInicial === 'string' && textoInicial) {
+    const ta = $('#sg-texto'); if (ta) ta.value = textoInicial;
+    sgCarregar(textoInicial, 'texto');
+  } else if (!sgEstado.passos.length) {
+    const ta = $('#sg-texto'); if (ta && !ta.value) ta.value = sgEstado.texto;
+    if (ta && ta.value) sgCarregar(ta.value, 'texto'); else sgPintar();
+  } else sgPintar();
+  const alvo = sgEstado.passos.length ? $('#sg-play') : $('#sg-texto');
+  if (alvo) alvo.focus({ preventScroll: true });
+}
+
+function sgFechar() {
+  sgEstado.aberto = false;
+  sgParar();
+  const painel = $('#sg-painel'), fab = $('#sg-fab');
+  if (painel) painel.hidden = true;
+  document.documentElement.classList.remove('sg-on');
+  if (fab) { fab.setAttribute('aria-expanded', 'false'); fab.focus({ preventScroll: true }); }
+}
+
+/* --- 12.3 montagem: vive FORA do #app, por isso sobrevive a todas as rotas --- */
+function montarSigner() {
+  if ($('#sg-fab')) return;
+  const raiz = document.createElement('div');
+  raiz.innerHTML = `
+<button class="sg-fab" id="sg-fab" type="button" aria-expanded="false" aria-controls="sg-painel">
+  ${sgFigura('Diálogos', 'A')}<span>Pamosii Signer</span>
+</button>
+<div class="sg-painel" id="sg-painel" role="dialog" aria-labelledby="sg-h" hidden>
+  <div class="sg-topo">
+    <h2 id="sg-h">${I.access} Pamosii Signer</h2>
+    <span class="sg-contador" id="sg-contador">—</span>
+    <button class="sg-x" id="sg-close" type="button" aria-label="Fechar o Pamosii Signer">${I.close}</button>
+  </div>
+  <p class="sg-aviso">Bonecos animados a mostrar a <strong>família de movimento</strong> de cada sinal,
+    com a palavra escrita por baixo. Não é a forma exacta do sinal — essa está nos vídeos das aulas — e
+    tudo o que aqui aparece vem do glossário deste site,
+    <span class="dic-badge is-a-validar">A validar</span> pela comunidade surda angolana.</p>
+  <div class="sg-fonte">
+    <label class="sg-lbl" for="sg-texto">Texto a sinalizar</label>
+    <textarea id="sg-texto" rows="2" autocomplete="off" spellcheck="false"
+      placeholder="Escreve (ou dita) a frase que queres ver em sinais.">Bom dia! Onde fica a escola?</textarea>
+    <div class="sg-liga">
+      <button class="btn btn-p btn-sm" type="button" id="sg-usar">${I.search} Sinalizar</button>
+      <button class="btn btn-o btn-sm" type="button" id="sg-pagina">Sinalizar esta página</button>
+      <button class="btn btn-o btn-sm" type="button" id="sg-fala" aria-pressed="false">${I.play} Ouvir em português</button>
+    </div>
+    <p class="sg-priv">O texto fica neste aparelho: nada é enviado para fora, e não há servidores.</p>
+  </div>
+  <div class="sg-palco" id="sg-palco"></div>
+  <p class="sg-ctrl">
+    <span class="sg-ctrl-r1">
+      <button class="btn btn-o btn-sm" type="button" id="sg-prev" aria-label="Sinal anterior">${I.chev} Anterior</button>
+      <button class="btn btn-a btn-sm" type="button" id="sg-play" aria-pressed="false">${I.play} Reproduzir</button>
+      <button class="btn btn-o btn-sm" type="button" id="sg-next" aria-label="Sinal seguinte">Seguinte ${I.arrow}</button>
+    </span>
+    <span class="sg-ctrl-r2">
+      <button class="btn btn-o btn-sm" type="button" id="sg-rep">Repetir este sinal</button>
+      <label class="sg-vel-l" for="sg-vel">Velocidade</label>
+      <select id="sg-vel"><option value="0.5">0,5×</option><option value="0.75">0,75×</option><option value="1" selected>1×</option><option value="1.5">1,5×</option></select>
+    </span>
+  </p>
+  <p class="sg-live" id="sg-live" role="status"></p>
+  <ul class="sg-strip" id="sg-strip" data-no-read aria-label="Sinais desta sequência — escolher um"></ul>
+  <p class="sg-falta" id="sg-falta" role="status" hidden></p>
+</div>`;
+  document.body.appendChild(raiz);
+
+  $('#sg-fab').addEventListener('click', () => { sgEstado.aberto ? sgFechar() : sgAbrir(); });
+  $('#sg-close').addEventListener('click', sgFechar);
+  $('#sg-usar').addEventListener('click', () => sgCarregar($('#sg-texto').value, 'texto'));
+  $('#sg-pagina').addEventListener('click', () => {
+    const t = sgTextoPagina();
+    $('#sg-texto').value = t;
+    sgCarregar(t, 'pagina');
+    $('#sg-live').textContent = 'Sequência desta página carregada (primeiras 120 palavras).';
+  });
+  $('#sg-fala').addEventListener('click', e => {
+    const b = e.currentTarget;
+    if (b.getAttribute('aria-pressed') === 'true') { window.speechSynthesis.cancel(); b.setAttribute('aria-pressed', 'false'); return; }
+    if (!falarTexto(sgEstado.texto || $('#sg-texto').value, b)) {
+      $('#sg-live').textContent = 'Este browser não tem síntese de voz; o texto continua a funcionar.';
+    }
+  });
+  $('#sg-play').addEventListener('click', sgReproduzir);
+  $('#sg-prev').addEventListener('click', () => { sgParar(); sgEstado.i = Math.max(0, sgEstado.i - 1); sgPintar(); });
+  $('#sg-next').addEventListener('click', () => { sgParar(); sgEstado.i = Math.min(sgEstado.passos.length - 1, sgEstado.i + 1); sgPintar(); });
+  $('#sg-rep').addEventListener('click', () => {
+    sgParar();
+    const dur = sgDur();
+    sgEstado.a = true; sgPintar();
+    sgEstado.relogio = setTimeout(sgParar, dur);
+    $('#sg-live').textContent = 'A repetir este sinal.';
+  });
+  $('#sg-vel').addEventListener('change', e => { sgEstado.vel = Number(e.target.value) || 1; sgPintar(); });
+  $('#sg-strip').addEventListener('click', e => {
+    const b = e.target.closest('[data-sg]');
+    if (!b) return;
+    sgParar(); sgEstado.i = Number(b.dataset.sg); sgPintar();
+  });
+  /* teclado: Esc fecha (em qualquer sítio, com o painel aberto); ←/→ e Espaço só quando o
+     foco está dentro do painel — com o painel aberto a pessoa continua a poder usar o
+     Espaço para rolar a página e as setas para se mover no texto que está a ler. */
+  document.addEventListener('keydown', e => {
+    if (!sgEstado.aberto) return;
+    if (e.key === 'Escape') { e.preventDefault(); sgFechar(); return; }
+    const dentro = $('#sg-painel').contains(document.activeElement);
+    if (dentro && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'SELECT') {
+      if (e.key === 'ArrowRight') { e.preventDefault(); sgParar(); sgEstado.i = Math.min(sgEstado.passos.length - 1, sgEstado.i + 1); sgPintar(); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); sgParar(); sgEstado.i = Math.max(0, sgEstado.i - 1); sgPintar(); }
+      if (e.key === ' ' || e.code === 'Space') { e.preventDefault(); sgReproduzir(); }
+    }
+    if (e.key === 'Tab' && dentro) {   /* laço de foco simples dentro da janela */
+      const f = [...$('#sg-painel').querySelectorAll('button:not([hidden]), a[href], textarea, select, input')]
+        .filter(x => x.offsetParent !== null);
+      if (!f.length) return;
+      const primeiro = f[0], ultimo = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === primeiro) { e.preventDefault(); ultimo.focus(); }
+      else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primeiro.focus(); }
+    }
+  });
+  sgPintar();
+}
+
+/* chamado pelo router: ao mudar de página a sequência para, e se o painel estiver
+   em modo "esta página" volta a ler o texto novo */
+function signerParar() {
+  if (!sgEstado.aberto) { sgParar(); return; }
+  sgParar();
+  if (sgEstado.modo === 'pagina') {
+    setTimeout(() => {
+      const t = sgTextoPagina();
+      const ta = $('#sg-texto'); if (ta) ta.value = t;
+      sgEstado.texto = t; sgPassar();
+    }, 0);
+  }
+}
+
+/* atalhos espalhados pelo site: qualquer [data-signer] abre o painel com texto */
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-signer]');
+  if (!b) return;
+  e.preventDefault();
+  const alvo = b.closest('#conteudo') ? (b.dataset.texto || (b.closest('article,li') || b).innerText.slice(0, 240)) : (b.dataset.texto || '');
+  sgAbrir(alvo);
+});
+
+/* ============================================================================
+   13. COLHEITA PARTICIPADA — qualquer pessoa pode acrescentar sinais
+   Regras de integridade:
+     - O site não envia NADA. As contribuições vivem no aparelho de quem as fez
+       e saem num ficheiro que a pessoa escolhe enviar (README, secção Colheita).
+     - ninguém que usa este site pode marcar um sinal como "validado": isso é
+       trabalho de um sinalizador surdo angolano. O estado máximo é "colhido".
+     - A câmara é opcional, nunca grava som, e as imagens não saem do browser.
+   ============================================================================ */
+
+const CH_COLHEITA = 'vs.colheita';
+const CH_LACUNAS = 'vs.lacunas';
+const CH_EXTRA = 'vs.extra';
+const SCHEMA_COLHEITA = 1;
+
+/* palavras sem sinal, contadas neste aparelho — é a lista de compras da equipa */
+function lerLacunas() {
+  try { return JSON.parse(localStorage.getItem(CH_LACUNAS) || '{}') || {}; } catch (e) { return {}; }
+}
+function registrarLacunas(palavras) {
+  if (!palavras || !palavras.length) return;
+  const d = lerLacunas();
+  palavras.map(w => norm(w)).filter(Boolean).forEach(w => { d[w] = (d[w] || 0) + 1; });
+  try { localStorage.setItem(CH_LACUNAS, JSON.stringify(d)); } catch (e) { /* aparelho cheio */ }
+}
+function apagarLacunas() { try { localStorage.removeItem(CH_LACUNAS); } catch (e) { /* nada guardado */ } }
+
+function lerColheita() {
+  try { const d = JSON.parse(localStorage.getItem(CH_COLHEITA) || '[]'); return Array.isArray(d) ? d : []; } catch (e) { return []; }
+}
+function guardarColheita(lista) {
+  try { localStorage.setItem(CH_COLHEITA, JSON.stringify(lista)); return true; }
+  catch (e) { return false; }   /* quota: o aviso aparece na própria página */
+}
+
+/* --- 13.1 o que entra no glossário: o MESMO formato de um pacote de colheita ---
+   Três canais chegam aqui: assets/glossario-extra.json (o que a equipa publicou),
+   o pacote importado neste aparelho, e nada mais. Sem entradas, nada muda. */
+const COLHIDAS = new Map();
+function indexarTermo(palavraRaw, tema, estado, extra) {
+  const chave = norm(palavraRaw).replace(/[….:;?!]/g, '').trim();
+  if (!chave) return false;
+  const entrada = { palavra: String(palavraRaw), tema: tema || 'Colheita', estado: estado || 'colhido', sinal: (extra && extra.video) || null };
+  if (!PAMOSSI_INDICE.has(chave)) PAMOSSI_INDICE.set(chave, entrada);
+  const partes = [];
+  tokenizar(chave).forEach(tk => dividirPalavra(tk).forEach(p => partes.push(norm(p))));
+  if (partes.length > 1) {
+    const k = partes.join(' ');
+    if (!PAMOSSI_EXPRESSOES.has(k)) PAMOSSI_EXPRESSOES.set(k, entrada);
+    PAMOSSI_EXP_MAX = Math.max(PAMOSSI_EXP_MAX, partes.length);
+  }
+  if (extra) COLHIDAS.set(chave, extra);
+  return true;
+}
+function grupoTema(tema) {
+  let g = GLOSSARIO.find(x => x.tema === tema);
+  if (!g) { g = { tema: tema, termos: [] }; GLOSSARIO.push(g); }
+  return g;
+}
+function registrarExtra(termos) {
+  const vista = [];
+  const contadas = new Set();   /* o mesmo termo pode chegar por três canais: conta uma vez */
+  (Array.isArray(termos) ? termos : []).forEach(t => {
+    if (!t || typeof t.palavra !== 'string') return;
+    const palavra = t.palavra.trim();
+    if (!palavra || palavra.length > 48) return;
+    const chave = norm(palavra).replace(/[….:;?!]/g, '').trim();
+    const estado = t.estado === 'confirmado' ? 'confirmado' : 'colhido';
+    const tema = t.tema || 'Colheita';
+    const g = grupoTema(tema);
+    if (!g.termos.some(x => norm(x.palavra) === chave)) {
+      g.termos.push({ palavra: palavra, estado: estado, sinal: t.video || null });
+    }
+    indexarTermo(palavra, tema, estado, t);
+    if (!contadas.has(chave)) { contadas.add(chave); vista.push(palavra); }
+  });
+  return vista;
+}
+async function carregarGlossarioExtra() {
+  let publicados = [];
+  try {
+    const res = await fetch('assets/glossario-extra.json', { cache: 'no-cache' });
+    const dados = res.ok ? await res.json() : null;
+    publicados = dados && Array.isArray(dados.termos) ? dados.termos : [];
+  } catch (e) { /* o ficheiro ainda não existe: o site continua igual */ }
+  const locais = (function () { try { const d = JSON.parse(localStorage.getItem(CH_EXTRA) || '[]'); return Array.isArray(d) ? d : []; } catch (e) { return []; } })();
+  /* os registos que a própria pessoa guardou neste aparelho valem como glossário local:
+     sem isto «kuduro» aparecia no dicionário até carregares de novo, e depois sumia-se */
+  const n = registrarExtra(publicados.concat(locais, lerColheita())).length;
+  if (n) {
+    const aviso = $('#route-live');
+    if (aviso) aviso.textContent = `${n} ${n === 1 ? 'sinal em fase de colheita disponível' : 'sinais em fase de colheita disponíveis'} neste aparelho.`;
+  }
+}
+
+function pacote() {
+  return {
+    schema: SCHEMA_COLHEITA,
+    tipo: 'pamosii-colheita',
+    geradoEm: new Date().toISOString(),
+    aparelho: 'local',
+    entrada: lerColheita(),
+    lacunas: lerLacunas(),
+  };
+}
+function descarregarFicheiro(nome, conteudo, tipo) {
+  const blob = new Blob([conteudo], { type: tipo || 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = nome;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 8000);
+}
+function textoPacote(p) {
+  return [
+    'PAMOSII — COLHEITA DE SINAIS LGA',
+    'Gerado em ' + p.geradoEm + ' (esquema ' + p.schema + ')',
+    '',
+    'PALAVAS SEM SINAL ENCONTRADAS NAS TRADUÇÕES (' + Object.keys(p.lacunas).length + '):',
+    Object.entries(p.lacunas).sort((a, b) => b[1] - a[1]).map(([w, n]) => '  ' + w + ' — vista ' + n + '×').join('\n') || '  (nenhuma)',
+    '',
+    'SINAIS REGISTADOS (' + p.entrada.length + '):',
+    ...p.entrada.map((e, i) => [
+      '  ' + (i + 1) + '. ' + e.palavra + '  [' + (e.tema || 'Colheita') + ']',
+      '     configuração da mão: ' + (e.configuracao || '—'),
+      '     lugar: ' + (e.lugar || '—'),
+      '     movimento: ' + (e.movimento || '—'),
+      '     expressão/corpo: ' + (e.mnm || '—'),
+      '     quem ensinou: ' + (e.fonte || '—'),
+      '     vídeo/URL: ' + (e.video || '—'),
+      '     estado: colhido (à espera de validação por um sinalizador surdo)',
+    ].join('\n')),
+    '',
+    'Este ficheiro não foi enviado por ninguém: saiu deste aparelho quando a pessoa carregou em "Exportar".',
+  ].join('\n');
+}
+
+/* --- 13.2 a página --- */
+const CH_TEMAS = () => [...GLOSSARIO.map(g => g.tema), 'Colheita'];
+
+function colheitaHTML(palavra) {
+  const lacunas = Object.entries(lerLacunas()).sort((a, b) => b[1] - a[1]).slice(0, 40);
+  const minhas = lerColheita();
+  const temas = [...new Set(CH_TEMAS())];
+  return `
+<div class="wrap page-head">
+  <p class="eyebrow">${I.access} Colheita participada</p>
+  <h1 class="ch-h">Ajudar a encher o dicionário de LGA</h1>
+  <p class="lead">O glossário deste site tem poucas centenas de palavras e o que falta só existe na memória
+  de quem sinaliza. Esta página serve para <strong>registar um sinal com método</strong>, guardá-lo neste
+  aparelho e exportar um ficheiro para a equipa validar.</p>
+</div>
+<div class="wrap">
+  <div class="note-band">
+    <p>${I.shield} <strong>O que acontece aos teus dados:</strong> nada é enviado por este site. Não há servidor,
+    não há contas, não há análise. O que escreves e as fotografias que tirares ficam no <strong>teu</strong> browser
+    e só saem quando fores tu a descarregar o ficheiro e a enviá-lo. Não precisamos do teu nome,
+    nem de telefone, nem de informação médica.</p>
+    <p>${I.info} <strong>Ninguém aqui marca um sinal como validado.</strong> O estado máximo é “colhido”.
+    Um sinal só entra no dicionário como confirmado depois de uma pessoa surda sinalizadora o rever — é essa
+    a entrega da equipa (README, lista de materiais).</p>
+  </div>
+
+  <section class="ch-backlog" aria-labelledby="ch-backlog-h">
+    <h2 id="ch-backlog-h">${I.target} Palavras que ficaram sem sinal neste aparelho</h2>
+    <p class="muted">Contador local: cada vez que uma tradução teu tropeça numa palavra, ela sobe nesta lista.
+    É a tua lista de compras para a equipa — e o ponto de partida mais útil para contribuir.</p>
+    ${lacunas.length ? `<ul class="ch-lacunas">${lacunas.map(([w, n]) => `
+      <li><span class="ch-lac-w">${esc(w)}</span><span class="ch-lac-n">${n}×</span>
+        <button class="btn btn-o btn-sm" type="button" data-ch-preenche="${esc(w)}">Registar este sinal</button>
+        <a class="btn btn-o btn-sm" href="#/pamosii">Ver no Pamosii</a></li>`).join('')}</ul>`
+      : '<p class="ch-vazio">Ainda sem registos. Faz uma frase no <a href="#/pamosii">Pamosii</a> com palavras que o dicionário não tenha, e volta aqui.</p>'}
+    <p class="ch-lac-act"><button class="btn btn-o btn-sm" type="button" id="ch-lac-limpar">Apagar este contador</button></p>
+  </section>
+
+  <section class="ch-form" aria-labelledby="ch-form-h">
+    <h2 id="ch-form-h">${I.doc} Registar um sinal</h2>
+    <p class="muted">Descreve por partes — é assim que os dicionários de língua gestual são escritos.
+    Se te enganares, apaga e volta a gravar: nada disto sai do teu aparelho.</p>
+    <form id="ch-novo" class="ch-campos">
+      <p class="ch-campo ch-campo-lg">
+        <label for="ch-palavra">Palavra ou frase em português</label>
+        <input id="ch-palavra" name="palavra" type="text" maxlength="48" autocomplete="off"
+          required value="${esc(palavra || '')}" placeholder="ex.: banana">
+      </p>
+      <p class="ch-campo">
+        <label for="ch-tema">Tema (para o dicionário)</label>
+        <select id="ch-tema" name="tema">${temas.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('')}</select>
+      </p>
+      <p class="ch-campo"><label for="ch-config">Configuração da mão (que mão, como está)</label>
+        <input id="ch-config" name="configuracao" type="text" maxlength="120" autocomplete="off" placeholder="ex.: mão em Y, palma para cima"></p>
+      <p class="ch-campo"><label for="ch-lugar">Lugar (onde toca / de onde parte)</label>
+        <input id="ch-lugar" name="lugar" type="text" maxlength="120" autocomplete="off" placeholder="ex.: à frente da boca"></p>
+      <p class="ch-campo"><label for="ch-mov">Movimento (trajeto, repetição)</label>
+        <input id="ch-mov" name="movimento" type="text" maxlength="120" autocomplete="off" placeholder="ex.: corta no ar duas vezes"></p>
+      <p class="ch-campo ch-campo-lg"><label for="ch-mnm">Expressão facial ou corporal (faz parte do sinal)</label>
+        <input id="ch-mnm" name="mnm" type="text" maxlength="160" autocomplete="off" placeholder="ex.: sobrancelhas baixas, cabeça inclinada"></p>
+      <p class="ch-campo"><label for="ch-fonte">Onde aprendeste este sinal</label>
+        <input id="ch-fonte" name="fonte" type="text" maxlength="120" autocomplete="off"
+          placeholder="ex.: professora surda na escola do Lubango / aula da Viva Surdo"></p>
+      <p class="ch-campo"><label for="ch-video">URL do vídeo (opcional, se existir em público)</label>
+        <input id="ch-video" name="video" type="url" maxlength="200" autocomplete="off" placeholder="https://…"></p>
+      <p class="ch-campo"><label for="ch-nota">Nota livre (variação regional, idade, contexto)</label>
+        <textarea id="ch-nota" name="nota" rows="2" maxlength="400" placeholder="ex.: em Benguela fazem com a outra mão"></textarea></p>
+      <p class="ch-ac"><button class="btn btn-p btn-sm" type="submit">${I.check} Guardar neste aparelho</button>
+        <span class="muted">Fica marcado como <strong>colhido</strong>, nunca como validado.</span></p>
+    </form>
+  </section>
+
+  <section class="ch-cam" aria-labelledby="ch-cam-h">
+    <h2 id="ch-cam-h">${I.video} Fotografia do sinal (opcional)</h2>
+    <p class="muted">Até haver vídeos gravados, uma sequência de 3 a 4 fotografias do meio do sinal já
+    permite à equipa desenhar o glifo certo. <strong>A câmara nunca grava som</strong>, nada é enviado,
+    e as imagens vivem apenas neste browser.</p>
+    <div class="ch-cam-grid">
+      <video id="ch-cam" playsinline muted aria-label="Pré-visualização da câmara"></video>
+      <ul class="ch-fotos" id="ch-fotos" aria-label="Fotografias tiradas"></ul>
+    </div>
+    <p class="ch-ac">
+      <button class="btn btn-p btn-sm" type="button" id="ch-on">${I.video} Ligar a câmara</button>
+      <button class="btn btn-a btn-sm" type="button" id="ch-shot" disabled>Capturar 4 quadros</button>
+      <button class="btn btn-o btn-sm" type="button" id="ch-off">Desligar e apagar</button>
+    </p>
+    <p class="ch-msg" id="ch-msg" role="status"></p>
+  </section>
+
+  <section class="ch-minhas" aria-labelledby="ch-minhas-h">
+    <h2 id="ch-minhas-h">${I.book} O que guardaste neste aparelho <span class="ch-n" id="ch-n">${minhas.length}</span></h2>
+    ${minhas.length ? `<ul class="ch-lista" id="ch-lista">${minhas.map(chItemHTML).join('')}</ul>`
+      : '<p class="ch-vazio">Ainda não guardaste sinais.</p>'}
+    <p class="ch-ac">
+      <button class="btn btn-a btn-sm" type="button" id="ch-export">${I.doc} Exportar pacote (JSON)</button>
+      <button class="btn btn-o btn-sm" type="button" id="ch-export-txt">Exportar para ler (texto)</button>
+      <button class="btn btn-o btn-sm" type="button" id="ch-copiar">Copiar resumo</button>
+    </p>
+    <p class="ch-ac">
+      <label class="ch-import" for="ch-import-file">${I.search} Importar um pacote para ver os sinais <span class="muted">(só neste aparelho)</span></label>
+      <input id="ch-import-file" type="file" accept="application/json,.json">
+    </p>
+    <p class="ch-msg" id="ch-status" role="status"></p>
+    <p class="ch-ac"><button class="btn btn-o btn-sm" type="button" id="ch-apagar-tudo">Apagar tudo o que guardei</button></p>
+  </section>
+
+  <section class="ch-envio" aria-labelledby="ch-envio-h">
+    <h2 id="ch-envio-h">${I.chat} Como isto chega ao dicionário</h2>
+    <ol class="ch-passo">
+      <li><strong>Exportas</strong> o pacote aqui em cima → descarrega <code>pamosii-colheita-AAAA-MM-DD.json</code>.</li>
+      <li><strong>Envias</strong> o ficheiro pela equipa, no <a href="#/contacto">Contacto</a> (o site não o envia por ti).</li>
+      <li><strong>A equipa valida</strong> com um sinalizador surdo: confirma, corrige ou junta variações.</li>
+      <li><strong>Entramos no site</strong> com <code>tools/ingerir-colheita.cjs</code>, que escreve
+        <code>assets/glossario-extra.json</code>. O Pamosii, o dicionário e o Signer passam a conhecer o sinal
+        sem se tocar no código.</li>
+    </ol>
+    <details class="ch-esquema">
+      <summary>O formato do ficheiro (para quem prepara dados fora daqui)</summary>
+      <pre class="ch-json"><code>${esc(JSON.stringify({
+        schema: SCHEMA_COLHEITA, tipo: 'pamosii-colheita',
+        entrada: [{ palavra: 'banana', tema: 'Comida e bebida', configuracao: 'mão em Y', lugar: 'à frente da boca',
+          movimento: 'corta no ar duas vezes', mnm: 'sem expressão', fonte: 'professora surda, Lubango',
+          video: '', estado: 'colhido', nota: '', fotos: ['data:image/jpeg;base64,…'] }],
+        lacunas: { zungu: 3 }
+      }, null, 2))}</code></pre>
+    </details>
+  </section>
+
+  <section class="bib-vlibras" aria-labelledby="ch-humano-h">
+    <h3 id="ch-humano-h">${I.users} O que este site nunca vai inventar</h3>
+    <p class="muted" style="max-width:66ch">A falta de sinal não se tapa com um desenho: o glifo animado mostra
+    a família de movimento, e ponto. Enquanto um sinal não for filmado ou descrito por alguém da comunidade surda
+    angolana, ele aparece como <em>sem sinal</em> — e é exactamente essa lista que a colheita transforma em trabalho.</p>
+  </section>
+</div>`;
+}
+
+function chItemHTML(e, i) {
+  /* o índice vem de quem desenha a lista: lerColheita().indexOf() re-analisa o JSON e por
+     isso nunca apanha o mesmo objecto — dava sempre -1 e o botão "Apagar" não apagava nada. */
+  const n = Number.isInteger(i) ? i : 0;
+  return `<li class="ch-item" data-i="${n}">
+    <p class="ch-item-p">${esc(e.palavra)} <span class="dic-badge is-colhido">Colhido</span><span class="ch-item-t">${esc(e.tema || 'Colheita')}</span></p>
+    ${e.configuracao || e.lugar || e.movimento ? `<p class="ch-item-d">${esc([e.configuracao && ('mão: ' + e.configuracao), e.lugar && ('lugar: ' + e.lugar), e.movimento && ('movimento: ' + e.movimento), e.mnm && ('expressão: ' + e.mnm)].filter(Boolean).join(' · '))}</p>` : ''}
+    ${e.fonte ? `<p class="ch-item-f">${esc(e.fonte)}${e.video ? ' · <a href="' + esc(e.video) + '" target="_blank" rel="noopener">vídeo<span class="sr-only"> (abre em nova janela)</span></a>' : ''}</p>` : ''}
+    ${e.nota ? `<p class="ch-item-n">${esc(e.nota)}</p>` : ''}
+    ${e.fotos && e.fotos.length ? `<div class="ch-item-fotos">${e.fotos.map((f, n) => `<img src="${esc(f)}" alt="Fotografia ${n + 1} do sinal de ${esc(e.palavra)}" loading="lazy" decoding="async">`).join('')}</div>` : ''}
+    <p class="ch-item-a"><button class="btn btn-o btn-sm" type="button" data-ch-apaga="${n}">Apagar</button></p>
+  </li>`;
+}
+
+function vistaColheita(args) {
+  const palavra = args && args.palavra ? decodeURIComponent(args.palavra) : '';
+  return {
+    active: '/colher',
+    h: shell(colheitaHTML(palavra), '/colher'),
+    bind: bindColheita,
+    meta: { t: 'Colheita participada de sinais LGA — ajuda a encher o dicionário', d: 'Registar sinais de Língua Gestual Angolana com método: configuração da mão, lugar, movimento e expressão. Tudo fica no teu aparelho e é exportado num ficheiro para a equipa validar.' },
+  };
+}
+
+let chCam = null;
+function desligarColheitaCam() {
+  if (!chCam) return;
+  try { chCam.stream && chCam.stream.getTracks().forEach(t => t.stop()); } catch (e) { /* já parada */ }
+  chCam = null;
+}
+
+function bindColheita() {
+  const aviso = (t) => { const m = $('#ch-status'); if (m) m.textContent = t; };
+
+  document.querySelectorAll('[data-ch-preenche]').forEach(b => b.addEventListener('click', () => {
+    const inp = $('#ch-palavra');
+    if (!inp) return;
+    inp.value = b.dataset.chPreenche;
+    inp.focus();
+    $('#ch-form-h').scrollIntoView({ block: 'center', behavior: movReduzido() ? 'auto' : 'smooth' });
+  }));
+  const limpar = $('#ch-lac-limpar');
+  if (limpar) limpar.addEventListener('click', () => {
+    apagarLacunas();
+    const sec = document.querySelector('.ch-backlog');
+    const temp = document.createElement('div');
+    temp.innerHTML = '<ul class="ch-lacunas"><li><span class="ch-vazio">Contador apagado. volta a traduzir para o encher outra vez.</span></li></ul>';
+    const ul = sec && sec.querySelector('.ch-lacunas');
+    if (ul) ul.replaceWith(temp.firstElementChild);
+    aviso('Contador de palavras sem sinal apagado deste aparelho.');
+  });
+
+  const form = $('#ch-novo');
+  if (form) form.addEventListener('submit', e => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const palavra = String(fd.get('palavra') || '').trim();
+    if (palavra.length < 2) { aviso('Escreve a palavra primeiro.'); $('#ch-palavra').focus(); return; }
+    const lista = lerColheita();
+    const registo = {
+      palavra: palavra,
+      tema: String(fd.get('tema') || 'Colheita'),
+      configuracao: String(fd.get('configuracao') || '').trim(),
+      lugar: String(fd.get('lugar') || '').trim(),
+      movimento: String(fd.get('movimento') || '').trim(),
+      mnm: String(fd.get('mnm') || '').trim(),
+      fonte: String(fd.get('fonte') || '').trim(),
+      video: String(fd.get('video') || '').trim(),
+      nota: String(fd.get('nota') || '').trim(),
+      estado: 'colhido',
+      data: new Date().toISOString().slice(0, 10),
+      fotos: (chCam && chCam.fotos.slice()) || [],
+    };
+    const duplicado = lista.findIndex(x => norm(x.palavra) === norm(palavra));
+    if (duplicado >= 0) lista[duplicado] = { ...lista[duplicado], ...registo };
+    else lista.unshift(registo);
+    if (!guardarColheita(lista)) { aviso('Este aparelho já não tem espaço para guardar mais: exporta o pacote e apaga registos antigos.'); return; }
+    registrarExtra([registo]);
+    aviso(`Guardado: «${palavra}» fica já visível no dicionário e no Pamosii como colhido, só neste aparelho.`);
+    const listaEl = $('#ch-lista');
+    const vazio = document.querySelector('.ch-minhas .ch-vazio');
+    if (vazio) vazio.remove();
+    /* a página vinha com "ainda não guardaste sinais" no sítio da lista: sem isto o primeiro
+       registo guardava-se mas nunca aparecia em ecrã */
+    if (!listaEl) {
+      document.querySelector('.ch-minhas h2').insertAdjacentHTML('afterend', '<ul class="ch-lista" id="ch-lista"></ul>');
+    }
+    document.getElementById('ch-lista').insertAdjacentHTML('afterbegin', chItemHTML(lista[0]));
+    const n = $('#ch-n'); if (n) n.textContent = String(lista.length);
+    reindexarLista();
+    if (chCam) { chCam.fotos.length = 0; pintarFotos(); }
+    form.reset();
+    $('#ch-palavra').focus();
+  });
+
+  /* câmara: só vídeo, 4 quadros, sempre locais */
+  const on = $('#ch-on'), shot = $('#ch-shot'), off = $('#ch-off'), msg = $('#ch-msg');
+  if (on && shot && off) {
+    const pode = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    if (!pode) {
+      on.disabled = true; shot.disabled = true;
+      msg.textContent = 'Este browser não dá acesso a câmara. Podes continuar a registar por descrição — é a parte que mais ajuda.';
+    }
+    on.addEventListener('click', async () => {
+      msg.textContent = 'A pedir a câmara…';
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 } }, audio: false });
+        const v = $('#ch-cam');
+        v.srcObject = stream; v.classList.add('on'); await v.play().catch(() => {});
+        chCam = { stream: stream, fotos: [] };
+        shot.disabled = false;
+        msg.textContent = 'Câmara ligada. Sem som. Nada sai deste browser.';
+      } catch (e) {
+        msg.textContent = 'A câmara não abriu (permissão negada ou indisponível). A descrição escrita continua a funcionar.';
+      }
+    });
+    shot.addEventListener('click', () => {
+      if (!chCam) return;
+      const v = $('#ch-cam');
+      const c = document.createElement('canvas');
+      c.width = 320; c.height = 240;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(v, 0, 0, 320, 240);
+      try { chCam.fotos.push(c.toDataURL('image/jpeg', 0.6)); } catch (e) { msg.textContent = 'O browser bloqueou a leitura da imagem.'; return; }
+      if (chCam.fotos.length >= 4) { msg.textContent = 'Quatro quadros chegados: já descrevem o sinal. Captura de novo se quiseres trocar.'; }
+      pintarFotos();
+    });
+    off.addEventListener('click', () => {
+      desligarColheitaCam();
+      $('#ch-cam').classList.remove('on');
+      shot.disabled = true;
+      pintarFotos();
+      msg.textContent = 'Câmara desligada e imagens apagadas deste browser.';
+    });
+  }
+
+  ['ch-export', 'ch-export-txt'].forEach(id => { const b = $('#' + id); if (b) b.addEventListener('click', () => {
+    const p = pacote();
+    if (!p.entrada.length && !Object.keys(p.lacunas).length) { aviso('Não há nada para exportar ainda.'); return; }
+    const dia = new Date().toISOString().slice(0, 10);
+    if (id === 'ch-export') descarregarFicheiro(`pamosii-colheita-${dia}.json`, JSON.stringify(p, null, 2));
+    else descarregarFicheiro(`pamosii-colheita-${dia}.txt`, textoPacote(p), 'text/plain;charset=utf-8');
+    aviso(`Ficheiro descarregado: ${p.entrada.length} sinal(is) e ${Object.keys(p.lacunas).length} palavra(s) sem sinal. Envia-o pela equipa no Contacto — o site não o envia por ti.`);
+  }); });
+  const copiar = $('#ch-copiar');
+  if (copiar) copiar.addEventListener('click', () => copiarTexto(textoPacote(pacote()), copiar));
+
+  const imp = $('#ch-import-file');
+  if (imp) imp.addEventListener('change', () => {
+    const f = imp.files && imp.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      let dados;
+      try { dados = JSON.parse(String(r.result)); } catch (e) { aviso('Esse ficheiro não é JSON válido.'); return; }
+      const termos = Array.isArray(dados.entrada) ? dados.entrada : (Array.isArray(dados.termos) ? dados.termos : null);
+      if (!termos) { aviso('Formato não reconhecido: esperava entrada[] ou termos[].'); return; }
+      if (dados.schema && dados.schema > SCHEMA_COLHEITA) { aviso('Este pacote é de um esquema mais novo que este site.'); return; }
+      const vistas = registrarExtra(termos);
+      try {
+        const atual = JSON.parse(localStorage.getItem(CH_EXTRA) || '[]');
+        const merge = (Array.isArray(atual) ? atual : []).concat(termos.filter(t => t && t.palavra));
+        localStorage.setItem(CH_EXTRA, JSON.stringify(merge.filter((x, i, a) => norm(x.palavra) && a.findIndex(y => norm(y.palavra) === norm(x.palavra)) === i)));
+      } catch (e) { aviso('Importado para esta sessão, mas o aparelho não tinha espaço para o guardar fixo.'); }
+      aviso(`${vistas.length} sinal(is) carregados deste ficheiro — visíveis já no dicionário, no Pamosii e no Signer, só neste aparelho.`);
+      imp.value = '';
+    };
+    r.readAsText(f);
+  });
+
+  const apagar = $('#ch-apagar-tudo');
+  if (apagar) apagar.addEventListener('click', () => {
+    if (!guardarColheita([])) { aviso('Não foi possível apagar.'); return; }
+    try { localStorage.removeItem(CH_EXTRA); } catch (e) { /* nada importado */ }
+    document.querySelectorAll('.ch-item').forEach(x => x.remove());
+    const n = $('#ch-n'); if (n) n.textContent = '0';
+    aviso('Apagado deste aparelho. Se não exportaste antes, os registos perderam-se — não há cópia em servidor nenhum.');
+  });
+}
+
+/* Um único listener delegado para «apagar este registo»: ligado uma vez, serve todas as
+   renderizações da página. Dentro de bindColheita() acrescentava mais um a cada visita. */
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-ch-apaga]');
+  if (!b) return;
+  const lista = lerColheita();
+  const i = Number(b.dataset.chApaga);
+  if (!Number.isInteger(i) || !lista[i]) return;
+  const nome = lista[i].palavra;
+  lista.splice(i, 1);
+  guardarColheita(lista);
+  const item = b.closest('.ch-item');
+  if (item) item.remove();
+  const n = $('#ch-n'); if (n) n.textContent = String(lista.length);
+  reindexarLista();
+  const m = $('#ch-status'); if (m) m.textContent = `Removido: «${nome}».`;
+});
+function reindexarLista() {
+  document.querySelectorAll('.ch-minhas .ch-item').forEach((li, n) => {
+    li.dataset.i = String(n);
+    const b = li.querySelector('[data-ch-apaga]');
+    if (b) b.dataset.chApaga = String(n);
+  });
+}
+function pintarFotos() {
+  const ul = $('#ch-fotos');
+  if (!ul) return;
+  const fotos = (chCam && chCam.fotos) || [];
+  ul.innerHTML = fotos.map((f, n) => `<li><img src="${esc(f)}" alt="Pré-visualização ${n + 1} do sinal, só neste aparelho" loading="lazy" decoding="async"></li>`).join('')
+    + (fotos.length ? `<li class="ch-fotos-n">${fotos.length}/4 quadros</li>` : '<li class="ch-fotos-n">Sem fotografias tiradas.</li>');
+}
+
+on('/colher', () => vistaColheita(null));
+on('/colher/:palavra', ({ args }) => vistaColheita(args));
+
 function iniciarApp() {
   aplicarPrefs(lerPrefs());
   montarPainelA11y();
+  montarSigner();
   render();
+  carregarGlossarioExtra();
 }
 
 /* Voltou a ligação: retira os avisos de "sem rede" para não deixar um estado fantasma

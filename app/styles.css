@@ -215,7 +215,7 @@ summary:focus-visible,[tabindex]:focus-visible{
 .brand .wm small{display:block;font-family:var(--font-b);font-weight:600;font-size:10.5px;letter-spacing:.9px;
   text-transform:uppercase;color:var(--amber);overflow-wrap:anywhere}
 .nav-links{display:flex;align-items:center;gap:4px;margin-left:auto;flex-wrap:wrap;min-width:0}
-/* os 9 rótulos vivem aqui no tamanho compacto: medido, a linha completa precisa de 1052px,
+/* os 11 rótulos vivem aqui no tamanho compacto: medido, a linha completa precisa de 910px,
    e é esse valor que define o ponto em que o menu hambúrguer assume (ver @media(max-width:1280px)) */
 .nav-links a{display:inline-flex;align-items:center;white-space:nowrap;min-height:44px;padding:8px 9px;color:rgba(255,255,255,.85);
   font-weight:600;font-size:13.5px;text-decoration:none;border-radius:10px}
@@ -272,6 +272,12 @@ summary:focus-visible,[tabindex]:focus-visible{
     font-size:calc(11px / var(--escala,1));overflow-wrap:anywhere;
     -webkit-tap-highlight-color:transparent;touch-action:manipulation}
   .tab .ic{width:21px;height:21px;flex:none}
+  /* o boneco do Signer no lugar do ícone de fala: fica parado — um ícone que se mexe
+     na navegação distrai e competiria com o próprio Signer. */
+  .tab-sign{display:flex;align-items:center;justify-content:center;height:21px}
+  .tab-sign .sg-fig{width:31px;height:20px;margin:0;color:inherit;flex:none}
+  .tab-sign .sg-fig *{animation:none!important}
+  .tab-sign .sg-fig .sg-cabeca{fill:rgba(255,255,255,.16)}
   .tab:hover{color:#fff}
   .tab[aria-current="page"],.tab-mais.on{color:var(--amber)}
   /* o hambúrguer do cabeçalho é substituído pelo "Mais" — um interruptor, não dois */
@@ -797,6 +803,11 @@ select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 .pm-desconhecidas .ic{width:16px;height:16px;flex:none;color:var(--amber-ink)}
 .pm-chip-bad{display:inline-flex;align-items:center;padding:3px 11px;border-radius:999px;font-weight:800;font-size:12.5px;
   background:var(--amber-soft);color:var(--amber-ink);border:1.5px dashed var(--amber-ink)}
+/* botão no meio de uma frase: tem de parecer um link, não um botão */
+.pm-link{display:inline;min-height:0;padding:3px 1px;border:0;border-radius:0;background:none;color:var(--teal-deep);
+  font:inherit;font-weight:800;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.pm-link:hover{color:var(--teal)}
+.pm-libras-hint{margin:8px 0 0;font-size:13.5px;color:var(--ink-soft)}
 
 /* construir do lado dos sinais */
 #pm-temas{margin:16px 0 20px}
@@ -881,16 +892,223 @@ select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 .pm-mov-ciclo{animation:pm-ciclo 5s linear infinite;transform-origin:50% 50%}
 [data-leitura-simples] .pm-glyph{animation:none}
 
-/* Navegação com 9 itens, medida no browser: os rótulos compactos + a marca completa precisam de
-   1052px, e a coluna de conteúdo (.wrap, máx. 1120) dá sempre 1076px. A folga é pequena e não
-   cresce com o ecrã, por isso o hambúrguer assume a 1280: acima disso a barra cabe numa linha,
-   abaixo disso o menu é um cartão. O flex-wrap do .nav é só a rede de segurança para a escala
-   de texto (que as media queries não vêem) — quebra em vez de alargar a página.
-   O antigo CTA do cabeçalho foi removido: com 9 itens nunca coube nos 1076px, e o herói já tem
+/* ============================================================================
+   BÍBLIA (/biblia) — texto real + áudio + glosa por versículo
+   Regras de integridade no comentário da secção 8 de app.js: nada aqui afirma
+   que existe uma Bíblia em LGA; a glosa é sempre marcada "a validar".
+   ============================================================================ */
+.bib-seccao{padding-top:8px}
+.bib-head-in{display:flex;align-items:center;gap:26px;flex-wrap:wrap}
+.bib-head-in>div{flex:1 1 460px;min-width:0}
+.bib-head-in .bib-glifo{flex:0 0 auto;width:min(150px,38vw);height:auto}
+.note-band.is-biblia{background:var(--cream);border-color:var(--amber-line)}
+.note-band.is-biblia .ic{color:var(--amber-ink)}
+
+/* versículo de hoje: o cartão "divertido", mas dentro dos tokens do tema */
+.bib-dia{position:relative;overflow:hidden;margin:22px 0 8px;padding:24px 26px;border-radius:var(--radius-lg);
+  background:linear-gradient(135deg,var(--teal-tint),var(--amber-soft));border:1.5px solid var(--note-line);
+  box-shadow:var(--shadow)}
+.bib-dia::after{content:"";position:absolute;right:-40px;top:-40px;width:170px;height:170px;border-radius:50%;
+  background:radial-gradient(circle,var(--amber) 0,transparent 68%);opacity:.4;pointer-events:none}
+.bib-dia-t{display:flex;align-items:center;gap:8px;margin:0;font-size:12.5px;font-weight:800;letter-spacing:.7px;
+  text-transform:uppercase;color:var(--teal-deep)}
+.bib-dia-t .ic{width:17px;height:17px;color:var(--amber-ink)}
+.bib-dia-v{position:relative;margin:10px 0 4px;font-family:var(--font-h);font-weight:700;
+  font-size:clamp(20px,2.6vw,27px);line-height:1.32;color:var(--ink);overflow-wrap:anywhere}
+.bib-dia-r{position:relative;margin:0 0 14px;font-size:13.5px;font-weight:800;color:var(--teal-deep)}
+.bib-dia-act{position:relative;display:flex;flex-wrap:wrap;gap:10px}
+
+/* chips de passagem (usa .f-chip, acrescenta o tema por baixo) */
+.bib-nav{margin:20px 0 6px}
+.bib-chip{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:52px;text-align:left}
+.bib-chip small{font-size:11.5px;font-weight:700;opacity:.8}
+
+/* leitor */
+.bib-leitor{margin-top:18px;padding:26px;border:1.5px solid var(--line);border-radius:var(--radius-lg);
+  background:var(--paper);box-shadow:var(--shadow)}
+.bib-head{border-bottom:1.5px dashed var(--line);padding-bottom:16px;margin-bottom:6px}
+.bib-tema{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-size:12.5px;font-weight:800;
+  letter-spacing:.7px;text-transform:uppercase;color:var(--teal-deep)}
+.bib-tema .ic{width:16px;height:16px}
+.bib-leitor h2{margin:0 0 8px;font-size:clamp(22px,2.8vw,30px);line-height:1.2}
+.bib-res{margin:0 0 10px;font-size:15.5px;color:var(--ink-soft);max-width:66ch}
+.bib-lic{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;margin:0;font-size:12.8px;color:var(--muted);max-width:70ch}
+.bib-lic .ic{width:15px;height:15px;flex:none;color:var(--teal-deep);margin-top:1px}
+
+/* barra de áudio */
+.bib-audio{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:16px 0 6px;padding:14px;
+  border-radius:var(--radius);background:var(--surface-soft);border:1.5px solid var(--line-soft)}
+.bib-vel{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;color:var(--ink-soft)}
+.bib-vel select{min-height:44px;font:inherit;font-size:14px;padding:6px 10px;border-radius:10px;
+  border:1.5px solid var(--line);background:var(--surface);color:var(--ink)}
+.bib-verso-cont{margin-left:auto;font-size:12.5px;font-weight:800;color:var(--muted)}
+.bib-live{margin:6px 0 14px;font-size:13.5px;font-weight:700;color:var(--teal-deep);min-height:20px}
+.bib-live:empty{display:none}
+
+/* lista de versículos */
+.bib-versos{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.bib-v{display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:6px 14px;align-items:start;
+  padding:14px 12px;border-radius:14px;border:1.5px solid transparent;transition:background .18s,border-color .18s}
+.bib-v+.bib-v{border-top:1px solid var(--line-soft)}
+.bib-v.is-on{background:var(--amber-soft);border-color:var(--amber-line)}
+.bib-vn{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--teal-tint);
+  color:var(--teal-deep);font-family:var(--font-h);font-weight:800;font-size:14.5px}
+.bib-v.is-on .bib-vn{background:var(--amber);color:var(--teal-dark)}
+.bib-vt{margin:0;font-size:17px;line-height:1.62;color:var(--ink);overflow-wrap:anywhere}
+.bib-vact{display:flex;gap:4px;flex:none}
+.bib-ico{width:44px;height:44px;display:grid;place-items:center;border:1.5px solid var(--line);border-radius:11px;
+  background:var(--surface);color:var(--ink-soft);cursor:pointer;transition:.15s}
+.bib-ico:hover{border-color:var(--teal);color:var(--teal-deep);background:var(--teal-tint)}
+.bib-ico .ic{width:17px;height:17px}
+.bib-ico[aria-pressed="true"]{border-color:var(--amber-ink);background:var(--amber-soft);color:var(--amber-ink)}
+
+/* glosa por versículo */
+.bib-glosa{grid-column:2 / -1;margin:2px 0 6px}
+.bib-glosa>summary{display:inline-flex;align-items:center;gap:9px;min-height:44px;cursor:pointer;
+  font-size:13.5px;font-weight:800;color:var(--teal-deep);list-style:none}
+.bib-glosa>summary::-webkit-details-marker{display:none}
+.bib-glosa>summary::before{content:"+";display:grid;place-items:center;width:24px;height:24px;flex:none;
+  border:1.5px solid var(--teal-deep);border-radius:8px;font-weight:800}
+.bib-glosa[open]>summary::before{content:"–"}
+.bib-glosa>summary:focus-visible{outline:3px solid var(--focus);outline-offset:3px;border-radius:10px}
+.bib-glosa .pm-meter{margin:12px 0}
+.bib-gloss{margin:12px 0 0;padding:12px 14px;border-radius:12px;background:var(--teal-tint);
+  font-size:14.5px;line-height:1.55;color:var(--ink);overflow-wrap:anywhere}
+.bib-gloss strong{display:block;font-size:11.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--teal-deep);margin-bottom:4px}
+.bib-falta{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:12px 0 0;font-size:13px;color:var(--ink-soft)}
+.bib-falta .ic{width:16px;height:16px;flex:none;color:var(--amber-ink)}
+
+/* modo de teste Libras (vídeo + avatar) */
+.bib-libras{margin-top:24px;padding:18px;border:1.5px dashed var(--amber-line);border-radius:var(--radius);
+  background:var(--amber-soft)}
+.bib-libras h3{display:flex;align-items:center;gap:9px;margin:0 0 8px;font-size:16.5px;color:var(--amber-ink)}
+.bib-libras h3 .ic{width:18px;height:18px;flex:none}
+.bib-libras .muted{color:#5A4616}
+.bib-libras-video{margin:14px 0 10px;border-radius:14px;overflow:hidden;border:1.5px solid var(--amber-line)}
+.bib-libras .bib-lic{color:#5A4616}
+.bib-vlibras{margin-top:26px;padding:20px;border:1.5px solid var(--line);border-radius:var(--radius-lg);background:var(--surface)}
+.bib-vlibras h3{display:flex;align-items:center;gap:9px;margin:0 0 8px;font-size:17px}
+.bib-vlibras h3 .ic{width:18px;height:18px;flex:none;color:var(--teal-deep)}
+.bib-vlibras-act{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.bib-vlibras-msg{margin:12px 0 0;font-size:13.5px;font-weight:700;color:var(--teal-deep)}
+
+/* progresso + quiz */
+.bib-stats{margin-top:28px;padding:20px 22px;border:1.5px solid var(--line);border-radius:var(--radius-lg);background:var(--surface)}
+.bib-stats h3{display:flex;align-items:center;gap:9px;margin:0 0 12px;font-size:17px}
+.bib-stats h3 .ic{width:18px;height:18px;flex:none;color:var(--teal-deep)}
+.bib-stats-l{display:flex;flex-wrap:wrap;gap:9px;margin:0 0 12px}
+.bib-stat{display:inline-flex;align-items:center;min-height:38px;padding:6px 14px;border-radius:999px;
+  background:var(--teal-tint);color:var(--teal-deep);font-size:13.5px;font-weight:800}
+.bib-stars{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.bib-star-chip{display:inline-flex;align-items:center;min-height:38px;padding:6px 13px;border-radius:999px;
+  border:1.5px solid var(--amber-line);background:var(--amber-soft);color:var(--amber-ink);
+  font-size:13px;font-weight:800;text-decoration:none}
+.bib-quiz{margin-top:28px;padding:22px;border:1.5px solid var(--note-line);border-radius:var(--radius-lg);background:var(--cream)}
+.bib-quiz h3{display:flex;align-items:center;gap:9px;margin:0 0 8px;font-size:18px}
+.bib-quiz h3 .ic{width:19px;height:19px;flex:none;color:var(--amber-ink)}
+.bib-qform{display:flex;flex-direction:column;gap:14px;margin-top:14px}
+.bib-q{border:1.5px solid var(--line);border-radius:var(--radius);background:var(--surface);padding:16px 18px}
+.bib-q legend{font-size:14px;font-weight:800;color:var(--teal-deep);padding:0 6px}
+.bib-q-t{margin:0 0 12px;font-size:16px;line-height:1.6;color:var(--ink);overflow-wrap:anywhere}
+.bib-q-opts{display:flex;flex-wrap:wrap;gap:9px}
+.bib-qo{display:inline-flex;align-items:center;gap:9px;min-height:46px;padding:8px 15px;border-radius:999px;
+  border:1.5px solid var(--line);background:var(--paper);font-weight:700;font-size:14.5px;cursor:pointer;transition:.15s}
+.bib-qo:hover{border-color:var(--teal)}
+.bib-qo input{width:20px;height:20px;flex:none;accent-color:var(--primary)}
+.bib-qo:has(input:checked){border-color:var(--teal-deep);background:var(--teal-tint);color:var(--teal-deep)}
+.bib-qo input:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.bib-q-fb{margin:10px 0 0;font-size:13.5px;font-weight:800;min-height:18px}
+.bib-q-fb:empty{display:none}
+.bib-q-fb.is-ok{color:var(--teal-deep)}
+.bib-q-fb.is-bad,.bib-q-fb.is-vazio{color:var(--amber-ink)}
+.bib-q-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.bib-q-score{font-size:13.5px;font-weight:800;color:var(--teal-deep)}
+@keyframes bib-pop{0%{transform:scale(1)}35%{transform:scale(1.02) rotate(-.4deg)}70%{transform:scale(.995) rotate(.3deg)}100%{transform:scale(1)}}
+.bib-qform.is-celebra{animation:bib-pop .9s ease-in-out;border-radius:var(--radius)}
+.bib-qform.is-celebra .bib-q{border-color:var(--amber)}
+
+/* "o que falta" — lista de trabalho, não promessa */
+.bib-falta-box{margin-top:28px;padding:20px 22px;border:1.5px dashed var(--line);border-radius:var(--radius-lg)}
+.bib-falta-box h3{margin:0 0 10px;font-size:17px}
+.bib-falta-l{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.bib-falta-l li{display:flex;flex-wrap:wrap;align-items:flex-start;gap:9px;font-size:14px;line-height:1.55;color:var(--ink-soft)}
+.bib-falta-l .ic{width:17px;height:17px;flex:none;color:var(--amber-ink);margin-top:2px}
+
+/* glifo da secção (decorativo) */
+.bib-glifo{width:112px;height:102px;color:var(--teal-deep);overflow:visible}
+.bib-glifo .pm-mao{fill:none;stroke:currentColor;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;opacity:.92}
+.bib-glifo .bib-livro{fill:none;stroke:var(--amber-ink);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.bib-glifo .bib-estrela{fill:var(--amber);stroke:none}
+
+/* ============================================================================
+   EVANGELISMO (/evangelismo) — roteiro prático + kit de frases
+   ============================================================================ */
+.ev-h{display:flex;align-items:center;gap:11px;margin:34px 0 12px;font-size:clamp(21px,2.5vw,27px)}
+.ev-h .ic{width:23px;height:23px;flex:none;color:var(--teal-deep)}
+.ev-roteiro{list-style:none;margin:0;padding:0;display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr))}
+.ev-passo{background:var(--paper);border:1.5px solid var(--line);border-radius:var(--radius-lg);padding:22px;box-shadow:var(--shadow)}
+.ev-passo h3{margin:0 0 8px;font-size:17px;color:var(--teal-deep);overflow-wrap:anywhere}
+.ev-passo p{margin:0;font-size:14.5px;line-height:1.6;color:var(--ink-soft)}
+.ev-evita{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;margin-top:12px;padding-top:12px;
+  border-top:1.5px dashed var(--amber-line);font-size:13.5px;color:var(--amber-ink)}
+.ev-evita .ic{width:16px;height:16px;flex:none;margin-top:2px}
+.ev-grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(min(330px,100%),1fr))}
+.ev-card,.ev-verso-card{display:flex;flex-direction:column;gap:10px;background:var(--paper);
+  border:1.5px solid var(--line);border-radius:var(--radius-lg);padding:22px;box-shadow:var(--shadow)}
+.ev-pt{margin:0;font-family:var(--font-h);font-weight:800;font-size:20px;line-height:1.3;color:var(--ink);overflow-wrap:anywhere}
+.ev-nota{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;margin:0;font-size:13px;color:var(--muted)}
+.ev-nota .ic{width:15px;height:15px;flex:none;color:var(--teal-deep);margin-top:2px}
+.ev-gloss{margin:0;padding:11px 13px;border-radius:12px;background:var(--teal-tint);font-size:14px;line-height:1.5;
+  color:var(--ink);overflow-wrap:anywhere}
+.ev-gloss strong{display:block;font-size:11.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--teal-deep);margin-bottom:3px}
+.ev-act{display:flex;flex-wrap:wrap;gap:9px;margin-top:auto}
+.ev-verso-t{margin:0;font-family:var(--font-h);font-weight:700;font-size:18px;line-height:1.45;color:var(--ink);overflow-wrap:anywhere}
+.ev-verso-r{margin:0;font-size:13px;font-weight:800;color:var(--teal-deep)}
+.ev-postura{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))}
+.ev-post{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);padding:20px}
+.ev-post h3{margin:0 0 7px;font-size:16.5px;color:var(--teal-deep);overflow-wrap:anywhere}
+.ev-post p{margin:0;font-size:14px;line-height:1.6;color:var(--ink-soft)}
+.ev-tips{margin:14px 0 0;padding:18px 20px 18px 34px;border:1.5px solid var(--note-line);border-radius:var(--radius);
+  background:var(--teal-tint);display:flex;flex-direction:column;gap:10px}
+.ev-tips li{font-size:14.5px;line-height:1.6;color:var(--ink-soft)}
+/* o painel de teste Libras dentro do Pamosii usa os mesmos avisos da Bíblia */
+.pm-teste{margin-top:22px}
+
+/* ---------- tema escuro e contraste alto: nada de texto escuro sobre escuro ---------- */
+[data-tema-escuro] .bib-dia{background:linear-gradient(135deg,var(--teal-tint),#2A2A12)}
+[data-tema-escuro] .bib-dia-v{color:var(--ink)}
+[data-tema-escuro] .bib-libras .muted,[data-tema-escuro] .bib-libras .bib-lic{color:var(--ink-soft)}
+[data-tema-escuro] .bib-v.is-on{background:#332B11}
+[data-tema-escuro] .bib-ico[aria-pressed="true"]{color:var(--amber)}
+[data-tema-escuro] .bib-qform.is-celebra .bib-q{border-color:var(--amber)}
+[data-contraste-alto] .bib-leitor,[data-contraste-alto] .bib-dia,[data-contraste-alto] .bib-quiz,
+[data-contraste-alto] .bib-stats,[data-contraste-alto] .bib-vlibras,[data-contraste-alto] .bib-libras,
+[data-contraste-alto] .ev-card,[data-contraste-alto] .ev-verso-card,[data-contraste-alto] .ev-passo,
+[data-contraste-alto] .ev-post,[data-contraste-alto] .ev-tips{background:#FFF;border:2px solid #000}
+[data-contraste-alto] .bib-vn,[data-contraste-alto] .bib-v.is-on .bib-vn{background:#000;color:#FFF;border:2px solid #000}
+[data-contraste-alto] .bib-ico,[data-contraste-alto] .bib-qo,[data-contraste-alto] .bib-stat,
+[data-contraste-alto] .bib-star-chip{border:2px solid #000;color:#000;background:#FFF}
+[data-contraste-alto] .bib-dia-v,[data-contraste-alto] .bib-vt,[data-contraste-alto] .ev-pt,
+[data-contraste-alto] .ev-verso-t,[data-contraste-alto] .bib-gloss,[data-contraste-alto] .ev-gloss{color:#000}
+[data-leitura-simples] .bib-dia::after,[data-leitura-simples] .bib-glifo{display:none}
+[data-leitura-simples] .bib-vt,[data-leitura-simples] .ev-pt,[data-leitura-simples] .bib-dia-v{font-size:1.15em;line-height:1.8}
+
+/* Navegação com 11 itens, medida no browser a 1285px: os rótulos compactos somam 910px e a
+   marca sem legenda 126px = 1036px dentro dos 1076px da coluna de conteúdo (.wrap, máx. 1120).
+   Com a legenda completa ("· Língua Gestual Angolana") a marca passa a 310px, são 1220px e a
+   barra passa a ter duas linhas — por isso ela esconde-se também acima de 1280, e o hambúrguer
+   assume a 1280: acima disso a barra cabe numa linha de 68px, abaixo disso o menu é um cartão.
+   O flex-wrap do .nav é só a rede de segurança para a escala de texto (que as media queries não
+   vêem) — quebra em vez de alargar a página; a folga são ~40px.
+   O antigo CTA do cabeçalho foi removido: nunca coube nos 1076px, e o herói já tem
    "Começar a aprender LGA" para o mesmo destino. */
 /* no telemóvel pequeno a legenda inteira faria o cabeçalho ter três linhas e comer a dobra;
    o nome da língua continua no herói, no menu ("Aprender LGA") e no rodapé */
 @media(max-width:560px){.brand .tg-lga{display:none}}
+@media(min-width:1281px){.brand .tg-lga{display:none}}
+/* "Colheita" (12.º rótulo) não entra na barra de cima em ecrã grande: 910 + ~86 px passaria
+   os 1076px e a barra tornava-se duas linhas. Vive no menu (<1281), no rodapé e no herói. */
+@media(min-width:1281px){.nav-links a.nav-extra{display:none}}
 /* ecrã táctil grande / portátil pequeno: o menu aberto é um cartão alinhado com o conteúdo,
    não uma faixa de telemóvel esticada por 1200px */
 @media(min-width:721px) and (max-width:1280px){
@@ -945,6 +1163,22 @@ select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
   .theme-nav{flex-wrap:nowrap;overflow-x:auto;min-width:0;max-width:100%;padding:3px 0 11px;scrollbar-width:thin;
     overscroll-behavior-x:contain;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;margin:6px 0 26px}
   .theme-nav>*{flex:0 0 auto;scroll-snap-align:start}
+  /* Bíblia no telemóvel: o número do versículo deixa de ser coluna e passa a estar em linha com
+     o texto, porque 38px de coluna + 44px de botões deixava pouco espaço para a palavra */
+  .bib-leitor{padding:18px 16px}
+  .bib-v{grid-template-columns:30px minmax(0,1fr);gap:4px 10px;padding:12px 8px}
+  .bib-vact{grid-column:2 / -1}
+  .bib-vn{width:28px;height:28px;font-size:13px}
+  .bib-vt{font-size:16.5px}
+  .bib-glosa{grid-column:1 / -1}
+  .bib-audio{padding:12px}
+  .bib-verso-cont{margin-left:0}
+  .bib-dia{padding:20px 18px}
+  .bib-quiz,.bib-stats,.bib-vlibras{padding:16px 14px}
+  .bib-q{padding:14px}
+  .bib-qo{min-height:48px}
+  .ev-card,.ev-verso-card,.ev-passo{padding:18px}
+  .ev-h .ic{width:20px;height:20px}
 }
 /* telemóvel deitado: menos altura útil, nada de ecrãs que obrigam a rolar para ver a acção */
 @media(max-height:470px) and (orientation:landscape){
@@ -953,4 +1187,251 @@ select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
   .hero-in{padding:24px 0 28px}
   .hero-art{display:none}
   #pm-cam,#pm-rev{aspect-ratio:4/3;max-height:calc(46vh / var(--escala,1))}
+}
+
+/* ============================================================================
+   12. PAMOSSI SIGNER — botao flutuante + painel de bonecos animados
+   Regras de integridade (as mesmas do comentario da seccao 12 de app.js):
+     - o boneco mostra a FAMILIA DE MOVIMENTO, nunca a forma exacta do sinal;
+     - vive FORA de #app, por isso nao e escalado por `style.zoom`: as distancias
+       do telemovel dividem a escala quando sao px de #app e multiplicam quando
+       sao px do viewport;
+     - nada se mexe antes de um toque, e `prefers-reduced-motion` desliga tudo.
+   ========================================================================== */
+.sg-fab{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:150;
+  display:inline-flex;align-items:center;gap:9px;min-height:52px;padding:9px 18px 9px 12px;border:0;border-radius:999px;
+  background:var(--teal-dark);color:#fff;font:inherit;font-weight:800;font-size:14px;cursor:pointer;
+  box-shadow:0 12px 30px rgba(16,52,47,.32);-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.sg-fab .sg-fig{width:44px;height:30px;flex:none;color:#fff}
+.sg-fab .sg-marca,.sg-fab .sg-chao{display:none}
+.sg-fab:hover{background:var(--teal-deep);color:var(--teal-dark)}
+.sg-fab[aria-expanded="true"]{background:var(--amber);color:var(--teal-dark)}
+/* com o painel aberto o botao sai de cena: no telemovel ficava por cima do fecho */
+html.sg-on .sg-fab{display:none}
+.sg-painel{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:170;
+  width:min(430px,calc(100vw - 32px));max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);
+  overflow-y:auto;overscroll-behavior:contain;background:var(--paper);color:var(--ink);
+  border:2px solid var(--line);border-radius:var(--radius-lg);padding:14px 16px 18px;box-shadow:var(--shadow-lg)}
+.sg-topo{display:flex;align-items:center;gap:10px;margin:0 0 10px}
+.sg-topo h2{margin:0;font-family:var(--font-h);font-size:19px;line-height:1.25;flex:1;min-width:0}
+.sg-topo .ic{width:20px;height:20px;color:var(--teal-deep);flex:none}
+.sg-contador{font-weight:800;font-size:13.5px;font-variant-numeric:tabular-nums;color:var(--ink-soft);
+  background:var(--teal-tint);border-radius:999px;padding:5px 11px}
+.sg-x{width:44px;height:44px;flex:none;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);
+  color:var(--ink);font:inherit;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.sg-x .ic{width:20px;height:20px}
+.sg-x:hover{border-color:var(--teal);color:var(--teal-deep)}
+.sg-aviso{margin:0 0 12px;font-size:13px;line-height:1.6;color:var(--ink-soft);
+  background:var(--cream);border:1.5px solid var(--amber-line);border-radius:12px;padding:10px 12px}
+.sg-fonte{margin-bottom:12px}
+.sg-lbl{display:block;font-weight:700;font-size:13.5px;color:var(--ink-soft);margin-bottom:6px}
+#sg-texto{display:block;width:100%;font:inherit;font-size:16px;padding:11px 13px;border:1.5px solid var(--line);
+  border-radius:12px;background:var(--surface);color:var(--ink);resize:vertical;min-height:64px}
+#sg-texto::placeholder{color:var(--muted)}
+.sg-liga{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}
+.sg-priv{margin:8px 0 0;font-size:12.5px;color:var(--muted)}
+/* o palco mostra um passo de cada vez; e aqui que o `--sg-d` (1/velocidade) entra */
+.sg-palco{border:1.5px solid var(--line-soft);border-radius:var(--radius);padding:14px 12px;margin-bottom:12px;
+  background:var(--surface);text-align:center}
+.sg-palavra{margin:6px 0 2px;font-family:var(--font-h);font-weight:800;font-size:clamp(22px,6vw,30px);line-height:1.15;
+  overflow-wrap:anywhere}
+.sg-de{display:block;font-family:var(--font-b);font-weight:700;font-size:13px;color:var(--muted);margin-top:2px}
+.sg-meta{margin:2px 0 0;font-size:12.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--teal-deep)}
+.sg-nota{margin:6px 0 0;font-size:13.5px;color:var(--ink-soft)}
+.sg-sem-video{display:flex;align-items:center;justify-content:center;gap:7px;margin:10px 0 0;font-size:13.5px;
+  font-weight:700;color:var(--amber-ink)}
+.sg-sem-video .ic{width:18px;height:18px;flex:none}
+.sg-convite{margin:4px 0 0;font-size:13.5px}
+.sg-video{margin-top:12px;text-align:left}
+/* nota dentro da fachada escura (--teal-dark): com --muted dava 2,17:1 — ilegível. */
+.sg-vid-note{margin:6px 0 0;font-size:12.5px;color:#DCEBE4;text-align:center}
+[data-contraste-alto] .sg-vid-note{color:#fff}
+.sg-vazio{margin:0;font-size:14.5px;color:var(--ink-soft);line-height:1.6}
+.sg-ctrl{display:flex;flex-direction:column;gap:8px;margin:0 0 10px}
+/* Dois grupos próprios: anterior/reproduzir/seguinte e repetir/velocidade. Sem isto os
+   seis controlos enrolavam-se de forma irregular (um por linha no telemóvel), e a barra
+   colada ao fundo do painel chegava a medir 267px num painel de 760px. */
+.sg-ctrl-r1,.sg-ctrl-r2{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+/* nowrap + padding mais curto: o painel faz ~377px de largura útil e "Anterior /
+   Reproduzir / Seguinte" com o padding padrão de .btn enrolava o terceiro botão. */
+.sg-ctrl .btn{flex-wrap:nowrap;white-space:nowrap;gap:6px;padding:8px 13px}
+.sg-vel-l{font-weight:700;font-size:13px;color:var(--ink-soft)}
+.sg-live{margin:0 0 8px;font-size:13px;font-weight:700;color:var(--teal-deep);min-height:18px}
+.sg-strip{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.sg-chip{display:inline-flex;align-items:center;min-height:40px;padding:6px 13px;border-radius:999px;
+  border:1.5px solid var(--line);background:var(--surface);color:var(--ink-soft);font:inherit;font-weight:700;
+  font-size:13.5px;cursor:pointer;transition:.15s;overflow-wrap:anywhere}
+.sg-chip:hover{border-color:var(--teal)}
+.sg-chip.on{background:var(--primary);border-color:var(--primary);color:var(--primary-fg)}
+.sg-chip.is-letra{font-family:var(--font-h);font-weight:800;min-width:40px;justify-content:center;padding:6px 10px}
+.sg-chip.is-letra.on{background:var(--amber);border-color:var(--amber);color:var(--teal-dark)}
+.sg-falta{margin:0;font-size:13px;line-height:1.6;color:var(--amber-ink);background:var(--amber-soft);
+  border:1.5px solid var(--amber-line);border-radius:12px;padding:10px 12px}
+.sg-falta a{color:var(--amber-ink);font-weight:800}
+
+/* a figura: corpo de tinta, sons de voz em âmbar, marca de movimento no canto.
+   transform-box:fill-box para que as percentagens do transform-origin sejam
+   medidas na própria caixa do grupo — sem isto o SVG roda em volta do viewBox. */
+.sg-fig{width:min(220px,68%);height:auto;color:var(--teal-deep);margin:0 auto;display:block;overflow:visible}
+.sg-fig .sg-line,.sg-fig .sg-cabeca,.sg-fig .sg-feicao,.sg-fig .sg-chao,.sg-fig .sg-mao circle,.sg-fig .sg-mao path{
+  fill:none;stroke:currentColor;stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round}
+.sg-fig .sg-cabeca{fill:var(--teal-tint)}
+.sg-fig .sg-feicao{stroke-width:3}
+.sg-fig .sg-chao{stroke:var(--line);stroke-width:3}
+.sg-fig .sg-mao circle,.sg-fig .sg-mao path{stroke:var(--amber-ink);stroke-width:4;fill:none}
+.sg-fig .sg-mao circle{fill:var(--amber-soft)}
+.sg-fig .sg-corpo{transform-box:fill-box;transform-origin:50% 92%}
+.sg-fig .sg-maos{transform-box:fill-box;transform-origin:50% 78%}
+.sg-fig .sg-marca{transform-box:fill-box;transform-origin:50% 50%}
+@keyframes sg-aceno{0%,100%{transform:rotate(-13deg)}50%{transform:rotate(13deg)}}
+@keyframes sg-acao{0%,100%{transform:translate(-7px,5px)}50%{transform:translate(7px,-5px)}}
+@keyframes sg-grafema{0%,100%{transform:translate(-5px,2px) rotate(-5deg)}50%{transform:translate(5px,-3px) rotate(5deg)}}
+@keyframes sg-contar{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes sg-objeto{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-7px) scale(1.04)}}
+@keyframes sg-ponto{0%,100%{transform:translate(0,0)}50%{transform:translate(9px,-4px)}}
+@keyframes sg-qualidade{0%,100%{transform:translateY(4px)}50%{transform:translateY(-4px)}}
+@keyframes sg-conversa{0%,100%{transform:translateX(-6px)}50%{transform:translateX(6px)}}
+@keyframes sg-ciclo{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes sg-sobe{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+/* --sg-d = 1/velocidade (definido por sgPintar no palco): a 1,5x o ciclo encurta mesmo */
+.sg-fig.sg-mov-aceno .sg-maos{animation:sg-aceno calc(1.9s * var(--sg-d,1)) ease-in-out infinite}
+.sg-fig.sg-mov-acao .sg-maos{animation:sg-acao calc(2.2s * var(--sg-d,1)) ease-in-out infinite}
+.sg-fig.sg-mov-grafema .sg-maos{animation:sg-grafema calc(1.7s * var(--sg-d,1)) ease-in-out infinite}
+.sg-fig.sg-mov-contar .sg-maos{animation:sg-contar calc(1.6s * var(--sg-d,1)) ease-in-out infinite}
+.sg-fig.sg-mov-objeto .sg-maos{animation:sg-objeto calc(2.4s * var(--sg-d,1)) ease-in-out infinite}
+.sg-fig.sg-mov-ponto .sg-maos{animation:sg-ponto calc(1.8s * var(--sg-d,1)) ease-in-out infinite}
+.sg-fig.sg-mov-qualidade .sg-maos{animation:sg-qualidade calc(2.1s * var(--sg-d,1)) ease-in-out infinite}
+.sg-fig.sg-mov-conversa .sg-maos{animation:sg-conversa calc(2.6s * var(--sg-d,1)) ease-in-out infinite}
+.sg-fig.sg-mov-ciclo .sg-maos{animation:sg-ciclo calc(5s * var(--sg-d,1)) linear infinite}
+.sg-fig.sg-mov-aceno .sg-corpo,.sg-fig.sg-mov-conversa .sg-corpo{animation:sg-sobe calc(2.6s * var(--sg-d,1)) ease-in-out infinite}
+[data-leitura-simples] .sg-fig,[data-leitura-simples] .sg-fig *{animation:none!important}
+
+/* telemóvel (vertical ou deitado): o painel é uma folha de baixo e sobe acima da
+   barra de navegação. --tab-h e env() são px FÍSICOS e a barra está DENTRO de #app
+   (escalada), enquanto o painel está FORA (não escalada) — por isso a reserva da
+   barra é multiplicada pela escala, tal como faz .a11y. */
+@media(max-width:720px), (orientation:landscape) and (max-height:500px){
+  .sg-fab{left:10px;bottom:calc(10px + var(--tab-h) * var(--escala,1) + env(safe-area-inset-bottom));
+    min-height:48px;padding:7px 14px 7px 9px;font-size:13px}
+  .sg-fab .sg-fig{width:38px;height:26px}
+  .sg-painel{left:8px;right:8px;bottom:calc(8px + var(--tab-h) * var(--escala,1) + env(safe-area-inset-bottom));
+    width:auto;max-height:calc(100vh - var(--tab-h) * var(--escala,1) - 20px);
+    max-height:calc(100dvh - var(--tab-h) * var(--escala,1) - 20px);padding:12px 13px 16px;border-radius:20px}
+  .sg-fig{width:min(178px,54%)}
+  .sg-palco{padding:11px 9px;margin-bottom:0}
+  .sg-aviso{font-size:12.5px;padding:9px 11px}
+  #sg-texto{min-height:52px}
+  .sg-chip{min-height:44px}
+  /* Transporte em duas linhas fixas: anterior/reproduzir/seguinte e repetir/velocidade.
+     Sem isto o "Reproduzir" esticava ao todo o largor (92px alto) e a barra colada ao
+     fundo do painel media 267px — mais de um terço da folha. */
+  .sg-ctrl-r1,.sg-ctrl-r2{display:flex;gap:6px;align-items:center}
+  .sg-ctrl-r2{margin-top:6px}
+  .sg-ctrl .btn{padding:9px 10px;font-size:13.5px;min-height:44px;white-space:nowrap;gap:6px;flex-wrap:nowrap;flex:0 0 auto}
+  #sg-play{flex:0 1 auto}
+  .sg-vel-l{white-space:nowrap}
+  #sg-vel{flex:0 0 auto}
+  /* o transporte fica colado ao fundo do painel: com a folha de 760px o palco empurrava
+     "Reproduzir" para fora do ecrã, e um leitor de sinais sem o botão à vista não serve.
+     As margens negativas vão buscarem o padding do painel para a barra o atravessar todo. */
+  .sg-ctrl{gap:0;position:sticky;bottom:0;z-index:2;background:var(--paper);
+    margin:0 -13px -16px;padding:10px 13px 14px;border-top:1.5px solid var(--line-soft)}
+  .sg-live,.sg-strip,.sg-falta{margin-bottom:10px}
+}
+/* o botao flutuante de acessibilidade fica no canto de baixo direito; o Signer fica
+   na esquerda, por isso nao ha colissao — mas os dois paineis abertos ao mesmo tempo
+   sobrepoem-se no telemovel pequeno: o do Signer fica por baixo, e ambos fecham com Escape */
+@media(max-width:720px){
+  .sg-painel{z-index:155}
+}
+@media(prefers-reduced-motion:reduce){
+  /* o *,*::before,*::after global (linha ~174) já congela o loop com !important; aqui só
+     se retira o "deslizar" dos botões, que é uma transição de estado, não movimento. */
+  .sg-chip,.sg-fab{transition:none}
+}
+/* contraste alto: o painel precisa de borda a sério e as chips de sublinhado no activo */
+[data-contraste-alto] .sg-painel{border-width:3px;background:#fff;color:#000}
+[data-contraste-alto] .sg-aviso,[data-contraste-alto] .sg-falta{background:#fff;color:#000;border-width:2px}
+[data-contraste-alto] .sg-chip.on{background:#000;color:#fff;border-color:#000;text-decoration:underline}
+[data-contraste-alto] .sg-fig{color:#000}
+[data-contraste-alto] .sg-fig .sg-mao circle,[data-contraste-alto] .sg-fig .sg-mao path{stroke:#000;fill:none}
+[data-contraste-alto] .sg-fig .sg-cabeca{fill:none}
+[data-contraste-alto] .sg-fig .sg-chao{stroke:#000}
+[data-tema-escuro] .sg-palco{background:var(--surface)}
+[data-tema-escuro] .sg-fab{background:var(--amber);color:var(--teal-dark)}
+
+/* ============================================================================
+   13. COLHEITA PARTICIPADA (/colher) — registar sinais, só neste aparelho
+   As regras (nada é enviado, estado máximo "colhido", câmara sem som) estão no
+   comentario da seccao 13 de app.js; este bloco é só apresentação.
+   ========================================================================== */
+.ch-h{margin-bottom:6px}
+.ch-backlog,.ch-form,.ch-cam,.ch-minhas{background:var(--paper);border:1.5px solid var(--line);
+  border-radius:var(--radius-lg);padding:20px 22px;margin:0 0 18px;box-shadow:var(--shadow)}
+.ch-backlog h2,.ch-form h2,.ch-cam h2,.ch-minhas h2,.ch-envio h2{margin:0 0 6px;
+  font-family:var(--font-h);font-size:21px;line-height:1.25}
+.ch-backlog h2 .ic,.ch-form h2 .ic,.ch-cam h2 .ic,.ch-minhas h2 .ic,.ch-envio h2 .ic{
+  width:21px;height:21px;color:var(--teal-deep);vertical-align:-3px}
+.ch-lacunas{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
+.ch-lacunas li{display:flex;align-items:center;flex-wrap:wrap;gap:8px;border:1.5px solid var(--line-soft);
+  border-radius:12px;padding:8px 10px;background:var(--surface)}
+.ch-lac-w{font-family:var(--font-h);font-weight:800;font-size:17px;flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.ch-lac-n{font-weight:800;font-size:12.5px;color:var(--amber-ink);background:var(--amber-soft);
+  border-radius:999px;padding:4px 10px;font-variant-numeric:tabular-nums}
+.ch-lac-act{margin:12px 0 0}
+.ch-vazio{margin:12px 0 0;font-size:14px;color:var(--ink-soft);font-style:italic}
+.ch-campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:14px;margin-top:14px}
+.ch-campo{display:flex;flex-direction:column;gap:6px;margin:0;min-width:0}
+.ch-campo-lg{grid-column:1 / -1}
+.ch-campo label{font-weight:700;font-size:13.5px;color:var(--ink-soft)}
+.ch-campo input,.ch-campo textarea,.ch-campo select{font:inherit;font-size:16px;padding:11px 13px;
+  border:1.5px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);width:100%;min-width:0}
+.ch-campo textarea{resize:vertical;min-height:56px}
+.ch-campo input::placeholder,.ch-campo textarea::placeholder{color:var(--muted)}
+.ch-ac{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:14px 0 0}
+.ch-ac .muted{font-size:13px}
+.ch-msg{margin:10px 0 0;font-size:14px;font-weight:700;color:var(--teal-deep);min-height:20px}
+.ch-cam-grid{display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr);gap:14px;margin-top:14px;align-items:start}
+#ch-cam{display:none;width:100%;border-radius:12px;background:#000;border:1.5px solid var(--line)}
+#ch-cam.on{display:block}
+.ch-fotos{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
+.ch-fotos li{width:88px}
+.ch-fotos img{width:88px;height:66px;object-fit:cover;border-radius:10px;border:1.5px solid var(--line);display:block}
+.ch-fotos-n{width:100%;font-size:12.5px;color:var(--muted)}
+.ch-n{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 8px;
+  border-radius:999px;background:var(--teal-tint);color:var(--teal-deep);font-size:14px;font-weight:800;
+  font-variant-numeric:tabular-nums}
+.ch-lista{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:10px}
+.ch-item{border:1.5px solid var(--line-soft);border-radius:var(--radius);padding:12px 14px;background:var(--surface)}
+.ch-item-p{margin:0;display:flex;align-items:center;flex-wrap:wrap;gap:9px;font-family:var(--font-h);
+  font-weight:800;font-size:18px;overflow-wrap:anywhere}
+.ch-item-t{font-family:var(--font-b);font-weight:700;font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.ch-item-d{margin:6px 0 0;font-size:14px;color:var(--ink-soft);line-height:1.55}
+.ch-item-f{margin:6px 0 0;font-size:13px;color:var(--muted)}
+.ch-item-n{margin:6px 0 0;font-size:13.5px;color:var(--ink-soft);font-style:italic}
+.ch-item-fotos{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.ch-item-fotos img{width:96px;height:72px;object-fit:cover;border-radius:10px;border:1.5px solid var(--line)}
+.ch-item-a{margin:10px 0 0}
+.ch-import{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-weight:700;font-size:14px;color:var(--ink)}
+.ch-import .ic{width:18px;height:18px;color:var(--teal-deep)}
+#ch-import-file{margin-top:8px;font-size:14px;max-width:100%}
+.ch-envio{background:var(--cream);border-color:var(--amber-line)}
+.ch-envio h2 .ic{color:var(--amber-ink)}
+.ch-passo{margin:12px 0 0;padding-left:22px;display:grid;gap:9px;font-size:15px;line-height:1.6}
+.ch-passo li::marker{font-weight:800;color:var(--amber-ink)}
+.ch-passo code{font-size:13px}
+.ch-esquema{margin-top:14px}
+.ch-esquema summary{font-weight:700;font-size:14px;cursor:pointer;min-height:44px;display:inline-flex;align-items:center}
+.ch-json{overflow-x:auto;font-size:12.5px;line-height:1.5;background:var(--paper);border:1.5px solid var(--line);
+  border-radius:12px;padding:12px 14px}
+.dic-ico{width:40px;height:40px;flex:none;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);
+  color:var(--teal-deep);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.dic-ico .ic{width:18px;height:18px}
+.dic-ico:hover{border-color:var(--teal);background:var(--teal-tint)}
+.dic-badge.is-colhido{background:var(--teal-tint);color:var(--teal-deep);border:1.5px dashed var(--teal-deep)}
+@media(max-width:720px){
+  .ch-backlog,.ch-form,.ch-cam,.ch-minhas,.ch-humano{padding:16px 15px}
+  .ch-cam-grid{grid-template-columns:1fr}
+  .ch-ac .btn,.ch-lacunas .btn,.ch-item-a .btn{flex:1 1 auto;justify-content:center}
+  .dic-ico{width:44px;height:44px}
 }

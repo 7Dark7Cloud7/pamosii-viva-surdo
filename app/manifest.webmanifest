@@ -1,7 +1,7 @@
 {
   "name": "Pamosii Viva Surdo — Língua Gestual Angolana",
   "short_name": "Pamosii",
-  "description": "Aulas gratuitas de Língua Gestual Angolana, dicionário de sinais e o Pamosii: português para sinais e sinais para português, escrito e falado.",
+  "description": "Aulas gratuitas de Língua Gestual Angolana, dicionário de sinais, o Pamosii (português para sinais e sinais para português) e a Bíblia em texto, áudio e sinais.",
   "lang": "pt-AO",
   "dir": "ltr",
   "start_url": "./",
@@ -19,6 +19,8 @@
   ],
   "shortcuts": [
     { "name": "Pamosii — traduzir", "short_name": "Pamosii", "url": "./#/pamosii", "description": "Escreve ou dita em português e vê a sequência de sinais; ou escolhe sinais e ouve a frase." },
-    { "name": "Dicionário de sinais", "short_name": "Dicionário", "url": "./#/dicionario", "description": "Procurar palavras e ver o sinal na aula." }
+    { "name": "Dicionário de sinais", "short_name": "Dicionário", "url": "./#/dicionario", "description": "Procurar palavras e ver o sinal na aula." },
+    { "name": "Bíblia — ouvir e ver em sinais", "short_name": "Bíblia", "url": "./#/biblia", "description": "Ler e ouvir a Bíblia em português, com a glosa de sinais versículo a versículo." },
+    { "name": "Colheita — registar sinais que faltam", "short_name": "Colheita", "url": "./#/colher", "description": "Registar sinais que conheces e exportar os registos para a equipa validar." }
   ]
 }

@@ -89,12 +89,17 @@ app/
     ├── icon-192.png    #       └─ os 3 PNGs são a mesma marca rasterizada
     ├── icon-512.png
     ├── icon-maskable-512.png
-    └── pattern-angola.svg
+    ├── pattern-angola.svg
+    ├── biblia.json            # texto bíblico real (Almeida, domínio público) usado em #/biblia
+    └── glossario-extra.json   # sinais publicados pela equipa a partir da Colheita (gerado)
 tools/
-├── parse-yt.cjs        # utilitário usado para extrair os dados reais da playlist
-├── make-icons.cjs      # gera os PNGs do manifest a partir da marca (node tools/make-icons.cjs)
-├── engine-test.cjs     # corre o motor de glosa do Pamosii em Node (node tools/engine-test.cjs)
-└── serve.cjs           # servidor estático de teste (porta 8123)
+├── parse-yt.cjs         # utilitário usado para extrair os dados reais da playlist
+├── yt-search.cjs        # pesquisa de vídeos públicos do canal (usado na recolha de fontes)
+├── fetch-biblia.cjs     # foi assim que biblia.json foi obtido e conferido
+├── make-icons.cjs       # gera os PNGs do manifest a partir da marca (node tools/make-icons.cjs)
+├── engine-test.cjs      # corre o motor de glosa do Pamosii em Node (node tools/engine-test.cjs)
+├── ingerir-colheita.cjs # transforma um pacote JSON exportado da Colheita em glossario-extra.json
+└── serve.cjs            # servidor estático de teste (porta 8123)
 docs/
 └── colheita-sinais-lga.md   # protocolo de gravação/validação necessário para alguma vez
                              # haver reconhecimento de sinais (não é código; ver abaixo)
@@ -114,10 +119,14 @@ Fora do repositório de trabalho: `.deploy-gh/` é o clone ligado ao repo public
 | `#/pamosii`       | Pamosii (português ↔ LGA)     | As quatro direcções em atalhos + frases de exemplo; glosa de uma ou várias frases com vídeo e glifo animado por sinal, barra de cobertura e alfabeto manual para o que não tem sinal; ditado por voz; construção de sequência de sinais → frase escrita e falada; módulo de câmara para gravar e rever o próprio sinal |
 | `#/professores`   | Recursos para professores     | Aulas de referência (real) + recursos "Em breve" |
 | `#/biblioteca`    | Biblioteca                    | Pesquisável; itens reais (vídeos) + itens planeados "Em breve" |
+| `#/biblia`        | Bíblia                        | Passagens reais (Almeida, domínio público) em texto, leitura em voz alta e **glosa de sinais versículo a versículo**; `#/biblia/:chave` abre uma passagem (`genesis-1`, `joao-3-16`, `salmos-23`, `marcos-7-31`) |
+| `#/evangelismo`   | Evangelismo                   | Roteiros de partilha com frases prontas, cada uma com a sequência de sinais e o modo de teste em Libras |
+| `#/colher`        | Colheita participada          | Qualquer pessoa regista sinais que conhece; lista das palavras sem sinal encontradas no site; exportação local em JSON/TXT |
+| `#/colher/:palavra` | Registar uma palavra        | Abre o formulário já preenchido com essa palavra (venha do dicionário, do Pamosii, da Bíblia ou do Signer) |
 | `#/sobre`         | Sobre                         | Missão, modelo (fontes públicas), reconhecimento com atribuição de fonte, valores |
 | `#/contacto`      | Contacto                      | Apenas canais verificados: Facebook, Instagram, YouTube + playlist |
 
-A rota antiga `#/catalogo` redirecciona para `#/cursos`.
+A rota antiga `#/catalogo` redirecciona para `#/cursos`. Além destas 15 vistas registadas, há dois widgets que não são rotas: o **Pamosii Signer** (botão flutuante presente em todas as páginas) e o **painel de acessibilidade**.
 
 ---
 
@@ -134,6 +143,10 @@ Tudo está no topo de `app/app.js`, em blocos numerados e comentados:
 7. **`GLOSSARIO`** + **`ESTADO_GLOSSARIO`** — o dicionário (13 temas, 203 palavras). Ver "Dicionário LGA" abaixo.
 8. **`A11Y_*`** — preferências de acessibilidade do painel fixo (guardadas em `localStorage`, chave `vs.a11y`).
 9. **`PAMOSSI_TIPOS`**, **`PAMOSSI_MAPA`**, **`PM_MARCAS`**, **`PM_MOVIMENTO`** — o motor e as ilustrações do Pamosii. O vocabulário **não** está duplicado aqui: o Pamosii usa o `GLOSSARIO` e as `LGA_AULAS` que já existem. Ver "Pamosii" abaixo.
+10. **`PM_MAOS`** + **`SG_MAOS`** e a função `sgFigura()` — o boneco do **Pamosii Signer** (cabeça, corpo, duas mãos e a marca de movimento). As famílias de movimento vêm do mesmo `PM_MOVIMENTO` do Pamosii; `styles.css` tem os `@keyframes sg-*`.
+11. **`app/assets/biblia.json`** + bloco `BIBLIA` — as passagens reais (tradução, licença, data de obtenção e versículos). Não é texto inventado: vem de Almeida, domínio público, e foi conferido com `tools/fetch-biblia.cjs`. **Não existe Bíblia em LGA** (ver "Bíblia" abaixo), por isso aqui só há português + glosa.
+12. **`app/assets/glossario-extra.json`** — sinais já publicados pela equipa a partir da Colheita. Gerado por `tools/ingerir-colheita.cjs`; é o único ficheiro de dados que o site lê por `fetch` em tempo de execução (e por isso tem a sua própria regra no `sw.js`: rede primeiro, casulo se falhar).
+13. **Chaves de `localStorage`** — `vs.a11y` (preferências), `vs.biblia` (última passagem lida), `vs.colheita` (registos desta pessoa), `vs.lacunas` (palavras sem sinal encontradas), `vs.extra` (o último `glossario-extra.json` visto). Nada é enviado para lado nenhum.
 
 Os textos institucionais (missão, valores, herói) estão nas vistas `on('/...')` do mesmo ficheiro.
 
@@ -210,6 +223,58 @@ Nada sai do navegador além do que o próprio browser envia: o reconhecimento de
 
 ---
 
+## Pamosii Signer — o boneco animado que acompanha todas as páginas
+
+Um botão flutuante (``Pamosii Signer``, canto inferior esquerdo, ao lado do botão de acessibilidade) abre uma janela fixa que está **fora** do `#app` e por isso permanece aberta enquanto se navega. É o protótipo do leitor de sinais estilo VLibras, feito com o que já existe neste repositório — os mesmos glifos vectoriais do Pamosii, agora montados como figura.
+
+**O que faz (verificado no browser):**
+
+| Peça | Comportamento real |
+|------|--------------------|
+| Texto → sequência | O campo aceita texto; "Sinalizar" divide por frases (todas, não só a primeira) e faz **um passo por palavra**, com o alfabeto manual letra a letra para o que não tem sinal. Medido com `Bom dia! Onde fica a escola?`: 3 passos; com soletração de `banana`: 11 chips, incluindo B-A-N-A-N-A. |
+| "Sinalizar esta página" | Reúne o texto visível do `<main>` e sinaliza essa sequência — o pedido de acessibilidade mais comum, sem nenhum servidor. |
+| Boneco | `sgFigura()` desenha cabeça, corpo, duas mãos e a marca de movimento da família do tema. Cada família tem o seu `@keyframes` (`sg-aceno`, `sg-conversa`, `sg-grafema`, `sg-contar`, `sg-objeto`, `sg-ponto`, `sg-qualidade`, `sg-ciclo`, `sg-sobe`). A velocidade (`0,5× / 0,75× / 1× / 1,5×`) escreve `--sg-d` no palco, e todas as durações são `calc(Xs * var(--sg-d))`. |
+| Vídeo real por palavra | Quando a palavra tem aula com vídeo, o palco mostra a fachada do YouTube (só carrega depois do clique, nunca com autoplay) e a nota *"O vídeo é que faz fé: o boneco só mostra a família de movimento."* |
+| Transporte | Anterior · Reproduzir/Pausar · Seguinte · Repetir este sinal · Velocidade, sempre visível: no telemóvel a barra fica `position:sticky` no fundo da janela. Medido a 390×844: duas linhas, 119px, botões a 44px, janela de 760px sem tocar na barra inferior. |
+| Teclado | Esc fecha (o listener vive no `documento`, por isso fecha mesmo com o foco no botão flutuante); ← → percorrem; Espaço reproduz; Tab fica em laço **dentro da janela** quando o foco já lá está. O foco vai para "Reproduzir" ao abrir. |
+| Falta de sinal | Cada palavra sem sinal no glossário aparece em `#sg-falta` com link directo para `#/colher/<palavra>` — o Signer é também a entrada da Colheita. |
+
+**O que o Signer NÃO é, e diz isso na própria janela:** não traduz automaticamente, não lê gestos, e o boneco **não é um sinalizador surdo angolano**. Enquanto não houver vídeo gravado e aprovado, o boneco é uma ilustração de apoio; o aviso aparece no topo da janela, e as páginas de "Sinais animados" repetem-no.
+
+## Bíblia — texto real, áudio e sinais (`#/biblia`, `#/biblia/:chave`)
+
+Passagens em português (Almeida, domínio público, obtidas e conferidas a 2026-10-22 — `tools/fetch-biblia.cjs`), com leitura em voz alta frase a frase (`speechSynthesis`, pára ao mudar de rota ou com Escape) e **glosa de sinais versículo a versículo** pelo mesmo motor do Pamosii. Há também um bloco reservado para "Bíblia em sinais + áudio para pessoas cegas", apresentado como **pendente**: sem vídeo aprovado, diz "Em breve" em vez de fingir que existe.
+
+**Verificado, e é a razão do estado honesto:** não existe Bíblia em Língua Gestual Angolana — nem vídeo completo, nem canal com Génesis em LGA. O que existe publicamente é **Libras** (LSL/Librês, Brasil) e **ASL** (inglês). Por isso:
+
+- o texto é português real;
+- a sequência de sinais é **glosa derivada do glossário**, claramente rotulada como apoio de estudo;
+- as palavras sem sinal (em Génesis 1 são muitas — `deus` 98×, `criou` 22×, `disse` 40×) entram automaticamente na lista de lacunas da Colheita, com link `#/colher/<palavra>`;
+- o **modo de teste em Libras** (abaixo) está disponível para comparação, sempre rotulado como brasileiro e "não é LGA".
+
+## Modo de teste em Libras — avatar VLibras (não é LGA)
+
+Nas páginas da Bíblia, do Evangelismo e do Pamosii há um bloco explícito para ligar o avatar **VLibras** (`https://vlibras.gov.br/app`), que sinaliza em **Língua Brasileira de Sinais**. Está desligado por omissão: nenhum pedido é feito a serviços externos até a pessoa carregar em "Ligar". A mensagem de estado diz `Desligado. Nenhum pedido é feito a serviços externos.`, e ao ligar passa a nomear o serviço. É um modo de **comparação** para quem está a aprender — nunca uma apresentação de LGA, e a própria página o sublinha (`um avatar brasileiro; não é LGA`).
+
+Consequência prática registada: ao ligá-lo, o browser passa a fazer pedidos a infra-estrutura brasileira (o plugin VLibras chega a contactar hosts de telemetria próprios, por exemplo `csm.sg.plot0.ru`). Nada disso vem do código deste site, e nada do que a pessoa escreve é enviado — mas a equipa deve saber que "Ligar o avatar" significa tráfego de terceiros, o que reforça a decisão de o manter opt-in.
+
+## Colheita participada (`#/colher`) — qualquer pessoa ajuda a encher o dicionário
+
+O gargalo real do projecto não é o código: é não haver dicionário de LGA suficiente. Esta página transforma cada visitante em recolha de dados, com o privacidade como limite duro.
+
+**O ciclo completo (verificado ponta a ponta):**
+
+1. **Entrada.** Onde falta um sinal — dicionário, cartões do Pamosii, versículos da Bíblia, roteiros de evangelismo, e o próprio Signer — há um link `#/colher/<palavra>` que abre o formulário já preenchido. As palavras sem sinal ficam contadas em `vs.lacunas` e aparecem como backlog ordenado por pedidos ("deus — 98×").
+2. **Registo.** A pessoa descreve o sinal nos campos que `docs/colheita-sinais-lga.md` define: palavra, tema, **configuração da mão**, **lugar**, **movimento**, **marcador não manual** (expressão facial/corporal), **onde o aprendeu**, URL opcional de vídeo e nota livre (variação regional). Guarda-se com `estado: 'colhido'` e data.
+3. **Fotografias (opcional).** Até haver vídeo, 3–4 quadros JPEG do meio do sinal chegam para desenhar o glifo certo. A câmara **nunca grava som** (`audio:false`), as imagens ficam no browser (máximo 4 por registo) e só saem se a pessoa carregar em exportar.
+4. **Usar no site imediatamente.** Os registos desta pessoa entram no índice de procura: pesquisar "kuduro" no dicionário devolve a entrada com etiqueta **Colhido** (tracejada) e a nota *"Registado por alguém da comunidade via Colheita. Ninguém aqui validou…"*. O contador discreto em `#route-live` diz quantos sinais estão em fase de colheita neste aparelho.
+5. **Exportar.** Um pacote JSON (esquema `pamosii-colheita`, com `entrada[]` e `lacunas{}`) e uma versão TXT legível por quem não tem terminal. A exportação é sempre acto deliberado: nada sai do browser sozinha.
+6. **Ingerir (equipa).** `node tools/ingerir-colheita.cjs pacote.json [--dry-run]` junta pacotes de muitas pessoas, elimina duplicados (fica com o registo mais completo), **recusa** texto que pareça URL ou base64, reduz `fotos` a `tem_fotos` (para o JSON não rebentar), e só promove a `confirmado` quando o registo traz `validado_por`. Escreve `app/assets/glossario-extra.json`, que o site passa a ler no arranque.
+
+**Porque é que isto não é "validação":** o site usa três estados separados e visíveis — `a-validar` (inferido do programa público), `colhido` (registo da comunidade, sem revisão) e `confirmado` (revisto por pessoa sura utilizadora de LGA). A ingestão automática **nunca** escreve `confirmado` sem `validado_por`, e as entradas `colhido` não ganham vídeo nem honram a autoridade de uma aula.
+
+---
+
 ## Painel de acessibilidade (fixo, em todas as páginas)
 
 Botão **"Acessibilidade"** no canto inferior direito. Opções reais, sem promessas vazias:
@@ -275,14 +340,17 @@ Ajustar, se necessário, o bloco `.brand` em `styles.css`. Nada mais precisa de 
 ## O que funciona de verdade vs. o que está deliberadamente pendente
 
 ### Implementado e funcional
-- Navegação completa entre as 9 páginas do menu: no telemóvel os quatro destinos principais vivem numa **barra fixa no fundo do ecrã** (tipo app) e o 5.º botão, "Mais", abre o mesmo menu completo; em tablet/desktop a barra de topo com os 9 rótulos, ou o hambúrguer. Tudo operável por teclado.
+- Navegação completa entre as 11 páginas do menu: no telemóvel os quatro destinos principais vivem numa **barra fixa no fundo do ecrã** (tipo app) e o 5.º botão, "Mais", abre o mesmo menu completo; em tablet/desktop a barra de topo com os rótulos (o 12.º, "Colheita", aparece até 1280px e passa a viver no "Mais" acima disso — medido, para a barra caber numa linha de 1076px), ou o hambúrguer. Tudo operável por teclado. O item "Pamosii" da barra inferior usa o **boneco do Signer** em vez de um ícone genérico, parado (um ícone em movimento na navegação distraía do próprio Signer).
 - Catálogo com pesquisa e filtro, sem conteúdo fictício.
 - Reprodução das 17 aulas reais de LGA (leitor YouTube carregado a pedido do utilizador).
 - Biblioteca pesquisável com itens reais e planeados.
-- **Dicionário português ↔ LGA** pesquisável, com estado de validação visível em cada entrada.
+- **Dicionário português ↔ LGA** pesquisável, com estado de validação visível em cada entrada, mini-glifo por palavra e atalho "Registar este sinal" quando a procura não encontra nada.
 - **Pamosii** (`#/pamosii`): glosa de uma ou várias frases com vídeo real por sinal e glifos vectoriais animados, modo de datilologia, ditado por voz, sequência de sinais → frase escrita e falada, e módulo de câmara para gravar/rever/capturar. Ver secção própria.
+- **Pamosii Signer**: leitor de sinais flutuante em todas as páginas, com figura animada por família de movimento, velocidade, transporte por teclado e convite directo para registar a palavra que falta. Ver secção própria.
+- **Bíblia** (`#/biblia`) com texto real de Almeida e glosa versículo a versículo; **Evangelismo** (`#/evangelismo`) com roteiros e cada frase sinalizável; **modo de teste em Libras** (VLibras, opt-in, claramente rotulado como brasileiro).
+- **Colheita participada** (`#/colher`): backlog de palavras sem sinal, formulário dos campos do protocolo, fotografias locais, exportação JSON/TXT e ingestão por `tools/ingerir-colheita.cjs`.
 - **Painel de acessibilidade** (tamanho de texto, contraste alto, tema escuro, movimento reduzido, leitura simples, leitura em voz alta) — ver secção acima.
-- **Modo aplicação**: instalável ("Adicionar ao ecrã principal") e **a funcionar sem rede** — as 10 rotas, o dicionário, a glosa do Pamosii e a frase falada abrem com o servidor desligado (179 KiB de casulo; ver "Modo aplicação").
+- **Modo aplicação**: instalável ("Adicionar ao ecrã principal") e **a funcionar sem rede** — as rotas, o dicionário, a glosa do Pamosii, a Bíblia e a frase falada abrem com o servidor desligado (ver "Modo aplicação").
 - Metadados por página (`title`, `description`, `og:*`).
 - **Experiência de telemóvel tratada como app** (sem framework, sem build): **barra de navegação no fundo do ecrã até 720px** (Início · Aprender · Pamosii · Dicionário · Mais), com estado actual em âmbar e `aria-current`; o "Mais" controla o mesmo painel do hambúrguer (`aria-controls="nav-links"`), e por isso o hambúrguer do cabeçalho fica escondido no telemóvel — um interruptor, não dois. Gaveta de navegação em cartão (não uma faixa esticada) entre 721px e 1280px; filas de filtros em *scroll-snap* horizontal em vez de cinco linhas que empurram o conteúdo; pré-visualização da câmara a 3/4 em pé e 4/3 deitado; `viewport-fit=cover` com `env(safe-area-inset-*)` no cabeçalho fixo, no menu, no botão de acessibilidade e na barra inferior; `text-size-adjust:100%`, `touch-action:manipulation` e `-webkit-tap-highlight-color:transparent`; bloco próprio para ecrãs de pouca altura (`max-height:470px`); `preconnect`/`dns-prefetch` para `i.ytimg.com` e `youtube-nocookie.com`, e `decoding="async"` nas miniaturas.
 - Acessibilidade de base: skip-link, HTML semântico, foco visível, `aria-current`, `<details>` nativo nos módulos, alvos de toque ≥44px (também os botões pequenos, a partir de 720px), `prefers-reduced-motion` e desligador manual de animação (os glifos param), ordem de títulos verificada, conteúdo duplicado do ponto de vista de quem ouve (cartões e sequência) marcado `data-no-read`, imagens decorativas `alt=""`.
@@ -293,6 +361,9 @@ Ajustar, se necessário, o bloco `.brand` em `styles.css`. Nada mais precisa de 
 - **Certificados** — nenhuma emissão nesta fase; dito explicitamente na página do curso.
 - **Pagamentos** — nada de preços inventados; nenhum fluxo de pagamento existe.
 - **Tradução automática fala ↔ LGA** — não existe tecnologia validada; o Pamosii faz glosa de estudo e o dicionário é glossário. Ambos o dizem ao utilizador.
+- **Bíblia em LGA** — não existe (verificado em Outubro de 2026, inclusive no YouTube: só há Libras e ASL). O site dá texto português real + glosa derivada do glossário, e guarda um bloco reservado para "Bíblia em sinais", com "Em breve".
+- **Avatar 3D que sinalize LGA** — o Pamosii Signer é o protótipo com os glifos que existem; um avatar que sinalize LGA de verdade precisa do mesmo corpus de vídeo angolano que ainda não foi gravado. Não há animação que faça de conta que sabe LGA: o boneco mostra a *família de movimento* e o aviso diz-lo.
+- **Colheita validada automaticamente** — os registos entram como `colhido`; só a equipa (com um revisor surdo) promove a `confirmado`. O site nunca mostra um registo da comunidade como LGA confirmada.
 - **Reconhecimento de gestos pela câmara** — o módulo grava e mostra o teu sinal; não analisa. Nenhum botão sugere que "a IA lê a tua mão". O caminho para algum dia analisar está definido em [`docs/colheita-sinais-lga.md`](docs/colheita-sinais-lga.md): é preciso corpus angolano anotado por pessoas surdas (não existe nenhum para LGA), e a primeira fase viável é a datilologia, a correr no dispositivo.
 - **Sinal isolado por palavra** — só com vídeo gravado e aprovado (campo `sinal` já reservado nos dados; especificação de gravação no mesmo documento).
 - **Aulas ao vivo, tutor IA, comunidade** — fora do MVP; nenhuns simulados.
@@ -386,7 +457,13 @@ O site **já está publicado** em <https://7dark7cloud7.github.io/pamosii-viva-s
 18. **Domínio e alojamento da marca** — o alojamento actual (GitHub Pages, `https://7dark7cloud7.github.io/pamosii-viva-surdo/`) já cumpre os três requisitos técnicos que o `tools/serve.cjs` cumpre no local: `https` (obrigatório para o service worker, o microfone e a câmara), `sw.js` na raiz do site e `manifest.webmanifest` com `Content-Type: application/manifest+json` — os três verificados no URL ao vivo. O que falta é a decisão da equipa: um domínio próprio (por ex. `pamosii.ao` / `vivasurdo.ao`) apontado para o mesmo conteúdo estático, e a conta que o controla. Trocar de alojamento não muda uma linha de código; muda só o `CNAME`/DNS e onde se faz `git push`.
 19. **Remover o tema de demonstração do glossário** — o último grupo do `GLOSSARIO` (`'Demonstração (sem vídeo)'`, 33 palavras: `mercado`, `autocarro`, `dinheiro`, `hospital`, `comprar`, `cedo`…) **não é LGA**. Foi acrescentado só para o painel conseguir mostrar frases do dia a dia — o motor, os cartões, a cobertura e os marcadores — antes de haver glossário validado. Não tem vídeo, não vem de nenhuma aula da Viva Surdo e não foi visto por ninguém surdo. Está marcado em três sítios para ninguém o ler como confirmado: o estado `'demonstracao'` (rótulo "Demonstração" em cada entrada do dicionário), o cartão tracejado âmbar nos resultados do Pamosii, e duas faixas de aviso (`note-band is-demo`) no dicionário e no painel. **Para o retirar:** apagar o objecto do tema em `GLOSSARIO` (app/app.js) — as faixas de aviso, os cartões e as etiquetas desaparecem sozinhos, porque são derivados do estado das entradas; depois trocar as frases de exemplo `PM_EXEMPLOS` por frases feitas só com vocabulário validado e actualizar `app/sw.js` + `index.html` (`?v=`). As frases que hoje tocam esse vocabulário são as do mercado e do hospital.
 
-Sem 13, 14 e 15 **não há** reconhecimento de gestos a prometer: o site continuaria a dizer "glosa de estudo" e "a tua escolha de sinais", que é o que faz hoje.
+20. **Lote de gravação da Bíblia em sinais** — se a equipa quiser mesmo o bloco reservado de "Bíblia em LGA", o mínimo honesto é Génesis 1 versículo a versículo, com um sinalizador surdo angolano e um revisor surdo (§6 do protocolo). Sem isso a página continua a dizer "Em breve", que é o que diz hoje. A questão de fundo tem de ser respondida pela equipa, não pelo código: **existe alguma tradução escrita de passages bíblicas em LGA?** A pesquisa pública de Outubro de 2026 não encontrou nenhuma (só Libras e ASL), e a própria existência de vocabulário religioso em LGA (anjo, pastor, cruz, orar, aleluia…) precisa de ser confirmada com pessoas surdas angolanas.
+21. **Política para os registos da Colheita** — quem revisa, com que cadência, e com que compensação (se houver). O texto actual diz "ninguém aqui validou"; a equipa tem de decidir se publica no `glossario-extra.json` só depois de revisão, e se quer pagar ou não aos contribuintes (o protocolo exige que **não** haja pagamento implícito no consentimento).
+22. **Consentimento específico para as fotografias** — a Colheita permite 3–4 quadros do próprio sinal, tirados e guardados no browser da pessoa. Para a equipa receber esses quadros é preciso: (a) um destino combinado (e-mail/nuvem) e um consentimento escrito por pessoa, com a autorização de uso público; (b) regra explícita para **menores** (o formulário aceita registos de qualquer idade, mas não pede idade — a equipa deve decidir se aceita registos de menores sem tutor). Menores e terceiros não podem ser publicados sem §5 do protocolo cumprido.
+23. **Uso do modo de teste em Libras na comunicação pública** — o avatar VLibras é brasileiro e está claramente rotulado como "não é LGA". A equipa deve decidir se o mantém visível ao público (ajuda quem está a aprender, mas pode confundir quem não conhece a diferença), e se avisa que ligá-lo gera tráfego para serviços do Brasil.
+24. **Legenda/atribuição das passagens bíblicas** — o texto é Almeida, domínio público, com `traducao`/`licenca`/`obtidoEm` registados em `app/assets/biblia.json`. Confirmar se a equipa quer outra versão (por exemplo uma revisão portuguesa actualizada) ou se mantém, e se o nome da versão aparece no rodapé da página.
+
+Sem 13, 14 e 15 **não há** reconhecimento de gestos a prometer: o site continuaria a dizer "glosa de estudo" e "a tua escolha de sinais", que é o que faz hoje. Sem 21 e 22 **não há** como receber os registos da Colheita de forma responsável: o ciclo está construído e testado no aparelho de quem escreve, mas falta o destino e o consentimento.
 
 ---
 
@@ -400,3 +477,7 @@ Sem 13, 14 e 15 **não há** reconhecimento de gestos a prometer: o site continu
 - O cache offline (`sw.js`) guarda **só conteúdo público do site** (página, estilo, motor, ícones, tipos letra-a-letra e miniaturas já vistas). Não guarda o que a pessoa escreve no Pamosii, o ditado do microfone nem as gravações da câmara — nada disso sai do browser, e o service worker só observa pedidos `GET` de ficheiros. Não há telemetria nem contadores de uso.
 - Áudio e vídeo no Pamosii: a dictação por voz (`SpeechRecognition`) e a câmara (`getUserMedia` + `MediaRecorder`) correm **no dispositivo e no browser do utilizador**. Nada é enviado para um servidor nosso, nada é guardado depois de fechar a página, e as gravações só existem enquanto o utilizador não sair da rota ou não carregar em "Parar" (a faixa de vídeo é desligada em cada mudança de rota). As preferências do painel de acessibilidade vão para `localStorage`. Não há backend, logo não há base de dados nem telemetria.
 - O Pamosii **não** reconhece sinais por câmara: a câmara serve para gravar e rever a própria demonstração, e a página diz isso ao utilizador.
+- **Câmara na Colheita:** `getUserMedia` com `audio:false` (nunca grava som), máximo 4 quadros JPEG por registo, guardados como `data:` no `localStorage` do aparelho. Não há upload: a única forma de as imagens saírem é a pessoa carregar em "Exportar" e enviar ela própria o ficheiro. Os quadros são removidos do pacote JSON na ingestão (`fotos` → `tem_fotos`), para nenhuma imagem acabar num repositório público por acidente.
+- **Termos de pesquisa verificados, não assumidos:** "Bíblia em Língua Gestual Angolana", "LGA Gênesis vídeos", "Língua Gestual Angolana dicionário online" e a leitura pública dos canais da Viva Surdo / UNILGA não devolvem corpus de LGA — a página da Bíblia e o bloco reservado estão escritos com essa limitação à vista, e nunca com sinais inventados.
+- O **avatar VLibras** é um serviço brasileiro de Libras, carregado só por escolha explícita da pessoa. Além de nunca ser apresentado como LGA, a página diz que ligá-lo fala com `vlibras.gov.br`; o plugin faz pedidos a infra-estrutura própria (telemetria/CDN do fornecedor), que não pertencem a este site.
+- Estados de validação são **três e nunca se confundem**: `a-validar` (inferido), `colhido` (comunidade, sem revisão), `confirmado` (revisto por pessoa sura utilizadora de LGA). A ingestão automática só escreve `confirmado` se o registo trouxer `validado_por`.
