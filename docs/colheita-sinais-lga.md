@@ -136,6 +136,51 @@ sessão interrompida a meio também é informação). Os campos descritivos do �
 (configuração da mão, lugar, movimento, marcador não manual, fonte) vêm nas mesmas linhas,
 quando a pessoa os preencheu — a gravação sozinha não substitui a descrição.
 
+### 4.2 Verificador de qualidade da gravação (mesma página, `#/colher`)
+
+O §3 pede boa luz, fundo simples e enquadramento. Até aqui isso era só uma instrução: a
+pessoa descobria que a gravação não prestava quando a equipa a abria. A secção 13.3.1 de
+`app/app.js` mede o quadro **durante** a sessão e mostra números com conselho em linguagem
+simples. Não trava nada, não apaga nada, não julga o sinal.
+
+| O que se mede | Como, no browser | O que gera aviso |
+|---|---|---|
+| luz | média da luminância do quadro reduzido a 96×72, em % | abaixo de 42 (escuro de mais) ou acima de 93 (luz a mais na cara) |
+| contraste | desvio-padrão da luminância, na escala 0–255 | abaixo de 22 (imagem chapada, pessoa colada ao fundo) |
+| nitidez | gradiente médio entre pixeis vizinhos | abaixo de 4 (tremido, desfocado ou lente suja) |
+| movimento | diferença média face ao quadro anterior, só na faixa central (15–92% da altura) | abaixo de 1,2 **enquanto grava** (quase não há sinal em curso) |
+
+O que **não** se mede, e continua a ser trabalho humano: se as mãos, os braços, os ombros e
+a cara cabem no quadro e se o fundo é simples. Detectar pessoas exige um modelo que este
+site não carrega — e fingir essa detecção era exactamente a promessa que o §0 proíbe. A
+página diz isto por extenso ao lado dos números, e a pré-visualização existe para isso.
+
+Limites a tratar como facto, não como pormenor:
+
+- **os limiares estão por calibrar.** Foram escritos à mão (`QUAL_LIMIAR` em `app/app.js`) e
+  `nitidez` depende da resolução, do sensor e do bitrate. Na primeira centena de sessões
+  reais a equipa compara as `bandeiras` com os clipes e ajusta os quatro números — é para
+  isso que os valores brutos também vão no ficheiro;
+- uma amostra por cada 500 ms; a fase de pré-aviso (1,6 s) não é medida para movimento,
+  porque aí ninguém se mexe ainda;
+- se o browser recusar a leitura do quadro (`getImageData`), a faixa diz isso mesmo e a
+  gravação e os quadros continuam — o verificador nunca é um motivo para se perder uma toma;
+- o resumo por repetição usa **mediana** de luz/contraste/nitidez e **média** de movimento,
+  e só marca uma queixa repetida em pelo menos 40% das amostras dessa repetição.
+
+Como sai no ficheiro (`schema: 2` de `SCHEMA_SESSAO`), sempre uma linha por repetição:
+
+```json
+{"qualidade": {"amostras": 8, "brilho": 58, "contraste": 52, "nitidez": 4.6,
+               "movimento": 3.6, "bandeiras": []}}
+```
+
+`tools/ingerir-colheita.cjs` (que aceita os esquemas 1 e 2 e recusa um mais recente do que
+ele) escreve por termo `sessao.regravar`, ex. `"4ª:brilho/movimento"`, e `sessao.leitura`
+com os números: a lista do «há que filmar outra vez» deixa de depender de abrir clipes um
+a um. Um repositório de treino continua a ser aceite com `qualidade` em falta — o campo é
+informativo, não obrigatório, e a única coisa obrigatória é o consentimento.
+
 ---
 
 ## 5. Consentimento — o mínimo a pedir por escrito

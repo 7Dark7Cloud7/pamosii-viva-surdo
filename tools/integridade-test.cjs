@@ -176,6 +176,25 @@ if (!/aria-live/.test(app)) falhas.push('Desapareceram as regioes aria-live (anu
 if (!/data-contraste-alto/.test(css)) falhas.push('Desapareceu o modo de contraste alto.');
 if (!/skip/.test(html)) falhas.push('Desapareceu o link "Saltar para o conteudo".');
 
+/* ------------------------------------------------- 7b. verificador de qualidade */
+if (/sess-qual-linha/.test(app)) {
+  /* A faixa mostra numeros. Se o texto do «o que nao medimos» desaparecer, a interface passa
+     a sugerir que sabemos se as maos cabem no quadro — e isso o codigo nao sabe. */
+  if (!/O que <strong>n[aã]o<\/strong> medimos/.test(app)) {
+    falhas.push('O verificador de qualidade mostra numeros sem dizer o que NAO mede (enquadramento).');
+  }
+  if (!/QUAL_LIMIAR/.test(app) || !/bandeiras/.test(app)) {
+    falhas.push('O verificador deixou de produzir o resumo (`bandeiras`) que o ingestor le.');
+  }
+  const ing = fs.readFileSync(path.join(__dirname, '..', 'tools', 'ingerir-colheita.cjs'), 'utf8');
+  const sq = app.match(/SCHEMA_SESSAO\s*=\s*(\d+)/);
+  const si = ing.match(/SCHEMA_SESSAO_MAX\s*=\s*(\d+)/);
+  if (!si) falhas.push('tools/ingerir-colheita.cjs ja nao declara SCHEMA_SESSAO_MAX — nao se sabe que esquema le.');
+  else if (sq && Number(si[1]) < Number(sq[1])) {
+    falhas.push('app.js exporta sessoes com schema ' + sq[1] + ' mas o ingestor so le ate ' + si[1] + ' — os ficheiros novos passariam a ser recusados.');
+  }
+}
+
 /* ------------------------------------------------------------ 8. partilha/emb */
 if (!manifest.share_target) {
   falhas.push('manifest sem share_target: o «Partilhar para o Pamosii» do Android deixou de existir.');

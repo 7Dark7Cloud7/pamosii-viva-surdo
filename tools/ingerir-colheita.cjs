@@ -27,6 +27,9 @@ const RAIZ = path.join(__dirname, '..');
 const FICHEIRO_APP = path.join(RAIZ, 'app', 'app.js');
 const DESTINO = path.join(RAIZ, 'app', 'assets', 'glossario-extra.json');
 const SCHEMA_ESPERADO = 1;
+/* O JSONL de sessões tem esquema próprio (SCHEMA_SESSAO em app/app.js):
+   1 = sem `qualidade`; 2 = cada repetição traz os números do verificador de gravação. */
+const SCHEMA_SESSAO_MAX = 2;
 
 const norm = (s) => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 
@@ -60,11 +63,15 @@ function glossarioCentral() {
 function leJsonl(bruto) {
   const linhas = String(bruto).split('\n').map(l => l.trim()).filter(Boolean);
   const porPalavra = new Map();
-  let maus = 0;
+  let maus = 0, futuro = 0;
   linhas.forEach(l => {
     let o;
     try { o = JSON.parse(l); } catch (e) { maus++; return; }
     if (!o || o.tipo !== 'pamosii-sessao' || !o.palavra) { maus++; return; }
+    if (Number(o.schema) > SCHEMA_SESSAO_MAX) {
+      futuro++;
+      return;
+    }
     const chave = norm(o.palavra);
     if (!porPalavra.has(chave)) {
       porPalavra.set(chave, {
@@ -75,7 +82,8 @@ function leJsonl(bruto) {
       });
     }
     const t = porPalavra.get(chave);
-    t.sessao.repeticoes.push({ rep: o.rep, ritmo: o.ritmo, dur_ms: o.dur_ms, quadros: (o.quadros || []).length });
+    t.sessao.repeticoes.push({ rep: o.rep, ritmo: o.ritmo, dur_ms: o.dur_ms, quadros: (o.quadros || []).length,
+      qualidade: o.qualidade && typeof o.qualidade === 'object' ? o.qualidade : null });
     /* o registo que a pessoa encheu depois da gravação é o mais completo: não o estragar */
     ['configuracao', 'lugar', 'movimento', 'mnm', 'fonte', 'nota', 'video', 'validado_por'].forEach(k => {
       if (o[k] && !t[k]) t[k] = o[k];
@@ -83,6 +91,8 @@ function leJsonl(bruto) {
     if (o.completa) t.sessao.completa = true;
   });
   if (maus) console.log('  ! ' + maus + ' linha(s) ilegais ignoradas.');
+  if (futuro) console.log('  ! ' + futuro + ' linha(s) com esquema acima de ' + SCHEMA_SESSAO_MAX
+    + ' ignoradas — este ingestor é mais velho que o exportador; actualizá-lo antes de confiar no resto.');
   const entrada = [...porPalavra.values()];
   return { termos: entrada, lacunas: {}, sessoes: entrada.length };
 }
@@ -112,6 +122,14 @@ function limpa(t) {
     return { erro: 'sessão de gravação sem consentimento registado: não se publica imagem de alguém sem isso' };
   }
   const segundos = s ? Math.round(s.repeticoes.reduce((n, r) => n + Number(r.dur_ms || 0), 0) / 1000) : undefined;
+  /* o verificador de gravação (schema 2): queixas repetidas em ≥40% das amostras de uma
+     repetição. É sobre o VÍDEO (luz, contraste, nitidez, movimento), nunca sobre o sinal
+     estar certo — continuar a não confundir as duas coisas. */
+  const comBandeira = s ? s.repeticoes.filter(r => r.qualidade && Array.isArray(r.qualidade.bandeiras) && r.qualidade.bandeiras.length) : [];
+  const regravar = comBandeira.map(r => r.rep + 'ª:' + r.qualidade.bandeiras.join('/'));
+  const leitura = s ? s.repeticoes.filter(r => r.qualidade).map(r => r.rep + 'ª '
+    + ['luz ' + r.qualidade.brilho, 'contr ' + r.qualidade.contraste,
+       'nitid ' + r.qualidade.nitidez, 'mov ' + r.qualidade.movimento].join(' ')) : [];
   return {
     termo: {
       palavra,
@@ -140,6 +158,8 @@ function limpa(t) {
         quem: s.consentimento.quem === 'outra' ? 'outra pessoa' : 'a própria pessoa',
         audio: s.audio === false ? 'não' : String(s.audio || '—'),
         consentido_em: campo(s.consentimento.em, 24),
+        regravar: regravar.length ? regravar : undefined,
+        leitura: leitura.length ? leitura.join(' · ') : undefined,
       } : undefined,
     },
   };
@@ -192,7 +212,8 @@ ficheiros.forEach(caminho => {
       return;
     }
     porChave.set(chave, r.termo);
-    console.log('  + ' + r.termo.palavra + ' [' + r.termo.estado + '] · ' + r.termo.tema);
+    console.log('  + ' + r.termo.palavra + ' [' + r.termo.estado + '] · ' + r.termo.tema
+      + (r.termo.sessao && r.termo.sessao.regravar ? ' · regravar: ' + r.termo.sessao.regravar.join(', ') : ''));
     novos++;
   });
 });
