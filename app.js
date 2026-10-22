@@ -3940,10 +3940,14 @@ function colheitaHTML(palavra) {
       }, null, 2))}</code></pre>
       <p class="muted">Uma sessão de gravação junta-se ao mesmo pacote com o campo
       <code>sessao</code>, e o botão «Exportar sessões (JSONL)» escreve <strong>uma linha por repetição</strong> —
-      é o formato que a equipa usa para medir duração e ritmo de cada sinal:</p>
+      é o formato que a equipa usa para medir duração e ritmo de cada sinal. O campo <code>qualidade</code>
+      são os números do verificador (mediana de luz, contraste e nitidez, média de movimento, e as
+      <code>bandeiras</code> que se repetiram em 40% das amostras): medem o <em>quadro</em>, não detectam mãos
+      nem caras, e servem para a equipa priorizar o que há para regravar.</p>
       <pre class="ch-json"><code>${esc(JSON.stringify({
         schema: SCHEMA_SESSAO, tipo: 'pamosii-sessao', sessao: 's1a2b3', palavra: 'banana', tema: 'Comida e bebida',
         rep: 3, ritmo: 'lento', dur_ms: 8000, audio: false, quadros: ['data:image/jpeg;base64,…'],
+        qualidade: { amostras: 16, brilho: 61, contraste: 48, nitidez: 9.3, movimento: 4.1, bandeiras: [] },
         consentimento: { quem: 'eu', em: '2026-10-22T09:14:02.000Z' }, estado: 'colhido'
       }, null, 0))}</code></pre>
     </details>
@@ -3986,7 +3990,7 @@ function chItemHTML(e, i) {
    o localStorage de quem os tirou, e os clipes do MediaRecorder vivem apenas na memória
    desta página até a pessoa descarregá-los (por isso o site insiste no download). */
 
-const SCHEMA_SESSAO = 1;
+const SCHEMA_SESSAO = 2;   /* 2 = cada repetição traz `qualidade` (luz/contraste/nitidez/movimento) */
 /* docs/colheita-sinais-lga.md §3: três repetições ao ritmo natural e uma lenta.
    A lenta é a que permite anotar a trajectória — sem ela o glifo desenha-se a adivinhar. */
 const SESS_REPS = [
@@ -3999,6 +4003,23 @@ const SESS_PREP_MS = 1600;                    /* respiração antes de cada repe
 const SESS_QUADROS_EM = [0.2, 0.55, 0.9];     /* frações da repetição em que se captura */
 const SESS_LARGURA = 320;
 const SESS_ALTURA = 240;
+
+/* --- 13.3.1 VERIFICADOR DE QUALIDADE DA GRAVAÇÃO (ferramenta 3 do protocolo) ---
+   Antes desta ferramenta a pessoa gravava às cegas: só dava conta de que a luz não
+   prestava quando a equipa abria o ficheiro. O que se pode medir AQUI, sem modelo
+   nenhum e sem rede, é o quadro pequeno que já estamos a capturar:
+     brilho   — média da luminância (está escuro? está estourado?)
+     contraste— desvio-padrão da luminância (fundo chapado, cara colada no fundo)
+     nitidez  — gradiente médio entre pixeis vizinhos (tremido, lente suja, focagem)
+     movimento— diferença média entre este quadro e o anterior, na faixa central
+   O que NÃO se mede, e por isso continua a ser a pessoa a confirmar: se as MÃOS,
+   os BRAÇOS, os OMBROS e a CARA cabem no quadro. Isso exige detectar pessoas — um
+   modelo que este site não carrega e não finge ter.
+   Os limiares são indicativos e estão escritos cru no JSONL (`qualidade`): a primeira
+   calibração honesta faz-se com as vossas gravações reais, não por cá. */
+const QUAL_L = 96, QUAL_A = 72;        /* quadro de medição: 6.912 pixeis, barato mesmo em telemóvel velho */
+const QUAL_INTERVALO_MS = 500;         /* uma medição a cada meio segundo */
+const QUAL_LIMIAR = { escuro: 42, estourado: 93, chapado: 22, tremido: 4, quieto: 1.2 };
 
 function chSessaoHTML(palavra, temas) {
   const pode = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
@@ -4071,6 +4092,13 @@ function sessPistaHTML(alvo) {
     <p class="sess-alvo" id="sess-alvo">${esc(alvo)}</p>
   </div>
   <p class="sess-passo" id="sess-passo" role="status" aria-live="polite">A ligar a câmara…</p>
+  <div class="sess-qual" id="sess-qual">
+    <p class="sess-qual-h">Verificação da gravação</p>
+    <ul class="sess-qual-linha" id="sess-qual-linha"></ul>
+    <p class="sess-qual-nota" id="sess-qual-nota" role="status" aria-live="polite">A medir o quadro…</p>
+    <p class="sess-qual-mut">O que <strong>não</strong> medimos: se as mãos, os braços, os ombros e a cara cabem
+      no quadro — isso só tu podes ver, por isso a pré-visualização acima é para isso mesmo.</p>
+  </div>
   <div class="sess-barra" id="sess-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100"
     aria-valuenow="0" aria-label="Tempo da repetição"><span id="sess-fill"></span></div>
   <p class="sess-cont" id="sess-cont">A preparar a primeira repetição…</p>
@@ -4157,10 +4185,140 @@ function sessPintaClips() {
     + 'pacote quando enviares à equipa.</li>';
 }
 
+/* lê o quadro pequeno que já temos e depara 4 números. devolve null se o browser
+   recusar a leitura (tela bloqueada, vídeo ainda sem fotograma). */
+let qualCanvas = null, qualCtx = null, qualLumaPrev = null;
+
+function qualReiniciar() { qualLumaPrev = null; }
+
+function qualMede(v) {
+  if (!v || !v.videoWidth) return null;
+  if (!qualCanvas) {
+    qualCanvas = document.createElement('canvas');
+    qualCanvas.width = QUAL_L; qualCanvas.height = QUAL_A;
+    qualCtx = qualCanvas.getContext('2d', { willReadFrequently: true });
+  }
+  try { qualCtx.drawImage(v, 0, 0, QUAL_L, QUAL_A); } catch (e) { return null; }
+  let px;
+  try { px = qualCtx.getImageData(0, 0, QUAL_L, QUAL_A).data; } catch (e) { return null; }
+  const n = QUAL_L * QUAL_A;
+  const lum = new Float32Array(n);
+  let soma = 0;
+  for (let i = 0; i < n; i++) {
+    const j = i * 4;
+    const l = 0.2126 * px[j] + 0.7152 * px[j + 1] + 0.0722 * px[j + 2];
+    lum[i] = l; soma += l;
+  }
+  const media = soma / n;
+  let dv = 0;
+  for (let i = 0; i < n; i++) { const x = lum[i] - media; dv += x * x; }
+  let grad = 0, gc = 0;
+  for (let y = 1; y < QUAL_A - 1; y++) {
+    for (let x = 1; x < QUAL_L - 1; x++) {
+      const i = y * QUAL_L + x;
+      grad += Math.abs(lum[i] - lum[i + 1]) + Math.abs(lum[i] - lum[i + QUAL_L]);
+      gc++;
+    }
+  }
+  /* movimento só na faixa central: 15%–92% da altura, onde costuma estar cara e mãos */
+  let mov = null;
+  if (qualLumaPrev && qualLumaPrev.length === n) {
+    const de = Math.floor(QUAL_A * 0.15), ate = Math.floor(QUAL_A * 0.92);
+    let s = 0, c = 0;
+    for (let y = de; y < ate; y++) {
+      const base = y * QUAL_L;
+      for (let x = 0; x < QUAL_L; x++) { s += Math.abs(lum[base + x] - qualLumaPrev[base + x]); c++; }
+    }
+    mov = c ? s / c : 0;
+  }
+  qualLumaPrev = lum;
+  return {
+    brilho: Math.round(media / 2.55),
+    contraste: Math.round(Math.sqrt(dv / n)),
+    nitidez: Number((grad / (gc || 1)).toFixed(1)),
+    movimento: mov === null ? null : Number(mov.toFixed(1)),
+  };
+}
+
+/* As palavras nunca são «reprovado»: este verificador informa, não julga, e não travar
+   a gravação — a pessoa é que decide se melhora a luz ou grava assim mesmo. */
+function qualDiagnostico(m, aGravar) {
+  if (!m) return [];
+  const f = [];
+  if (m.brilho < QUAL_LIMIAR.escuro) f.push({ k: 'brilho', t: 'Está escuro de mais: vira-te para a luz ou acende a divisão.' });
+  else if (m.brilho > QUAL_LIMIAR.estourado) f.push({ k: 'brilho', t: 'Luz a mais na cara: evita ter uma janela ou uma lâmpada mesmo atrás de ti.' });
+  if (m.contraste < QUAL_LIMIAR.chapado) f.push({ k: 'contraste', t: 'Imagem chapada: escolhe um fundo simples, de cor diferente da tua pele e da tua roupa.' });
+  if (m.nitidez < QUAL_LIMIAR.tremido) f.push({ k: 'nitidez', t: 'Imagem tremida ou desfocada: apoia o telemóvel em qualquer coisa, limpa a lente e deixa-o quieto.' });
+  /* na respiração ninguém se mexe ainda — só faz sentido acusar quietude a gravar */
+  if (aGravar && m.movimento !== null && m.movimento < QUAL_LIMIAR.quieto) {
+    f.push({ k: 'movimento', t: 'Neste instante quase não há movimento: confirma que estás a fazer o sinal completo, do princípio ao fim.' });
+  }
+  return f;
+}
+
+const mediana = (xs) => {
+  if (!xs.length) return null;
+  const a = xs.slice().sort((p, q) => p - q);
+  const m = a.length >> 1;
+  return a.length % 2 ? a[m] : Number(((a[m - 1] + a[m]) / 2).toFixed(1));
+};
+
+/* resumo de uma repetição para o JSONL: mediana dos valores, média do movimento,
+   e as bandeiras que apareceram em pelo menos 40% das amostras dessa repetição. */
+function qualResume(meds) {
+  if (!meds || !meds.length) return null;
+  const conta = {};
+  meds.forEach(m => (m.flagKeys || []).forEach(k => { conta[k] = (conta[k] || 0) + 1; }));
+  const corte = Math.max(1, Math.ceil(meds.length * 0.4));
+  const movs = meds.map(m => m.movimento).filter(x => x !== null && x !== undefined);
+  return {
+    amostras: meds.length,
+    brilho: mediana(meds.map(m => m.brilho)),
+    contraste: mediana(meds.map(m => m.contraste)),
+    nitidez: mediana(meds.map(m => m.nitidez)),
+    movimento: movs.length ? Number((movs.reduce((a, b) => a + b, 0) / movs.length).toFixed(1)) : null,
+    bandeiras: Object.keys(conta).filter(k => conta[k] >= corte),
+  };
+}
+
+function sessMede() {
+  if (!SESS) return;
+  SESS.medEm = SESS.decorrido;
+  const m = qualMede($('#sess-cam'));
+  if (!m) { SESS.ultimaMed = null; sessPintaQual(); return; }
+  m.flags = qualDiagnostico(m, SESS.fase === 'gravar');
+  m.flagKeys = m.flags.map(f => f.k);
+  SESS.ultimaMed = m;
+  if (SESS.atual) (SESS.atual.medicoes = SESS.atual.medicoes || []).push(m);
+  sessPintaQual();
+}
+
+function sessPintaQual() {
+  const ul = $('#sess-qual-linha'), nota = $('#sess-qual-nota');
+  if (!ul || !nota || !SESS) return;
+  const m = SESS.ultimaMed;
+  if (!m) {
+    ul.innerHTML = '';
+    nota.textContent = 'O browser não deixou ler o quadro — a gravação e os quadros continuam na mesma.';
+    return;
+  }
+  const linha = (rotulo, valor, k) => `<li${m.flagKeys.includes(k) ? ' class="is-mau"' : ''}>`
+    + `<span>${rotulo}</span><b>${valor}</b></li>`;
+  ul.innerHTML = linha('Luz', m.brilho + ' %', 'brilho')
+    + linha('Contraste', String(m.contraste), 'contraste')
+    + linha('Nitidez', String(m.nitidez), 'nitidez')
+    + (m.movimento === null ? '<li><span>Movimento</span><b>—</b></li>' : linha('Movimento', String(m.movimento), 'movimento'));
+  const texto = m.flags.length ? m.flags.map(f => f.t).join(' ')
+    : 'Luz, contraste e nitidez dentro do que se pode medir sem modelo. Grava assim.';
+  /* só escrevemos quando muda: um aria-live a reannunciar cada 0,5 s é insuportável */
+  if (nota.textContent !== texto) nota.textContent = texto;
+}
+
 /* --- máquina de estados: preparar → gravar → (clipes) → repetição seguinte --- */
 function sessTique() {
   if (!SESS || SESS.parada) return;
   SESS.decorrido = performance.now() - SESS.t0;
+  if (SESS.decorrido - (SESS.medEm || 0) >= QUAL_INTERVALO_MS) sessMede();
   if (SESS.fase === 'preparar') {
     if (SESS.decorrido >= SESS_PREP_MS) sessComecaGravar();
     sessPinta();
@@ -4195,7 +4353,8 @@ function sessPrepara(rep) {
   SESS.rep = rep;
   SESS.fase = 'preparar';
   SESS.proximo = 0;
-  SESS.atual = { rep: rep + 1, ritmo: SESS_REPS[rep].ritmo, ms: SESS_REPS[rep].ms, quadros: [], inicio: new Date().toISOString() };
+  SESS.medEm = -1e9;                    /* medir logo no primeiro tique desta repetição */
+  SESS.atual = { rep: rep + 1, ritmo: SESS_REPS[rep].ritmo, ms: SESS_REPS[rep].ms, quadros: [], medicoes: [], inicio: new Date().toISOString() };
   SESS.t0 = performance.now();
   if (SESS.rec) { const r = SESS.rec; SESS.rec = null; try { r.stop(); } catch (e) { /* já parado */ } }
   sessPinta();
@@ -4205,6 +4364,8 @@ function sessComecaGravar() {
   SESS.fase = 'gravar';
   SESS.t0 = performance.now();
   SESS.decorrido = 0;
+  SESS.medEm = -1e9;   /* o cronómetro reinicia-se aqui: sem isto a medição ficava adormecida
+                          até ao valor que já tinha atingido na respiração (≈1,5 s) */
   if (window.MediaRecorder && SESS.stream && SESS.stream.getVideoTracks().length) {
     try {
       SESS.rec = new MediaRecorder(SESS.stream);
@@ -4272,12 +4433,17 @@ function sessFecha(completa) {
     sessao: {
       schema: SCHEMA_SESSAO, id: id, consentimento: consent, audio: false,
       completa: !!completa, gerada: new Date().toISOString(),
-      repeticoes: reps.map(r => ({ rep: r.rep, ritmo: r.ritmo, dur_ms: r.ms, inicio: r.inicio, quadros: r.quadros })),
+      repeticoes: reps.map(r => {
+        const q = qualResume(r.medicoes);
+        return { rep: r.rep, ritmo: r.ritmo, dur_ms: r.ms, inicio: r.inicio, quadros: r.quadros, qualidade: q };
+      }),
     },
     fotos: reps.reduce((acc, r) => acc.concat(r.quadros), []),
     configuracao: '', lugar: '', movimento: '', mnm: '', fonte: '', video: '', nota: '',
   };
   const lista = lerColheita();
+  const marcadas = registo.sessao.repeticoes.filter(r => r.qualidade && r.qualidade.bandeiras.length);
+  const ROTULO_BANDEIRA = { brilho: 'luz', contraste: 'contraste', nitidez: 'nitidez', movimento: 'movimento' };
   const dup = lista.findIndex(x => norm(x.palavra) === norm(palavra));
   if (dup >= 0) lista[dup] = { ...lista[dup], ...registo };
   else lista.unshift(registo);
@@ -4298,6 +4464,12 @@ function sessFecha(completa) {
         estado <strong>colhido</strong> (só um sinalizador surdo pode validar).</p>
       ${completa ? '' : `<p class="sess-sumario">${I.info} Sessão incompleta: gravaste ${reps.length} das
         ${SESS_REPS.length} repetições. Guarda mesmo assim — a equipa vê o que falta no ficheiro.</p>`}
+      ${marcadas.length ? `<p class="sess-sumario">${I.info} O verificador marcou ${marcadas.length} das ${reps.length}
+        ${pl(reps.length, 'repetição', 'repetições')}: ${marcadas.map(r => r.rep + 'ª ('
+          + r.qualidade.bandeiras.map(b => ROTULO_BANDEIRA[b] || b).join(', ') + ')').join(', ')}.
+        Não precisas de gravar de novo se na pré-visualização te parece bom — a marca segue no ficheiro para a equipa.</p>`
+        : `<p class="sess-sumario">${I.check} Nenhuma ${pl(reps.length, 'repetição', 'repetições')} marcada pelo verificador
+          de luz, contraste, nitidez e movimento.</p>`}
       <p class="sess-sumario muted">Falta a parte escrita: descreve o sinal no formulário de cima
         (configuração da mão, lugar, movimento, expressão). A gravação sozinha não chega para o dicionário.</p>
       ${clips.length ? `<p class="sess-sumario">${I.info} Ainda tens ${clips.length} ${pl(clips.length, 'clipe', 'clipes')}
@@ -4340,6 +4512,7 @@ function sessFecha(completa) {
 
 function sessPararTudo() {
   if (sessTiqueId) { clearInterval(sessTiqueId); sessTiqueId = null; }
+  qualReiniciar();
   if (!SESS) return;
   try { SESS.rec && SESS.rec.state !== 'inactive' && SESS.rec.stop(); } catch (e) { /* já parado */ }
   SESS.rec = null;
@@ -4375,6 +4548,7 @@ function exportarSessoes() {
       sessao: e.sessao.id, palavra: e.palavra, tema: e.tema || 'Colheita', data: e.data || undefined,
       rep: r.rep, ritmo: r.ritmo, dur_ms: r.dur_ms, inicio: r.inicio || undefined,
       completa: !!e.sessao.completa, audio: false,
+      qualidade: r.qualidade || undefined,
       consentimento: e.sessao.consentimento,
       configuracao: e.configuracao || undefined, lugar: e.lugar || undefined,
       movimento: e.movimento || undefined, mnm: e.mnm || undefined,
