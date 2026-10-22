@@ -114,6 +114,28 @@ Regras de dados (as mesmas que o site já cumpre):
   vozes de terceiros sem consentimento);
 - este repositório/JSONL não é publicado sem decisão da equipa.
 
+### 4.1 O que o site já produz (modo sessão de gravação, `#/colher`)
+
+A secção 13.3 de `app/app.js` implementa este protocolo no browser de quem grava. Não é
+uma promessa: foi corrido ponta a ponta, e o ficheiro que de fora é aceite por
+`tools/ingerir-colheita.cjs`. O mapeamento, campo a campo:
+
+| Este documento pede | O que o código faz |
+|---|---|
+| §3: 3 repetições naturais + 1 lenta | `SESS_REPS` = 3 × 4 s + 1 × 8 s, guiadas por barra de tempo e contador "Repetição N de 4", com 1,6 s de pré-aviso por repetição |
+| §3: sem áudio | `getUserMedia({video:…, audio:false})` — o pedido não inclui faixa de áudio |
+| §3: quadros do meio do sinal | 3 JPEG por repetição, a 20% / 55% / 90% do movimento, 320×240, qualidade 0,55 |
+| §4: uma linha por sinal/repetição | `Exportar sessões (JSONL)` escreve `pamosii-sessoes-AAAA-MM-DD.jsonl`, `application/x-ndjson`, **uma linha por repetição** |
+| §5: consentimento antes de gravar | o botão de começar está bloqueado até as confirmações estarem marcadas; o bloco `consentimento` (`quem`, `em`, `audio:false`) vai em cada linha; **a ingestão recusa** sessão sem consentimento registado |
+| §6 / pagamento | `dur_ms` por repetição, medido ao relógio de parede e somado pelo ingester (20 s para uma sessão completa) — é a grandeza sobre a qual se calcula o pagamento proporcional |
+| privacidade | os clipes vivem só na memória da visita (cada um com link de download); nada sai do browser sem a pessoa carregar em "Exportar"; um registo guardado fica `estado: "colhido"` e o site nunca o mostra como validado |
+
+O registo do site é **uma linha por repetição**, não por sinal: ao agrupar por `palavra`
+o ingester reconstrói a sessão inteira (e um `completa: false` fica visível, porque uma
+sessão interrompida a meio também é informação). Os campos descritivos do §3 do formulário
+(configuração da mão, lugar, movimento, marcador não manual, fonte) vêm nas mesmas linhas,
+quando a pessoa os preencheu — a gravação sozinha não substitui a descrição.
+
 ---
 
 ## 5. Consentimento — o mínimo a pedir por escrito
@@ -123,14 +145,28 @@ Meia página, linguagem simples, uma assinatura por pessoa. Conteúdos obrigató
 1. o que é gravado (vídeo/imagem das mãos, braços, ombros e rosto), por quem e onde fica guardado;
 2. que o material servirá para construir ferramentas de tradução/estudo de LGA (Pamosii) e
    pode ser publicado na aplicação e em materiais de formação;
-3. que a participação é gratuita e revogável a qualquer momento, com pedido por Facebook/e-mail
+3. que a participação é revogável a qualquer momento, com pedido por Facebook/e-mail
    da Viva Surdo, e que a recolha de material já publicado será interrompida;
 4. se a pessoa aceita aparecer identificada (nome/crédito) ou prefere aparecer só pelo código;
 5. contacto para dúvidas e para revogar;
-6. para menores: nome e assinatura do encarregado de educação.
+6. para menores: nome e assinatura do encarregado de educação;
+7. **compensação** — que quem sinaliza e quem valida são pagos, de forma proporcional à
+   duração da gravação, ao alcance e ao uso dos dados, e que existe orçamento para isso
+   desde o primeiro lote. O consentimento **não** pode ser a forma de obter trabalho
+   gestual gratuito; registar a disponibilidade para pagar não é pagar.
 
-Nunca: prometer pagamento implícito, pedir BI/carta de identidade "para o arquivo",
-ou pedir dados sobre a surdez da pessoa ou da família.
+Duas regras duras, do lado europeu da casa (EDPD/EUD), que este projecto aplica a si mesmo
+mesmo sendo angolano:
+
+- **nenhum avatar, boneco ou síntese imita a cara, a voz ou o estilo de sinalização de uma
+  pessoa real** sem autorização escrita, prévia e separada do consentimento de gravação —
+  mesmo que a cara não apareça. É por isto que o Signer mostra glifos de estudo rotulados
+  como tal, e que "clipes reais em cadeia" vêm antes de qualquer boneco personificado;
+- **a IA complementa intérpretes humanos, não os substitui** onde existir um (interpretação
+  de tribunal, escola, consulta médica fica com pessoas pagas).
+
+Nunca: prometer pagamento implícito no texto do consentimento, pedir BI/carta de identidade
+"para o arquivo", ou pedir dados sobre a surdez da pessoa ou da família.
 
 ---
 
@@ -165,6 +201,16 @@ Um sinal pode ficar `aprovado` para estudo (aparecer no dicionário) e mesmo ass
   aviso existente "a validar", sem esconder nada.
 - Nada de chaves de API nem credenciais no frontend; se houver hospedagem de vídeo
   (YouTube não-listado, R2, bucket próprio), decide-se na fase de backend.
+- **A ponte que já existe**: o JSONL que a sessão de gravação exporta entra em
+  `node tools/ingerir-colheita.cjs <ficheiro>.jsonl --dry-run` (sem escrever nada) e, depois
+  de revisto, sem `--dry-run` escreve `app/assets/glossario-extra.json`, que o site lê no
+  arranque. O ingester agrupa as linhas por palavra, junta registos duplicados, reduz
+  `quadros`/`fotos` a contagem (`tem_fotos`) para nenhuma imagem acabar num repositório por
+  acidente, e **recusa** sessão sem consentimento. Só promove a `confirmado` quando a linha
+  traz `validado_por` — que é o §6 a acontecer, não o código a decidir por ele.
+- As marcações de tempo (`#/marcar`) têm a sua própria ponte:
+  `node tools/ingerir-marcacoes.cjs marcacoes.json --dry-run` produz os segmentos a cortar
+  por palavra — o que falta para o Signer encadear clipes reais em vez de glifos.
 
 ---
 

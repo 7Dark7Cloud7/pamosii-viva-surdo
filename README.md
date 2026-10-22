@@ -98,8 +98,13 @@ tools/
 ├── fetch-biblia.cjs     # foi assim que biblia.json foi obtido e conferido
 ├── make-icons.cjs       # gera os PNGs do manifest a partir da marca (node tools/make-icons.cjs)
 ├── engine-test.cjs      # corre o motor de glosa do Pamosii em Node (node tools/engine-test.cjs)
-├── ingerir-colheita.cjs # transforma um pacote JSON exportado da Colheita em glossario-extra.json
-└── serve.cjs            # servidor estático de teste (porta 8123)
+├── integridade-test.cjs # lê o código-fonte e falha se alguma interface prometer o que não existe
+├── ingerir-colheita.cjs # pacote JSON ou JSONL da Colheita → glossario-extra.json (--dry-run, --mostra)
+├── ingerir-marcacoes.cjs # marcações de tempos exportadas → segmentos para cortar os clipes
+├── teste-embed.html     # página mínima para provar o postMessage do Signer incorporado
+├── serve.cjs            # servidor estático de teste (porta 8123)
+└── exemplos/
+    └── sessoes-exemplo.jsonl # sessões exportadas pelo browser (quadros substituídos por marcador)
 docs/
 └── colheita-sinais-lga.md   # protocolo de gravação/validação necessário para alguma vez
                              # haver reconhecimento de sinais (não é código; ver abaixo)
@@ -121,12 +126,14 @@ Fora do repositório de trabalho: `.deploy-gh/` é o clone ligado ao repo public
 | `#/biblioteca`    | Biblioteca                    | Pesquisável; itens reais (vídeos) + itens planeados "Em breve" |
 | `#/biblia`        | Bíblia                        | Passagens reais (Almeida, domínio público) em texto, leitura em voz alta e **glosa de sinais versículo a versículo**; `#/biblia/:chave` abre uma passagem (`genesis-1`, `joao-3-16`, `salmos-23`, `marcos-7-31`) |
 | `#/evangelismo`   | Evangelismo                   | Roteiros de partilha com frases prontas, cada uma com a sequência de sinais e o modo de teste em Libras |
-| `#/colher`        | Colheita participada          | Qualquer pessoa regista sinais que conhece; lista das palavras sem sinal encontradas no site; exportação local em JSON/TXT |
+| `#/colher`        | Colheita participada          | Qualquer pessoa regista sinais que conhece — por escrito ou numa sessão de gravação guiada (consentimento + 3 repetições + 1 lenta, sem áudio); lista das palavras sem sinal encontradas no site; exportação local em JSON/TXT/JSONL |
 | `#/colher/:palavra` | Registar uma palavra        | Abre o formulário já preenchido com essa palavra (venha do dicionário, do Pamosii, da Bíblia ou do Signer) |
+| `#/marcar`        | Marcação de tempos            | Ferramenta de revisão: marca os segundos em que o sinal de cada palavra aparece nas 17 aulas; exporta JSON/TXT e come-se em `tools/ingerir-marcacoes.cjs` |
+| `#/fora`          | Fora deste site               | As três formas de usar o Signer fora desta página: partilhar no Android, extensão Chrome, e incorporar por iframe |
 | `#/sobre`         | Sobre                         | Missão, modelo (fontes públicas), reconhecimento com atribuição de fonte, valores |
 | `#/contacto`      | Contacto                      | Apenas canais verificados: Facebook, Instagram, YouTube + playlist |
 
-A rota antiga `#/catalogo` redirecciona para `#/cursos`. Além destas 15 vistas registadas, há dois widgets que não são rotas: o **Pamosii Signer** (botão flutuante presente em todas as páginas) e o **painel de acessibilidade**.
+A rota antiga `#/catalogo` redirecciona para `#/cursos`. Além destas 17 vistas registadas, há dois widgets que não são rotas: o **Pamosii Signer** (botão flutuante presente em todas as páginas) e o **painel de acessibilidade**.
 
 ---
 
@@ -239,7 +246,16 @@ Um botão flutuante (``Pamosii Signer``, canto inferior esquerdo, ao lado do bot
 | Teclado | Esc fecha (o listener vive no `documento`, por isso fecha mesmo com o foco no botão flutuante); ← → percorrem; Espaço reproduz; Tab fica em laço **dentro da janela** quando o foco já lá está. O foco vai para "Reproduzir" ao abrir. |
 | Falta de sinal | Cada palavra sem sinal no glossário aparece em `#sg-falta` com link directo para `#/colher/<palavra>` — o Signer é também a entrada da Colheita. |
 
-**O que o Signer NÃO é, e diz isso na própria janela:** não traduz automaticamente, não lê gestos, e o boneco **não é um sinalizador surdo angolano**. Enquanto não houver vídeo gravado e aprovado, o boneco é uma ilustração de apoio; o aviso aparece no topo da janela, e as páginas de "Sinais animados" repetem-no.
+**As quatro superfícies do Signer (todas o mesmo widget, nenhum servidor):**
+
+| Superfície | Como se usa | O que está implementado |
+|---|---|---|
+| Dentro do site | Botão flutuante em todas as páginas | Janela fixa fora do `#app`; descrito na tabela acima. |
+| **Apontar** | "Apontar" no topo da janela → a pessoa clica numa frase ou parágrafo do `<main>` e **só esse trecho** é sinalizado | O `click` captura o elemento, extrai-lhe o texto, fecha o modo de apontamento e monta a sequência. Sai com Esc, com o botão, ou ao mudar de rota. Sem leitor de ecrã, o mesmo resultado obtém-se com "Sinalizar esta página" e as setas. |
+| **Incorporada** | `<iframe src="…/app/index.html?emb=1#/pamosii">` — o site nasce sem cabeçalho, rodapé nem barra de tabs, para um site de parceiro ou de uma escola | Verificado com um iframe real: o painel dentro do iframe recebe `{tipo:'pamosii-sinalizar', texto}` do pai e monta a sequência ("Eu quero água" → 2 sinais). Duas travas: o `?emb=1` tira a navegação, e o painel **só aceita ordens quando está dentro de um iframe** (`window.parent !== window`) — o mesmo `postMessage` atirado contra a página aberta sozinho é ignorado, medido. O texto entra sanitizado (string, sem `\0`, limitado a `SG_EMB_MAX`). Limite honesto: não há lista permitida de origens — qualquer página que incruste o iframe pode mandar texto ao painel, que é só isso que o painel faz com o campo de escrita. |
+| **Fora do site** | `manifest.webmanifest` com `share_target` (`text/plain`, `title`, `url`): no Android, "Partilhar → Pamosii" a partir do WhatsApp, Chrome ou Notes | A partilha abre `#/fora?text=…`, uma página que mostra o texto recebido e o sinaliza — o gesto que o VLibras tem, sem instalação extra. A mesma página explica como usar o Signer **fora** deste site (extensão Chrome em `extension/`, e o iframe). |
+
+**O que o Signer NÃO é, e diz isso na própria janela:** não traduz automaticamente, não lê gestos, e o boneco **não é um sinalizador surdo angolano**. Enquanto não houver vídeo gravado e aprovado, o boneco é uma ilustração de apoio; o aviso aparece no topo da janela, e as páginas de "Sinais animados" repetem-no. Um boneco não pode imitar a cara, a voz ou o estilo de uma pessoa real sem **autorização escrita, prévia e separada** — está dito no `docs/colheita-sinais-lga.md` §5 e é a razão por que a fase "clipes reais em cadeia" (ver abaixo na lista da equipa) vem antes de qualquer avatar personificado.
 
 ## Bíblia — texto real, áudio e sinais (`#/biblia`, `#/biblia/:chave`)
 
@@ -271,7 +287,42 @@ O gargalo real do projecto não é o código: é não haver dicionário de LGA s
 5. **Exportar.** Um pacote JSON (esquema `pamosii-colheita`, com `entrada[]` e `lacunas{}`) e uma versão TXT legível por quem não tem terminal. A exportação é sempre acto deliberado: nada sai do browser sozinha.
 6. **Ingerir (equipa).** `node tools/ingerir-colheita.cjs pacote.json [--dry-run]` junta pacotes de muitas pessoas, elimina duplicados (fica com o registo mais completo), **recusa** texto que pareça URL ou base64, reduz `fotos` a `tem_fotos` (para o JSON não rebentar), e só promove a `confirmado` quando o registo traz `validado_por`. Escreve `app/assets/glossario-extra.json`, que o site passa a ler no arranque.
 
-**Porque é que isto não é "validação":** o site usa três estados separados e visíveis — `a-validar` (inferido do programa público), `colhido` (registo da comunidade, sem revisão) e `confirmado` (revisto por pessoa sura utilizadora de LGA). A ingestão automática **nunca** escreve `confirmado` sem `validado_por`, e as entradas `colhido` não ganham vídeo nem honram a autoridade de uma aula.
+**Modo sessão de gravação (a parte que desbloqueia a fase 2).** Descrever um sinal por palavras é o mínimo; para treinar ou desenhar glifos é preciso vê-lo. A página tem por isso uma sessão guiada que cumpre o protocolo de gravação (`docs/colheita-sinais-lga.md` §3), com o consentimento como portão e não como rodapé:
+
+1. **Consentimento primeiro.** Quatro confirmações (gravação das mãos/rosto, uso no Pamosii, pagamento proporcionado ao tempo e ao uso, e — se quem sinaliza não é a pessoa que grava — a autorização dessa pessoa). Sem as três obrigatórias marcadas o botão "Aceitar e começar" não desbloqueia, e a câmara nem é pedida. A qualquer momento há um **Revogar e apagar** que desliga a câmara e deita fora quadros e clipes sem guardar nada.
+2. **Câmara sem áudio.** `getUserMedia({video:…, audio:false})` — o pedido é literalmente sem faixa de áudio, por duas razões: não é preciso para ver um sinal, e o som ambiente capta vozes de terceiros sem consentimento. Se a câmara falhar, a mensagem diz isso e o formulário escrito continua disponível.
+3. **4 repetições guiadas.** 3 ao ritmo natural (4 s) e 1 lenta (8 s), com pré-aviso de 1,6 s por repetição, barra de tempo, contador "Repetição 2 de 4", e pausa que descarta o clipe a meio (um clipe incompleto não serve para anotar trajectória). É o mesmo cronómetro da parede que depois escreve `dur_ms` — a base do pagamento proporcional.
+4. **Prova visual.** De cada repetição ficam 3 quadros (20%, 55%, 90% do movimento) a 320×240 JPEG — o meio do sinal, que é o que falta para desenhar o glifo. Além disso um `MediaRecorder` grava a repetição inteira; **os clipes vivem só na memória da visita**, cada um com o seu link "Descarregar repetição N", e a própria sessão avisa para os descarregar antes de sair.
+5. **Guardar.** O registo entra em `vs.colheita` com `tipo:'sessao'`, `estado:'colhido'`, o `consentimento` (quem sinaliza, hora, `audio:false`) e as 4 repetições medidas. Aparece logo na lista da página e no dicionário com etiqueta **Sessão**. O texto descritivo continua a ser pedido: a gravação sozinha não chega para o dicionário.
+6. **Exportar.** `Exportar sessões (JSONL)` escreve **uma linha por repetição** (`pamosii-sessoes-AAAA-MM-DD.jsonl`, `application/x-ndjson`), exactamente o formato do §4 do protocolo. O pacote JSON e o TXT também levam o bloco `sessao`.
+7. **Ingerir.** `node tools/ingerir-colheita.cjs <ficheiro>.jsonl [--dry-run] [--mostra]` aceita JSONL, agrupa as linhas por palavra, soma os segundos, e **recusa** qualquer sessão sem consentimento registado. Com `--mostra` imprime só os termos limpos, para rever antes de escrever `glossario-extra.json`. `tools/exemplos/sessoes-exemplo.jsonl` é o exemplo de teste (dry-run apenas).
+
+**Porque é que isto não é "validação":** o site usa três estados separados e visíveis — `a-validar` (inferido do programa público), `colhido` (registo da comunidade, sem revisão) e `confirmado` (revisto por pessoa sura utilizadora de LGA). A ingestão automática **nunca** escreve `confirmado` sem `validado_por`, e as entradas `colhido` não ganham vídeo nem honram a autoridade de uma aula. Uma gravação guardada também não vale por si: fica `colhido` até haver revisão humana.
+
+---
+
+## Marcação de tempos por sinal (`#/marcar`)
+
+Para o Signer deixar de ser um boneco e passar a mostrar **o sinal real de cada palavra** é preciso saber em que segundos de cada aula ele aparece. Ninguém tem esse mapa — é trabalho de revisão, e faz-se aqui, no browser de quem revê, sem backend:
+
+1. **Escolher a aula** (as 17 do mini-curso, com o vídeo do YouTube num reader acessível: Espaço = reproduzir/pausar, 0,5× e 1×).
+2. **Marcar.** Escreve a palavra, carrega "Capturar início / fim" (ou `i` / `f` no teclado) e o tempo do leitor entra na ficha; `[` e `]` ajustam 0,1 s, `s` grava. Cada marcação fica com `estado: 'por validar'` — a ferramenta não se auto-valida, e `tools/integridade-test.cjs` falha se alguém escrever código que o faça.
+3. **Guardar e exportar.** Em `vs.marcar` neste aparelho; exporta JSON (`{aula, palavra, inicio, fim, estado}`) e TXT. Nada é enviado.
+4. **Ingerir (equipa).** `node tools/ingerir-marcacoes.cjs marcacoes.json --dry-run` ordena por tempo, junta duplicados da mesma palavra na mesma aula e produz os segmentos a cortar — a matéria-prima dos clipes por sinal que o Signer encadeia.
+
+---
+
+## Usar o Signer fora deste site (`#/fora`)
+
+O VLibras não vive só no site do CELIB — vive na página de quem lê. Aqui há três caminhos, todos no mesmo código e nenhum com servidor:
+
+| Caminho | Como | Estado verificado |
+|---|---|---|
+| **Partilhar de qualquer app** (Android) | `manifest.webmanifest` → `share_target` (GET, `title`/`text`/`url`, `action: "./"`) | Instala-se ("Adicionar ao ecrã principal") e o Pamosii aparece na folha de partilha; `iniciarApp()` detecta `?text=`, limpa o endereço com `history.replaceState` e abre `#/pamosii` com a sequência já montada — sem a pessoa reescrever nada. O `url` partilhado **não** entra na sequência (um link não é uma frase); só aparece como nota. No iPhone, onde o `share_target` não existe, a página `#/fora` diz isso e aponta para o campo do painel. |
+| **Extensão Chrome** | pasta `extension/` (MV3), carregar como "descompactada" em `chrome://extensions` | `content.js` injecta o painel na página que a pessoa está a ler; `background.js` **não faz rede nem guarda dados** (verificado por `tools/integridade-test.cjs`, que também confirma que cada ficheiro declarado no `manifest.json` existe). Não imita a cara nem o estilo de uma pessoa real: mostra os mesmos glifos de estudo do site. |
+| **Incorporar** | `?emb=1` num `<iframe>` (o `tools/teste-embed.html` é uma página de teste local desse canal) | Corrido num iframe real neste ambiente: texto enviado pelo pai aparece no painel e monta a sequência. Ver também a linha "Incorporada" da tabela do Signer, onde está o limite (não há lista permitida de origens). |
+
+A página `#/fora` explica os três à pessoa que chega do dicionário ou do Signer, com o aviso de sempre: é **glosa de estudo**, não tradução automática, e continua `a validar` pela comunidade surda angolana.
 
 ---
 
@@ -348,7 +399,7 @@ Ajustar, se necessário, o bloco `.brand` em `styles.css`. Nada mais precisa de 
 - **Pamosii** (`#/pamosii`): glosa de uma ou várias frases com vídeo real por sinal e glifos vectoriais animados, modo de datilologia, ditado por voz, sequência de sinais → frase escrita e falada, e módulo de câmara para gravar/rever/capturar. Ver secção própria.
 - **Pamosii Signer**: leitor de sinais flutuante em todas as páginas, com figura animada por família de movimento, velocidade, transporte por teclado e convite directo para registar a palavra que falta. Ver secção própria.
 - **Bíblia** (`#/biblia`) com texto real de Almeida e glosa versículo a versículo; **Evangelismo** (`#/evangelismo`) com roteiros e cada frase sinalizável; **modo de teste em Libras** (VLibras, opt-in, claramente rotulado como brasileiro).
-- **Colheita participada** (`#/colher`): backlog de palavras sem sinal, formulário dos campos do protocolo, fotografias locais, exportação JSON/TXT e ingestão por `tools/ingerir-colheita.cjs`.
+- **Colheita participada** (`#/colher`): backlog de palavras sem sinal, formulário dos campos do protocolo, fotografias locais, **sessão de gravação guiada** (consentimento → 3 repetições naturais + 1 lenta, sem áudio, quadros + clipes na memória), exportação JSON/TXT/JSONL e ingestão por `tools/ingerir-colheita.cjs`.
 - **Painel de acessibilidade** (tamanho de texto, contraste alto, tema escuro, movimento reduzido, leitura simples, leitura em voz alta) — ver secção acima.
 - **Modo aplicação**: instalável ("Adicionar ao ecrã principal") e **a funcionar sem rede** — as rotas, o dicionário, a glosa do Pamosii, a Bíblia e a frase falada abrem com o servidor desligado (ver "Modo aplicação").
 - Metadados por página (`title`, `description`, `og:*`).
@@ -379,9 +430,16 @@ Não há chamadas de API no código. Quando existir backend, os pontos naturais 
 ```bash
 node --check app/app.js     # sintaxe JS (sem build/lint configurados no projecto)
 node --check app/sw.js      # idem para o service worker
+node tools/engine-test.cjs  # frases de exemplo no motor de glosa (exit 0 = OK)
+node tools/integridade-test.cjs      # lê app.js/index.html/sw.js/extension e falha se alguma
+                              # interface prometer o que o código não faz (claims, links mortos,
+                              # chaves, versão do casulo, invariante das marcações e das sessões)
+node tools/ingerir-colheita.cjs tools/exemplos/sessoes-exemplo.jsonl --dry-run
 node tools/make-icons.cjs   # regenera os PNG do manifest a partir da marca (sem dependências)
 node tools/serve.cjs        # http://127.0.0.1:8123 — URL estável usado nestes testes
 ```
+
+Depois de mexer em `app.js`, `styles.css` ou `sw.js`: **mexer na versão do casulo** (`VERSAO` em `sw.js` e o `?v=` em `index.html`, sempre em par), senão o browser continua a servir o ficheiro velho — foi precisamente assim que uma edição da sessão pareceu não ter efeito nenhum. Para testar sem o service worker no meio: `evaluate` → `getRegistrations()`/`unregister()` + apagar as caches, e recarregar.
 
 Teste manual recomendado: navegar por todas as rotas, abrir pelo menos um vídeo em cada página, pesquisar no catálogo/biblioteca/dicionário, escrever uma frase no Pamosii (e outra com "Soletrar letras"), gravar um clipe de 5s e rever a 0,5×, e percorrer o site apenas com o teclado (Tab/Enter/Escape no menu móvel, na barra inferior — incluir o "Mais" — e no painel de acessibilidade). Para o offline: abrir o site uma vez com rede, depois desligar a internet (ou desligar o servidor de teste) e recarregar — as páginas, o dicionário e o Pamosii devem responder, e um vídeo deve mostrar o aviso de "precisa de rede" em vez de um leitor em branco. Para a instalação: no Chrome de telemóvel, menu → "Adicionar ao ecrã principal"; o ícone e o nome vêm do `manifest.webmanifest`.
 
@@ -399,6 +457,10 @@ Verificado nesta entrega (medição no browser em `http://127.0.0.1:8123`; telem
 - Leitor de vídeo em fachada (só carrega o iframe do YouTube depois do clique, sempre sem autoplay e com `decoding="async"` na miniatura): testado nos cartões do Pamosii, do dicionário e da biblioteca, e nas listas de cursos, sem scroll horizontal em nenhuma largura.
 - Animação dos glifos activa no estado normal e `animation-name: none` com "Movimento reduzido" ligado.
 - Leitura em voz alta na página do Pamosii: 29 frases, inclui a glosa, ignora os glifos SVG e os cartões duplicados.
+- **Sessão de gravação corrida ponta a ponta no browser** (câmara sintética, porque este ambiente não tem câmara real): as três confirmações desbloqueiam o botão, o pedido de câmara é `audio:false`, as 4 repetições disparam na ordem do protocolo, e o registo guardado traz `completa:true`, `dur_ms` = 4000/4000/4000/8000 (o cronómetro da parede, não uma contagem de fotogramas), 12 quadros (3 por repetição), 4 clipes descarregáveis e `consentimento {quem:'eu', audio:false}`. O `Exportar sessões (JSONL)` produziu 1 linha por repetição em `pamosii-sessoes-2026-10-22.jsonl` (`application/x-ndjson`), e esse ficheiro real foi lido por `tools/ingerir-colheita.cjs --dry-run --mostra`, que agrupou as 4 linhas em 1 registo com **20 segundos** e 12 quadros — os segundos que servem de base ao pagamento proporcional.
+- Estados de erro da sessão, medidos: permissão negada → "A câmara não abriu (permissão negada ou indisponível). A descrição escrita continua a funcionar." e o botão volta a ficar activo; pausa → descarta o clipe e os quadros da repetição a meio e volta a começar essa repetição; revogar → desliga as faixas, conta o que se perdeu e devolve o formulário de consentimento. Bug apanhado por esta medição e corrigido: o `<p id="sess-msg">` vivia **dentro** da pista, que só é montada depois da câmara abrir — por isso uma falha de câmara não mostrava nada a ninguém. O aviso passou a viver ao lado da pista.
+- Âncoras no endereço: `#/…` são rotas; `#tema-alfabeto` é um ponto da página `/aprender-lga` e recarregar com ele no URL deixava um 404. Agora `render()` procura a âncora, vai à página que a contém e faz scroll (verificado: `?t=…#tema-alfabeto` → h1 "Aprender Língua Gestual Angolana", `.theme-sec` encontrada, 0 erros na consola). Os botões "Descrever agora" deixaram de ser `<a href="#…">` por essa razão.
+- As três superfícies do Signer, corridas no browser nesta entrega: **partilha** (`?text=Deus%20criou%20o%20mundo&url=…` → o endereço limpa-se para `#/pamosii`, o campo enche-se com o texto e o `sg-live` diz explicitamente *"18 caracteres, sem o link"* — o URL não entra na sequência); **incorporada** (iframe real com `?emb=1`: sem cabeçalho/rodapé/barra de tabs, `postMessage` do pai → textarea com "Eu quero água" e 2 sinais montados; o mesmo `postMessage` atirado contra a página aberta sozinha é ignorado, porque `EM_IFRAME` é falso); **apontar** (`#/evangelismo`: ligar "Apontar a um texto" → `aria-pressed="true"` → clicar num parágrafo → 269 caracteres desse parágrafo, 171 sinais, e nada do resto da página).
 
 **Sem rede e instalável (medido em `http://127.0.0.1:8123` a 390×844: a bateria completa de 10 rotas com a escala de texto do painel a 150% — o caso mais apertado — e a verificação final da versão publicada a 100%):**
 

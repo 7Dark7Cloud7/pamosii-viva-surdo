@@ -2,10 +2,11 @@
 
    Uso:
      node tools/ingerir-colheita.cjs caminho/do/pamosii-colheita-2026-10-22.json [outro.json ...]
+     node tools/ingerir-colheita.cjs caminho/do/pamosii-sessoes-2026-10-22.jsonl   (uma linha por repetição)
      node tools/ingerir-colheita.cjs --dry-run   …   (mostra o que faria, não escreve)
 
    O que faz:
-     1. lê um ou mais pacotes exportados pela página /colher (schema 1);
+     1. lê um ou mais pacotes exportados pela página /colher (schema 1) — JSON ou JSONL;
      2. limpa e valida cada termo (palavra, tema, URL, comprimento);
      3. tira as fotografias (base64) — ficam no aparelho de quem colheu, nunca no site;
      4. deduplica contra o GLOSSÁRIO central lido de app/app.js e contra o que já
@@ -15,6 +16,8 @@
    Regras de integridade (as mesmas do site):
      - UM SINAL SÓ FICA "confirmado" se o registo trouxer `validado_por` com o nome de
        um sinalizador surdo. Sem isso, entra como "colhido" — e a página diz isso.
+     - uma sessão de gravação sem `consentimento` registado é recusada: a recolha só
+       entra no dicionário se a pessoa que sinalizou tiver concordado antes.
      - o script não envia nada a lado nenhum nem pede dados pessoais. */
 
 const fs = require('node:fs');
@@ -53,16 +56,48 @@ function glossarioCentral() {
   return chaves;
 }
 
-/* ---------- 2. leitura e limpeza de um pacote ---------- */
+/* ---------- 2. leitura e limpeza de um pacote (JSON da Colheita ou JSONL de sessões) ---------- */
+function leJsonl(bruto) {
+  const linhas = String(bruto).split('\n').map(l => l.trim()).filter(Boolean);
+  const porPalavra = new Map();
+  let maus = 0;
+  linhas.forEach(l => {
+    let o;
+    try { o = JSON.parse(l); } catch (e) { maus++; return; }
+    if (!o || o.tipo !== 'pamosii-sessao' || !o.palavra) { maus++; return; }
+    const chave = norm(o.palavra);
+    if (!porPalavra.has(chave)) {
+      porPalavra.set(chave, {
+        palavra: o.palavra, tema: o.tema, estado: o.estado, validado_por: o.validado_por,
+        configuracao: o.configuracao, lugar: o.lugar, movimento: o.movimento, mnm: o.mnm,
+        fonte: o.fonte, nota: o.nota, video: o.video, data: o.data,
+        sessao: { id: o.sessao, completa: o.completa, consentimento: o.consentimento, audio: o.audio, repeticoes: [] },
+      });
+    }
+    const t = porPalavra.get(chave);
+    t.sessao.repeticoes.push({ rep: o.rep, ritmo: o.ritmo, dur_ms: o.dur_ms, quadros: (o.quadros || []).length });
+    /* o registo que a pessoa encheu depois da gravação é o mais completo: não o estragar */
+    ['configuracao', 'lugar', 'movimento', 'mnm', 'fonte', 'nota', 'video', 'validado_por'].forEach(k => {
+      if (o[k] && !t[k]) t[k] = o[k];
+    });
+    if (o.completa) t.sessao.completa = true;
+  });
+  if (maus) console.log('  ! ' + maus + ' linha(s) ilegais ignoradas.');
+  const entrada = [...porPalavra.values()];
+  return { termos: entrada, lacunas: {}, sessoes: entrada.length };
+}
+
 function lePacote(caminho) {
-  const bruto = JSON.parse(fs.readFileSync(caminho, 'utf8'));
-  if (bruto.schema && bruto.schema > SCHEMA_ESPERADO) {
-    throw new Error(path.basename(caminho) + ': schema ' + bruto.schema + ', este ingestor só conhece a versão ' + SCHEMA_ESPERADO);
+  const bruto = fs.readFileSync(caminho, 'utf8');
+  if (/\.jsonl$/i.test(caminho) || /\.ndjson$/i.test(caminho)) return leJsonl(bruto);
+  const dados = JSON.parse(bruto);
+  if (dados.schema && dados.schema > SCHEMA_ESPERADO) {
+    throw new Error(path.basename(caminho) + ': schema ' + dados.schema + ', este ingestor só conhece a versão ' + SCHEMA_ESPERADO);
   }
-  const termos = Array.isArray(bruto.entrada) ? bruto.entrada
-    : Array.isArray(bruto.termos) ? bruto.termos : null;
+  const termos = Array.isArray(dados.entrada) ? dados.entrada
+    : Array.isArray(dados.termos) ? dados.termos : null;
   if (!termos) throw new Error(path.basename(caminho) + ': sem `entrada[]` nem `termos[]` — não é um pacote da Colheita.');
-  return { termos, lacunas: bruto.lacunas && typeof bruto.lacunas === 'object' ? bruto.lacunas : {} };
+  return { termos, lacunas: dados.lacunas && typeof dados.lacunas === 'object' ? dados.lacunas : {} };
 }
 
 function limpa(t) {
@@ -72,6 +107,11 @@ function limpa(t) {
   const url = String(t.video || '').trim();
   if (url && !/^https?:\/\/\S+$/i.test(url)) return { erro: 'URL do vídeo inválido: ' + url.slice(0, 40) };
   const campo = (v, n) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, n);
+  const s = t.sessao && Array.isArray(t.sessao.repeticoes) && t.sessao.repeticoes.length ? t.sessao : null;
+  if (s && !(s.consentimento && s.consentimento.em)) {
+    return { erro: 'sessão de gravação sem consentimento registado: não se publica imagem de alguém sem isso' };
+  }
+  const segundos = s ? Math.round(s.repeticoes.reduce((n, r) => n + Number(r.dur_ms || 0), 0) / 1000) : undefined;
   return {
     termo: {
       palavra,
@@ -88,6 +128,19 @@ function limpa(t) {
       nota: campo(t.nota, 400) || undefined,
       data: campo(t.data, 10) || undefined,
       tem_fotos: Array.isArray(t.fotos) && t.fotos.length ? t.fotos.length : undefined,
+      /* a sessão de gravação: quantas repetições, se a lenta lá está, quanto tempo de sinal
+         (é com estes segundos que se paga a quem sinaliza), e quem autorizou */
+      sessao: s ? {
+        id: campo(s.id, 20),
+        rep: s.repeticoes.length,
+        lenta: s.repeticoes.some(r => r.ritmo === 'lento'),
+        completa: !!s.completa,
+        segundos,
+        quadros: s.repeticoes.reduce((n, r) => n + Number(r.quadros || 0), 0),
+        quem: s.consentimento.quem === 'outra' ? 'outra pessoa' : 'a própria pessoa',
+        audio: s.audio === false ? 'não' : String(s.audio || '—'),
+        consentido_em: campo(s.consentimento.em, 24),
+      } : undefined,
     },
   };
 }
@@ -95,6 +148,7 @@ function limpa(t) {
 /* ---------- 3. correr ---------- */
 const argv = process.argv.slice(2);
 const dry = argv.includes('--dry-run');
+const mostra = argv.includes('--mostra');
 const ficheiros = argv.filter(a => !a.startsWith('--'));
 
 if (!ficheiros.length) {
@@ -155,6 +209,7 @@ const saida = {
 };
 
 console.log('\n' + (dry ? '[dry-run] nada escrito.' : '→ ' + path.relative(RAIZ, DESTINO)));
+if (mostra) console.log(JSON.stringify(termos, null, 1));
 console.log('  ' + novos + ' novo(s), ' + repetidos + ' juntado(s), ' + jaCentrais + ' já no glossário central, ' + recusados + ' recusado(s).');
 if (Object.keys(lacunasTotais).length) {
   const top = Object.entries(lacunasTotais).sort((a, b) => b[1] - a[1]).slice(0, 15);

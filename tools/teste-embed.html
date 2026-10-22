@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-AO">
+<head>
+<meta charset="utf-8">
+<title>Teste — incorporar o Pamosii Signer</title>
+<style>
+  body{font:16px/1.6 system-ui;margin:0;padding:20px;background:#f4f1ea;color:#122}
+  h1{font-size:19px}
+  #sitio{width:min(430px,100%);height:600px;border:2px solid #10342F;border-radius:14px;background:#fffdf7;overflow:hidden}
+  #sitio iframe{width:100%;height:100%;border:0;display:block}
+  button,textarea{font:inherit}
+  #log{white-space:pre-wrap;background:#fff;border-radius:10px;padding:10px;font-size:13px;margin-top:12px}
+  #tx{width:100%;min-height:64px;box-sizing:border-box;border-radius:10px;border:1px solid #999;padding:8px}
+</style>
+</head>
+<body>
+<h1>Teste local: incorporar o Pamosii Signer num iframe (o que a extensão Chrome faz)</h1>
+<p>Abre o site com <code>?emb=1</code> (sem navegação) e envia texto por <code>postMessage</code>.
+Usa apenas <code>http://127.0.0.1:8123</code> — serve para provar o canal, não é parte do site.</p>
+<textarea id="tx">Obrigado. Bom dia! Onde fica a escola?</textarea>
+<p><button id="btn" type="button">Sinalizar este texto</button></p>
+<div id="sitio"></div>
+<p id="log">à espera…</p>
+<script>
+const SITE = 'http://127.0.0.1:8123';
+const log = m => { document.getElementById('log').textContent = m; };
+let pronto = false, fila = '';
+const f = document.createElement('iframe');
+f.src = SITE + '/?emb=1#/pamosii';
+f.setAttribute('title', 'Pamosii Signer');
+document.getElementById('sitio').appendChild(f);
+
+window.addEventListener('message', ev => {
+  const d = ev.data;
+  if (!d || typeof d !== 'object' || d.tipo !== 'pamosii-signer-pronto') return;
+  if (ev.origin !== SITE) { log('ping de origem inesperada: ' + ev.origin); return; }
+  pronto = true;
+  log('pronto (origem ' + ev.origin + ')' + (fila ? ' — a enviar o texto na fila' : ''));
+  if (fila) { const t = fila; fila = ''; enviar(t); }
+});
+
+function enviar(t) {
+  try { f.contentWindow.postMessage({ tipo: 'pamosii-sinalizar', texto: t }, SITE); }
+  catch (e) { log('falhou: ' + e.message); }
+}
+
+document.getElementById('btn').addEventListener('click', () => {
+  const t = document.getElementById('tx').value.trim();
+  if (!pronto) { fila = t; log('ainda sem ping de pronto — texto na fila'); return; }
+  enviar(t);
+  log('enviado: ' + t);
+});
+</script>
+</body>
+</html>

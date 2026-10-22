@@ -1,0 +1,36 @@
+/* Pamosii Signer — styles do content script, aplicados à página da pessoa (light DOM).
+
+   Só duas classes são usadas, e só enquanto o modo apontar está ligado:
+     .pamosii-a-apontar  no <html>  → cursor de mira em todo o texto
+     .pamosii-alvo       no bloco   → o parágrafo actualmente escolhido
+
+   Nada aqui altera layout, cor de texto ou tipografia de forma permanente:
+   tudo desaparece quando o modo apontar desliga. Os textos do painel vivem
+   dentro do shadow DOM fechado (content.js), portanto este ficheiro não os
+   afecta — nem eles a ele. */
+
+html.pamosii-a-apontar,
+html.pamosii-a-apontar * {
+  cursor: crosshair !important;
+}
+
+/* anel de pick: outline em vez de border, para não empurrar nem uma linha de texto */
+html.pamosii-a-apontar .pamosii-alvo {
+  outline: 3px solid #f7c948 !important;
+  outline-offset: 3px !important;
+  border-radius: 6px !important;
+}
+
+/* alto contraste do sistema: o amarelo perde-se em fundos claros, passa a preto */
+@media (prefers-contrast: more) {
+  html.pamosii-a-apontar .pamosii-alvo {
+    outline: 4px solid #000 !important;
+    outline-offset: 2px !important;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  html.pamosii-a-apontar .pamosii-alvo {
+    outline-color: #ffd97a !important;
+  }
+}

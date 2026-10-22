@@ -1472,7 +1472,7 @@ const META = {
   '/biblia': { t: 'Bíblia em português, áudio e sinais — Pamosii Viva Surdo', d: 'Texto bíblico real (João Ferreira de Almeida, domínio público), leitura em voz alta para pessoas cegas e glosa de sinais por versículo. Não existe Bíblia publicada em Língua Gestual Angolana; há testes em Libras.' },
   '/evangelismo': { t: 'Evangelismo acessível — Pamosii Viva Surdo', d: 'Roteiros curtos de partilha da Bíblia para usar com pessoas surdas: frases em português com glosa de sinais, áudio e copiar. Conteúdo de estudo, sem promessas de tradução automática.' },
   '/sobre': { t: 'Sobre — Pamosii Viva Surdo', d: 'Pamosii é a plataforma da Viva Surdo, iniciativa angolana de inclusão das pessoas surdas através da educação, da formação e da Língua Gestual Angolana (LGA).' },
-  '/colher': { t: 'Colheita participada de sinais LGA — Pamosii Viva Surdo', d: 'Registar sinais de Língua Gestual Angolana com método (configuração da mão, lugar, movimento, expressão). Tudo fica no aparelho de quem regista e é exportado num ficheiro para a equipa validar.' },
+  '/colher': { t: 'Colheita participada de sinais LGA — Pamosii Viva Surdo', d: 'Registar sinais de Língua Gestual Angolana com método (configuração da mão, lugar, movimento, expressão) ou gravar uma sessão guiada: consentimento no início, 3 repetições e uma lenta, sem áudio. Tudo fica no aparelho de quem regista e é exportado para a equipa validar.' },
   '/marcar': { t: 'Marcação de tempos por sinal — Pamosii Viva Surdo', d: 'Ferramenta para marcar os segundos em que o sinal de cada palavra aparece nas 17 aulas de LGA. As marcações ficam no aparelho e exportam-se em JSON para a equipa cortar os clipes.' },
   '/contacto': { t: 'Contacto — Pamosii Viva Surdo', d: 'Canais oficiais verificados da Viva Surdo: Facebook, Instagram e YouTube. Telefone e e-mail serão divulgados após confirmação.' },
 };
@@ -1490,6 +1490,13 @@ const on = (path, view) => routes.push({ path, view });
 const go = (path) => { location.hash = '#' + path; };
 
 const REDIRECTS = { '/catalogo': '/cursos' }; // rotas antigas do site anterior
+
+/* As âncoras escritas por este site vivem em duas páginas. O elemento decide: se a
+   âncora existe cá, fica tudo como está; senão vai para a página que a contém. */
+const rotaDaAncora = (h) => {
+  if (document.getElementById(h)) return null;
+  return h.startsWith('tema-') ? '/aprender-lga' : '/';
+};
 
 /* As rotas das duas secções novas têm de ser registadas aqui: o helper `on` só
    existe a partir desta linha, e os ficheiros são avaliados de cima para baixo.
@@ -1529,6 +1536,7 @@ const NAV_ITENS = [
   { path: '/evangelismo', rotulo: 'Evangelismo' },
   { path: '/colher', rotulo: 'Colheita', extra: true },
   { path: '/marcar', rotulo: 'Marcação', extra: true },
+  { path: '/fora', rotulo: 'Fora deste site', extra: true },
   { path: '/sobre', rotulo: 'Sobre' },
   { path: '/contacto', rotulo: 'Contacto' },
 ];
@@ -1544,7 +1552,19 @@ const TAB_ITENS = [
   { path: '/dicionario', rotulo: 'Dicionário', icone: 'book' },
 ];
 
+/* `?emb=1` é o modo widget: o site inteiro fica sem cabeçalho, rodapé e barra de tabs,
+   e só aparece o painel do Signer — é esta página que outros sites incorporam num iframe
+   e que a extensão Chrome abre. Sem este parâmetro o site é normal. */
+const EMB = /[?&]emb=1\b/.test(location.search);
+const EM_IFRAME = window.parent !== window;
+
 function shell(content, active) {
+  if (EMB) {
+    return `<main id="conteudo" class="emb-main" tabindex="-1">
+  <p class="emb-aviso">Pamosii Signer — a preparar o painel de sinais… Se não aparecer nada,
+    abre o site sem este modo e usa o botão do Signer: <a href="#/pamosii">Pamosii</a>.</p>
+</main>`;
+  }
   const links = NAV_ITENS.map(n =>
     `<a href="#${n.path}"${n.extra ? ' class="nav-extra"' : ''}${n.path === active ? ' aria-current="page"' : ''}>${n.rotulo}</a>`).join('');
   const nasTabs = TAB_ITENS.some(n => n.path === active);
@@ -1588,6 +1608,7 @@ function shell(content, active) {
       </div>
     </div>
     <div class="foot-bottom">
+      <span class="foot-creditos">Aplicação criada pela <strong>equipa Horizonte Futuro</strong> e pela <strong>equipa Viva Surdo</strong>.</span>
       <span>© ${ano} Pamosii Viva Surdo. Conteúdos de LGA publicados com autorização do canal oficial da Viva Surdo.</span>
       <span>Sem registo de contas e sem recolha de dados pessoais nesta versão.</span>
     </div>
@@ -2768,6 +2789,31 @@ on('/sobre', () => {
 </section>
 <section class="section tight">
   <div class="wrap">
+    <div class="fact-card rv creditos">
+      <h2>${I.users} Quem faz esta aplicação</h2>
+      <p><strong>O Pamosii foi criado pela equipa Horizonte Futuro em conjunto com a equipa Viva Surdo.</strong>
+        A Horizonte Futuro constrói e mantém a plataforma; a Viva Surdo é a iniciativa angolana que publica o
+        conteúdo, define o que é correto em Língua Gestual Angolana e decide o que pode ser divulgado.</p>
+      <p style="margin-top:10px">As duas equipas trabalham sobre o mesmo princípio: <strong>a comunidade surda
+        não é fonte gratuita</strong>. O trabalho de quem sinaliza, valida e corrige é trabalho profissional e
+        tem de ser pago — proporcional à duração, ao alcance e ao uso dos dados recolhidos. Enquanto esse
+        orçamento não estiver garantido, as ferramentas de recolha (Colheita, Marcação) servem para preparar o
+        material, não para o publicar como válido.</p>
+      <p style="margin-top:10px">Nenhum boneco animado deste site substitui uma pessoa sura, nenhum avatar
+        imita a cara, a voz ou o estilo de sinalizar de alguém real sem <strong>autorização escrita, prévia e
+        separada</strong> dessa pessoa. E nenhum texto deste site traduz automaticamente fala para LGA ou LGA
+        para fala: o que existe é uma <em>glosa de estudo</em> feita a partir do glossário, marcada
+        <span class="dic-badge is-a-validar">A validar</span>.</p>
+      <p style="margin-top:10px"><strong>Remoção de conteúdo.</strong> Se apareceste num vídeo, numa imagem ou
+      num registo e queres que saia, diz o quê e onde nos canais oficiais da Viva Surdo — o pedido é tratado
+      pela equipa antes de qualquer nova publicação. Os textos e gravações que fazes <em>aqui</em> nunca saem
+      do teu aparelho: basta apagar na própria página (<a href="#/colher">Colheita</a>,
+      <a href="#/marcar">Marcação</a>), ou limpar os dados do navegador.</p>
+    </div>
+  </div>
+</section>
+<section class="section tight">
+  <div class="wrap">
     <div class="band rv">
       <div>
         <h2>Acompanha o trabalho da Viva Surdo</h2>
@@ -2899,12 +2945,22 @@ async function render() {
   let hash = location.hash.replace(/^#/, '') || '/';
   if (REDIRECTS[hash]) { location.replace('#' + REDIRECTS[hash]); return; }
 
+  /* um endereço com âncora (#tema-casa) não é uma rota: é um ponto de uma página.
+     Ao recarregar, é nessa página que o elemento existe. Sem isto davam 404. */
+  let ancora = '';
+  if (hash && !hash.startsWith('/') && !matchRoute(hash)) {
+    ancora = hash;
+    const para = rotaDaAncora(ancora);
+    if (para) hash = para; else ancora = '';
+  }
+
   pararLeitura();
   bibParar();
   desligarCamara();
   desligarVLibras();   /* o avatar externo vive fora do #app: sem isto ficaria a pairar na página nova */
   signerParar();
   desligarColheitaCam();
+  pararSessao();       /* a sessão em curso vive só nesta página: mudar de rota apaga-a */
   desligarMarcacoes();   /* o leitor do YouTube vive dentro desta rota: sai com ela */
   const m = matchRoute(hash);
   const resultado = m ? await m.view({ args: m.args }) : notFound();
@@ -2925,6 +2981,10 @@ async function render() {
     if (main) main.focus({ preventScroll: true });
     window.scrollTo({ top: 0, behavior: 'auto' });
   }
+  if (ancora) {
+    const el = document.getElementById(ancora);
+    if (el) el.scrollIntoView({ block: 'start', behavior: movReduzido() ? 'auto' : 'smooth' });
+  }
   primeiraRender = false;
 }
 
@@ -2933,8 +2993,8 @@ window.addEventListener('hashchange', () => {
   const h = location.hash.slice(1);
   if (h && !h.startsWith('/')) {
     const el = document.getElementById(h);
-    if (el) { el.scrollIntoView(); }
-    return;
+    if (el) { el.scrollIntoView(); return; }
+    /* a âncora pertence a outra página: render() encarrega-se de a ir buscar. */
   }
   render();
 });
@@ -3050,7 +3110,7 @@ function sgPassos(texto) {
   return passos;
 }
 
-const sgEstado = { aberto: false, modo: 'texto', texto: '', passos: [], i: 0, a: false, vel: 1, relogio: 0 };
+const sgEstado = { aberto: false, modo: 'texto', texto: '', passos: [], i: 0, a: false, vel: 1, relogio: 0, aponta: false };
 
 function sgPassoActual() { return sgEstado.passos[sgEstado.i] || null; }
 
@@ -3157,6 +3217,7 @@ function sgAbrir(textoInicial) {
 }
 
 function sgFechar() {
+  sgApontarDesligar();
   sgEstado.aberto = false;
   sgParar();
   const painel = $('#sg-painel'), fab = $('#sg-fab');
@@ -3189,9 +3250,17 @@ function montarSigner() {
       placeholder="Escreve (ou dita) a frase que queres ver em sinais.">Bom dia! Onde fica a escola?</textarea>
     <div class="sg-liga">
       <button class="btn btn-p btn-sm" type="button" id="sg-usar">${I.search} Sinalizar</button>
+      <button class="btn btn-o btn-sm" type="button" id="sg-aponta" aria-pressed="false">${I.target} Apontar a um texto</button>
       <button class="btn btn-o btn-sm" type="button" id="sg-pagina">Sinalizar esta página</button>
       <button class="btn btn-o btn-sm" type="button" id="sg-fala" aria-pressed="false">${I.play} Ouvir em português</button>
     </div>
+    <p class="sg-aponta-aviso" id="sg-aponta-aviso" hidden>
+      ${I.target} <strong>Modo apontar ligado.</strong> Carrega na frase ou no parágrafo que queres ver em sinais —
+      só esse trecho é que é sinalizado. Com o teclado: <kbd>←</kbd> <kbd>→</kbd> percorrem os textos,
+      <kbd>Enter</kbd> sinaliza o que está marcado, <kbd>Esc</kbd> sai do modo.
+      <button class="btn btn-o btn-sm" type="button" id="sg-aponta-sair">Sair do modo apontar</button>
+      <span class="sg-aponta-onde" id="sg-aponta-onde" role="status"></span>
+    </p>
     <p class="sg-priv">O texto fica neste aparelho: nada é enviado para fora, e não há servidores.</p>
   </div>
   <div class="sg-palco" id="sg-palco"></div>
@@ -3215,7 +3284,9 @@ function montarSigner() {
 
   $('#sg-fab').addEventListener('click', () => { sgEstado.aberto ? sgFechar() : sgAbrir(); });
   $('#sg-close').addEventListener('click', sgFechar);
-  $('#sg-usar').addEventListener('click', () => sgCarregar($('#sg-texto').value, 'texto'));
+  $('#sg-usar').addEventListener('click', () => { sgApontarDesligar(); sgCarregar($('#sg-texto').value, 'texto'); });
+  $('#sg-aponta').addEventListener('click', () => { sgEstado.aponta ? sgApontarDesligar() : sgApontarLigar(); });
+  $('#sg-aponta-sair').addEventListener('click', () => { sgApontarDesligar(); $('#sg-aponta').focus(); });
   $('#sg-pagina').addEventListener('click', () => {
     const t = sgTextoPagina();
     $('#sg-texto').value = t;
@@ -3272,6 +3343,7 @@ function montarSigner() {
 /* chamado pelo router: ao mudar de página a sequência para, e se o painel estiver
    em modo "esta página" volta a ler o texto novo */
 function signerParar() {
+  sgApontarDesligar();
   if (!sgEstado.aberto) { sgParar(); return; }
   sgParar();
   if (sgEstado.modo === 'pagina') {
@@ -3281,6 +3353,306 @@ function signerParar() {
       sgEstado.texto = t; sgPassar();
     }, 0);
   }
+}
+
+/* --- 12.5 MODO APONTAR: carregar numa frase do site e só ela é sinalizada ---
+   O que istos faz: transforma um clique (ou uma selecção, ou o Tab do teclado)
+   num trecho isolado — a frase por baixo do cursor, não a página toda.
+   Regras de integridade:
+     - não há reconhecimento de imagem nem de voz: o texto apontado é o texto que
+       já está escrito na página;
+     - o resultado continua a ser glosa de estudo feita a partir do glossário deste
+       site, com o aviso "A validar" — apontar não melhora a tradução;
+     - nada sai do aparelho. */
+
+const SG_BLOCOS = 'p,li,h1,h2,h3,h4,h5,h6,figcaption,blockquote,td,th,summary,label,caption';
+const SG_MAX_TRECHO = 400;   /* caracteres: mais do que isto deixa de ser "uma frase" */
+
+function sgBlocos() {
+  return Array.from(document.querySelectorAll('#conteudo ' + SG_BLOCOS))
+    .filter(e => !e.closest('#sg-painel') && !e.closest('#sg-fab')
+      && (e.innerText || '').trim().length > 2
+      && !e.querySelector(SG_BLOCOS));
+}
+
+/* o texto visível de um bloco, nó a nó, para poder saber em que letra está o cursor */
+function sgTextoDoBloco(el) {
+  const partes = [];
+  let s = '';
+  const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  let n;
+  while ((n = w.nextNode())) {
+    if (n.nodeType === 3) { const t = n.nodeValue || ''; if (!t.length) continue; partes.push({ no: n, len: t.length }); s += t; }
+    else if (n.nodeName === 'BR') { partes.push({ no: null, len: 1 }); s += ' '; }
+  }
+  return { s, partes };
+}
+
+/* frases: cortamos nos sinais de pontuação fortes e nas quebras de linha */
+function sgFrasesDoTexto(s) {
+  const out = [];
+  const re = /[.!?…]+[»"')\]]*\s*|[;:]\s+|\n+/g;
+  let ini = 0, m;
+  while ((m = re.exec(s))) {
+    const fim = m.index + m[0].length;
+    if (s.slice(ini, fim).trim().length > 2) out.push([ini, fim]);
+    ini = fim;
+  }
+  if (s.slice(ini).trim().length > 2) out.push([ini, s.length]);
+  return out;
+}
+
+function sgÍndiceDasPartes(partes, no, off) {
+  let ac = 0;
+  for (const p of partes) {
+    if (p.no === no) return ac + Math.min(off, p.len);
+    ac += p.len;
+  }
+  return -1;
+}
+
+function sgCortar(t) {
+  const x = String(t || '').replace(/\s+/g, ' ').trim();
+  if (x.length <= SG_MAX_TRECHO) return x;
+  const janela = x.slice(0, SG_MAX_TRECHO);
+  const corte = Math.max(janela.lastIndexOf(' '), janela.lastIndexOf(','), janela.lastIndexOf(';'), janela.lastIndexOf('—'));
+  return (corte > 40 ? janela.slice(0, corte) : janela).trim() + ' …';
+}
+
+/* o trecho que a pessoa apontou: selecção dentro do bloco > frase sob o cursor > bloco */
+function sgTrechoApontado(el, x, y) {
+  const { s, partes } = sgTextoDoBloco(el);
+  const sel = window.getSelection && window.getSelection();
+  const textoSel = sel ? String(sel).trim() : '';
+  const dentro = sel && sel.anchorNode && el.contains(sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentNode : sel.anchorNode);
+  if (textoSel.length > 2 && dentro) {
+    /* se a pessoa marcou a meio de uma palavra, alargamos até à palavra inteira */
+    const i = s.indexOf(textoSel);
+    if (i < 0) return { texto: sgCortar(textoSel), origem: 'selecção' };
+    let a = i, b = i + textoSel.length;
+    const letra = (c) => /[\p{L}\p{N}]/u.test(c || '');
+    while (a > 0 && letra(s[a - 1])) a--;
+    while (b < s.length && letra(s[b])) b++;
+    return { texto: sgCortar(s.slice(a, b)), origem: 'selecção' };
+  }
+  const frases = sgFrasesDoTexto(s);
+  if (!frases.length) return { texto: sgCortar(s), origem: 'bloco' };
+  let idx = -1;
+  if (typeof document.caretRangeFromPoint === 'function') {
+    const r = document.caretRangeFromPoint(x, y);
+    if (r && r.startContainer) idx = sgÍndiceDasPartes(partes, r.startContainer, r.startOffset);
+  } else if (typeof document.caretPositionFromPoint === 'function') {
+    const p = document.caretPositionFromPoint(x, y);
+    if (p && p.offsetNode) idx = sgÍndiceDasPartes(partes, p.offsetNode, p.offset);
+  }
+  if (idx < 0) return { texto: sgCortar(s), origem: 'bloco' };
+  const f = frases.find(([a, b]) => idx >= a && idx <= b) || frases[0];
+  return { texto: sgCortar(s.slice(f[0], f[1])), origem: 'frase' };
+}
+
+let sgApontaHandler = null, sgMovHandler = null, sgAlvo = null;
+function sgMarcarAlvo(el) {
+  if (sgAlvo === el) return;
+  if (sgAlvo) sgAlvo.classList.remove('sg-alvo');
+  sgAlvo = el;
+  const onde = $('#sg-aponta-onde');
+  if (sgAlvo) {
+    sgAlvo.classList.add('sg-alvo');
+    sgAlvo.scrollIntoView({ block: 'nearest', behavior: movReduzido() ? 'auto' : 'smooth' });
+    if (onde) {
+      const blocos = sgBlocos();
+      const texto = (sgAlvo.innerText || '').replace(/\s+/g, ' ').trim();
+      onde.textContent = 'Texto marcado: ' + (blocos.indexOf(sgAlvo) + 1) + ' de ' + blocos.length
+        + ' — «' + texto.slice(0, 60) + (texto.length > 60 ? ' …' : '') + '»';
+    }
+  } else if (onde) onde.textContent = '';
+}
+
+function sgApontarLigar() {
+  if (sgApontaHandler || !$('#sg-painel')) return;
+  sgEstado.aponta = true;
+  document.documentElement.classList.add('sg-apontando');
+  const btn = $('#sg-aponta');
+  if (btn) { btn.setAttribute('aria-pressed', 'true'); btn.innerHTML = `${I.close} A apontar — carrega num texto`; }
+  const aviso = $('#sg-aponta-aviso');
+  if (aviso) aviso.hidden = false;
+
+  sgMovHandler = (e) => {
+    const el = e.target && e.target.closest && e.target.closest(SG_BLOCOS);
+    if (el && !el.closest('#sg-painel') && !el.closest('#sg-fab') && el.querySelector(SG_BLOCOS) === null) sgMarcarAlvo(el);
+  };
+  document.addEventListener('mousemove', sgMovHandler, { passive: true });
+
+  sgApontaHandler = (e) => {
+    if (e.button && e.button !== 0) return;
+    if (e.target && e.target.closest && (e.target.closest('#sg-painel') || e.target.closest('#sg-fab'))) return;
+    /* links, botões e campos continuam a ser links, botões e campos: apontar não
+       se faz passar por eles */
+    if (e.target && e.target.closest && e.target.closest('a[href],button,summary,input,select,textarea,label,[role="button"]')) return;
+    const el = e.target && e.target.closest && e.target.closest(SG_BLOCOS);
+    if (!el) {
+      const l = $('#sg-live');
+      if (l) l.textContent = 'Aí não havia texto. Carrega em cima de uma frase ou parágrafo, ou prime Esc para sair do modo apontar.';
+      return;
+    }
+    e.preventDefault(); e.stopPropagation();
+    const t = sgTrechoApontado(el, e.clientX, e.clientY);
+    sgApontarUsar(t.texto, t.origem);
+  };
+  document.addEventListener('click', sgApontaHandler, true);
+  document.addEventListener('keydown', sgApontaTecla, true);
+  sgMarcarAlvo(sgBlocos()[0] || null);
+}
+
+function sgApontarDesligar() {
+  sgEstado.aponta = false;
+  if (sgApontaHandler) { document.removeEventListener('click', sgApontaHandler, true); sgApontaHandler = null; }
+  if (sgMovHandler) { document.removeEventListener('mousemove', sgMovHandler); sgMovHandler = null; }
+  document.removeEventListener('keydown', sgApontaTecla, true);
+  if (sgAlvo) { sgAlvo.classList.remove('sg-alvo'); sgAlvo = null; }
+  document.documentElement.classList.remove('sg-apontando');
+  const btn = $('#sg-aponta');
+  if (btn) { btn.setAttribute('aria-pressed', 'false'); btn.innerHTML = `${I.target} Apontar a um texto`; }
+  const aviso = $('#sg-aponta-aviso');
+  if (aviso) aviso.hidden = true;
+  const onde = $('#sg-aponta-onde');
+  if (onde) onde.textContent = '';
+}
+
+/* teclado: ← → percorrem os blocos da página, Enter sinaliza o bloco em foco */
+function sgApontaTecla(e) {
+  if (!sgEstado.aponta) return;
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); sgApontarDesligar(); $('#sg-aponta') && $('#sg-aponta').focus(); return; }
+  const blocos = sgBlocos();
+  if (!blocos.length) return;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault(); e.stopPropagation();
+    const passo = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1 : -1;
+    const actual = blocos.indexOf(sgAlvo);
+    const prox = Math.max(0, Math.min(blocos.length - 1, (actual < 0 ? 0 : actual + passo)));
+    sgMarcarAlvo(blocos[prox]);
+    return;
+  }
+  if (e.key === 'Enter' && sgAlvo) {
+    e.preventDefault(); e.stopPropagation();
+    const r = sgAlvo.getBoundingClientRect();
+    const t = sgTrechoApontado(sgAlvo, r.left + Math.min(20, r.width / 2), r.top + Math.min(12, r.height / 2));
+    sgApontarUsar(t.texto, t.origem);
+  }
+}
+
+function sgApontarUsar(texto, origem) {
+  const limpo = sgCortar(texto);
+  if (limpo.length < 3) {
+    const l = $('#sg-live');
+    if (l) l.textContent = 'Não havia texto suficiente nesse ponto. Tenta noutro parágrafo.';
+    return;
+  }
+  const ta = $('#sg-texto'); if (ta) ta.value = limpo;
+  sgApontarDesligar();
+  sgCarregar(limpo, 'apontado');
+  const total = sgEstado.passos.length;
+  const l = $('#sg-live');
+  if (l) l.textContent = 'Apontaste a ' + origem + ' (' + limpo.length + ' caracteres): '
+    + (total ? total + (total === 1 ? ' sinal na sequência.' : ' sinais na sequência.') : 'sem sinais possíveis neste texto.')
+    + ' Carrega em Reproduzir.';
+  const play = $('#sg-play');
+  if (play) play.focus({ preventScroll: true });
+}
+
+/* --- 12.6 modo widget (`?emb=1`): o painel sozinho, para outros sites e para a
+   extensão Chrome. O que entra é texto; o que sai é só a sequência de sinais no ecrã.
+   Regras de integridade:
+     - nada é enviado para parte nenhuma: quem incorpora limita-se a mostrar texto
+       no painel, e o glossário usado é o mesmo deste site (portanto "A validar");
+     - o painel aceita mensagens do pai com {tipo:'pamosii-sinalizar', texto}, e só
+       age se estiver dentro de um iframe; o texto é limitado a 6 000 caracteres;
+     - não há reconhecimento de imagem nem de voz: o que aqui aparece vem sempre de
+       texto já escrito. */
+const SG_EMB_MAX = 6000;
+
+function sgUsarTextoExterno(texto, origem) {
+  const limpo = String(texto || '').replace(/\u0000/g, '').slice(0, SG_EMB_MAX).trim();
+  if (limpo.length < 2) return false;
+  const ta = $('#sg-texto'); if (ta) ta.value = limpo;
+  sgEstado.aberto = true;
+  const painel = $('#sg-painel');
+  if (painel) painel.hidden = false;
+  document.documentElement.classList.add('sg-on');
+  sgCarregar(limpo, origem || 'texto');
+  const l = $('#sg-live');
+  if (l) l.textContent = sgEstado.passos.length
+    ? sgEstado.passos.length + (sgEstado.passos.length === 1 ? ' sinal para' : ' sinais para') + ' o texto recebido. Carrega em Reproduzir.'
+    : 'Não há sinais possíveis para esse texto neste glossário.';
+  return true;
+}
+
+function montarWidget() {
+  document.documentElement.classList.add('emb');
+  const inicial = new URLSearchParams(location.search).get('texto');
+  if (inicial) sgUsarTextoExterno(inicial, 'recebido');
+  else {
+    sgEstado.aberto = true;
+    const p = $('#sg-painel'); if (p) p.hidden = false;
+    document.documentElement.classList.add('sg-on');
+    sgPintar();
+  }
+  window.addEventListener('message', (ev) => {
+    const d = ev.data;
+    if (!d || typeof d !== 'object' || d.tipo !== 'pamosii-sinalizar') return;
+    if (!EM_IFRAME) return;   /* fora de um iframe não há pai de quem receber ordens */
+    sgUsarTextoExterno(d.texto, 'apontado de fora');
+  });
+  if (EM_IFRAME) {
+    try { window.parent.postMessage({ tipo: 'pamosii-signer-pronto', origem: location.origin }, '*'); } catch (e) { /* pai fechado */ }
+  }
+}
+
+/* --- 12.7 PARTILHAR PARA O PAMOSII (Android, Web Share Target) ---
+   Depois de «Adicionar ao ecrã principal», o Pamosii aparece no menu Partilhar do
+   telemóvel. A pessoa escolhe texto noutro app (WhatsApp, navegador, leitor de PDF)
+   e o Android abre este site com `?title=…&text=…&url=…` no endereço.
+   O que fazemos: limpamos o endereço (para um F5 não voltar a abrir o painel com o
+   texto velho), mandamos o texto para o Signer e dizemos de onde ele veio.
+   Regras de integridade:
+     - nada é enviado: o texto partilhado entra por URL e vai directo ao painel, que
+       só mostra sinais deste glossário («A validar»);
+     - se vier ficheiro em vez de texto, o manifest não o pede e o Android não o envia;
+     - sem `share_target`-support (iOS, desktop) esta função simplesmente não faz nada. */
+function lerPartilha() {
+  const p = new URLSearchParams(location.search);
+  const titulo = (p.get('title') || '').trim();
+  const corpo = (p.get('text') || '').trim();
+  const url = (p.get('url') || '').trim();
+  const partes = [];
+  /* o `title` costuma ser o nome do app («Conversa do WhatsApp»), não texto para sinalizar:
+     só entra quando não veio mesmo nenhum texto, para a pessoa não ficar sem nada */
+  if (corpo) partes.push(corpo);
+  else if (titulo) partes.push(titulo);
+  /* o link NÃO entra na sequência: um URL não é uma frase, e o glossário não tem
+     sinais para ele. Só serve para dizer à pessoa o que aconteceu. */
+  const texto = partes.join('\n').replace(/\u0000/g, '').trim();
+  return { texto: texto ? texto.slice(0, SG_EMB_MAX) : '', url };
+}
+
+function receberPartilha(entrada) {
+  const { texto, url } = entrada || lerPartilha();
+  const ta = $('#sg-texto'), l = $('#sg-live');
+  if (!texto) {
+    /* a pessoa partilhou um link sem texto escrito nenhum */
+    sgAbrir();
+    if (l) l.textContent = 'Partilhaste um link' + (url ? ' (' + url.slice(0, 60) + ')' : '')
+      + '. O Pamosii só trabalha com texto escrito: copia as palavras para a caixa, ou '
+      + 'parte o texto em vez da ligação.';
+    return false;
+  }
+  const ok = sgUsarTextoExterno(texto, 'partilhado');
+  if (l && ok) l.textContent = 'Texto que partilhaste para o Pamosii (' + texto.length
+    + ' caracteres' + (url ? ', sem o link' : '') + '). ' + (sgEstado.passos.length
+      ? 'Carrega em Reproduzir para ver os sinais.'
+      : 'Este glossário ainda não tem sinais para estas palavras — diz quais faltam na Colheita.');
+  if (ta) ta.focus();
+  return ok;
 }
 
 /* atalhos espalhados pelo site: qualquer [data-signer] abre o painel com texto */
@@ -3422,6 +3794,13 @@ function textoPacote(p) {
       '     expressão/corpo: ' + (e.mnm || '—'),
       '     quem ensinou: ' + (e.fonte || '—'),
       '     vídeo/URL: ' + (e.video || '—'),
+      ...(e.sessao ? [
+        '     SESSÃO DE GRAVAÇÃO ' + e.sessao.id + (e.sessao.completa ? '' : ' (incompleta)') + ':',
+        '       quem sinaliza: ' + (e.sessao.consentimento && e.sessao.consentimento.quem === 'outra' ? 'outra pessoa (autorização escrita a entregar à equipa)' : 'a própria pessoa que registou'),
+        '       consentimento registado em: ' + ((e.sessao.consentimento && e.sessao.consentimento.em) || '—') + ' · áudio gravado: não',
+        ...(e.sessao.repeticoes || []).map(r => '       repetição ' + r.rep + ': ' + r.ritmo + ', '
+          + Math.round((r.dur_ms || 0) / 1000) + 's, ' + (r.quadros || []).length + ' quadros'),
+      ] : []),
       '     estado: colhido (à espera de validação por um sinalizador surdo)',
     ].join('\n')),
     '',
@@ -3441,14 +3820,16 @@ function colheitaHTML(palavra) {
   <p class="eyebrow">${I.access} Colheita participada</p>
   <h1 class="ch-h">Ajudar a encher o dicionário de LGA</h1>
   <p class="lead">O glossário deste site tem poucas centenas de palavras e o que falta só existe na memória
-  de quem sinaliza. Esta página serve para <strong>registar um sinal com método</strong>, guardá-lo neste
-  aparelho e exportar um ficheiro para a equipa validar.</p>
+  de quem sinaliza. Esta página serve para <strong>registar um sinal com método</strong> — por escrito ou
+  numa <strong>sessão de gravação guiada</strong> — guardá-lo neste aparelho e exportar um ficheiro para a
+  equipa validar.</p>
 </div>
 <div class="wrap">
   <div class="note-band">
     <p>${I.shield} <strong>O que acontece aos teus dados:</strong> nada é enviado por este site. Não há servidor,
-    não há contas, não há análise. O que escreves e as fotografias que tirares ficam no <strong>teu</strong> browser
-    e só saem quando fores tu a descarregar o ficheiro e a enviá-lo. Não precisamos do teu nome,
+    não há contas, não há análise. O que escreves, os quadros e as gravações que saírem desta página ficam no
+    <strong>teu</strong> browser — os clipes de vídeo vivem só na memória desta visita e apagam-se ao sair —
+    e só partem quando fores tu a descarregar o ficheiro e a enviá-lo. Não precisamos do teu nome,
     nem de telefone, nem de informação médica.</p>
     <p>${I.info} <strong>Ninguém aqui marca um sinal como validado.</strong> O estado máximo é “colhido”.
     Um sinal só entra no dicionário como confirmado depois de uma pessoa surda sinalizadora o rever — é essa
@@ -3501,6 +3882,8 @@ function colheitaHTML(palavra) {
     </form>
   </section>
 
+  ${chSessaoHTML(palavra, temas)}
+
   <section class="ch-cam" aria-labelledby="ch-cam-h">
     <h2 id="ch-cam-h">${I.video} Fotografia do sinal (opcional)</h2>
     <p class="muted">Até haver vídeos gravados, uma sequência de 3 a 4 fotografias do meio do sinal já
@@ -3525,6 +3908,7 @@ function colheitaHTML(palavra) {
     <p class="ch-ac">
       <button class="btn btn-a btn-sm" type="button" id="ch-export">${I.doc} Exportar pacote (JSON)</button>
       <button class="btn btn-o btn-sm" type="button" id="ch-export-txt">Exportar para ler (texto)</button>
+      <button class="btn btn-o btn-sm" type="button" id="ch-export-jsonl">Exportar sessões (JSONL)</button>
       <button class="btn btn-o btn-sm" type="button" id="ch-copiar">Copiar resumo</button>
     </p>
     <p class="ch-ac">
@@ -3554,6 +3938,14 @@ function colheitaHTML(palavra) {
           video: '', estado: 'colhido', nota: '', fotos: ['data:image/jpeg;base64,…'] }],
         lacunas: { zungu: 3 }
       }, null, 2))}</code></pre>
+      <p class="muted">Uma sessão de gravação junta-se ao mesmo pacote com o campo
+      <code>sessao</code>, e o botão «Exportar sessões (JSONL)» escreve <strong>uma linha por repetição</strong> —
+      é o formato que a equipa usa para medir duração e ritmo de cada sinal:</p>
+      <pre class="ch-json"><code>${esc(JSON.stringify({
+        schema: SCHEMA_SESSAO, tipo: 'pamosii-sessao', sessao: 's1a2b3', palavra: 'banana', tema: 'Comida e bebida',
+        rep: 3, ritmo: 'lento', dur_ms: 8000, audio: false, quadros: ['data:image/jpeg;base64,…'],
+        consentimento: { quem: 'eu', em: '2026-10-22T09:14:02.000Z' }, estado: 'colhido'
+      }, null, 0))}</code></pre>
     </details>
   </section>
 
@@ -3570,8 +3962,12 @@ function chItemHTML(e, i) {
   /* o índice vem de quem desenha a lista: lerColheita().indexOf() re-analisa o JSON e por
      isso nunca apanha o mesmo objecto — dava sempre -1 e o botão "Apagar" não apagava nada. */
   const n = Number.isInteger(i) ? i : 0;
+  const s = e && e.sessao && Array.isArray(e.sessao.repeticoes) ? e.sessao : null;
+  const quadros = s ? s.repeticoes.reduce((a, r) => a + (r.quadros || []).length, 0) : 0;
   return `<li class="ch-item" data-i="${n}">
-    <p class="ch-item-p">${esc(e.palavra)} <span class="dic-badge is-colhido">Colhido</span><span class="ch-item-t">${esc(e.tema || 'Colheita')}</span></p>
+    <p class="ch-item-p">${esc(e.palavra)} <span class="dic-badge is-colhido">Colhido</span>${s
+      ? `<span class="dic-badge is-sessao">Sessão · ${s.repeticoes.length} ${pl(s.repeticoes.length, 'repetição', 'repetições')}${s.completa ? '' : ' (incompleta)'}</span>` : ''}<span class="ch-item-t">${esc(e.tema || 'Colheita')}</span></p>
+    ${s ? `<p class="ch-item-d">${s.repeticoes.map(r => r.rep + 'ª ' + r.ritmo + ' (' + Math.round((r.dur_ms || 0) / 1000) + 's)').join(' · ')} · ${quadros} ${pl(quadros, 'quadro', 'quadros')} · ${s.consentimento && s.consentimento.quem === 'outra' ? 'quem sinalizou é outra pessoa' : 'quem sinaliza és tu'}</p>` : ''}
     ${e.configuracao || e.lugar || e.movimento ? `<p class="ch-item-d">${esc([e.configuracao && ('mão: ' + e.configuracao), e.lugar && ('lugar: ' + e.lugar), e.movimento && ('movimento: ' + e.movimento), e.mnm && ('expressão: ' + e.mnm)].filter(Boolean).join(' · '))}</p>` : ''}
     ${e.fonte ? `<p class="ch-item-f">${esc(e.fonte)}${e.video ? ' · <a href="' + esc(e.video) + '" target="_blank" rel="noopener">vídeo<span class="sr-only"> (abre em nova janela)</span></a>' : ''}</p>` : ''}
     ${e.nota ? `<p class="ch-item-n">${esc(e.nota)}</p>` : ''}
@@ -3580,13 +3976,586 @@ function chItemHTML(e, i) {
   </li>`;
 }
 
+/* --- 13.3 SESSÃO DE GRAVAÇÃO (ferramenta 2 do protocolo) ---
+   Um sinal só presta-se a ser desenhado ou montado num vídeo se vier com:
+     - três repetições, duas ao ritmo normal e uma deliberadamente LENTA;
+     - quadros do meio do movimento em cada repetição (o princípio e o fim também);
+     - o consentimento registado ANTES do primeiro quadro, e um botão que o revoga;
+     - contagem de tempo por repetição — é com a duração que se paga quem sinaliza.
+   Nada disto sai do aparelho: a câmara é pedida sem faixa de áudio, os quadros vão para
+   o localStorage de quem os tirou, e os clipes do MediaRecorder vivem apenas na memória
+   desta página até a pessoa descarregá-los (por isso o site insiste no download). */
+
+const SCHEMA_SESSAO = 1;
+/* docs/colheita-sinais-lga.md §3: três repetições ao ritmo natural e uma lenta.
+   A lenta é a que permite anotar a trajectória — sem ela o glifo desenha-se a adivinhar. */
+const SESS_REPS = [
+  { ritmo: 'normal', ms: 4000 },
+  { ritmo: 'normal', ms: 4000 },
+  { ritmo: 'normal', ms: 4000 },
+  { ritmo: 'lento', ms: 8000 },
+];
+const SESS_PREP_MS = 1600;                    /* respiração antes de cada repetição */
+const SESS_QUADROS_EM = [0.2, 0.55, 0.9];     /* frações da repetição em que se captura */
+const SESS_LARGURA = 320;
+const SESS_ALTURA = 240;
+
+function chSessaoHTML(palavra, temas) {
+  const pode = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  return `
+  <section class="ch-sess" aria-labelledby="ch-sess-h">
+    <h2 id="ch-sess-h">${I.video} Sessão de gravação de um sinal</h2>
+    <p class="muted">A ferramenta acima descreve um sinal por palavras. Esta grava-o com método, seguindo o
+      protocolo da equipa (<code>docs/colheita-sinais-lga.md</code>, §3): a palavra fica escrita em grande, a
+      pessoa que sinaliza faz o sinal <strong>três vezes ao ritmo natural e uma vez devagar</strong>, e o site
+      conta o tempo e captura os quadros de cada repetição. É o material que depois permite montar o vídeo real
+      e pagar a quem sinaliza <strong>em proporção à duração</strong> — que é como o registo fica com o tempo
+      medido, e não com uma promessa.</p>
+    ${pode ? '' : `<p class="ch-sess-sem">${I.info} Este browser não dá acesso a câmara. A descrição escrita
+      lá em cima continua a funcionar, e é das partes que mais ajudam.</p>`}
+
+    <form class="ch-sess-caixa" id="ch-sess-consent">
+      <p class="ch-sess-titulo">${I.shield} Consentimento primeiro — sem isto a sessão não começa</p>
+      <ol class="ch-sess-regras">
+        <li>A câmara liga-se <strong>sem microfone</strong>. Não há áudio, não há envio, não há análise:
+          tudo fica neste browser e apaga-se quando a pessoa apagar o registo.</li>
+        <li>A pessoa que aparece pode <strong>parar a meio</strong> e apagar o que já foi gravado, e isso
+          nunca prejudica nada nem ninguém.</li>
+        <li>Publicar um sinal filmado de uma pessoa real exige <strong>autorização escrita, prévia e
+          separada</strong> à equipa, e paga-se em proporção à duração, ao alcance e ao uso dos dados.
+          Enquanto esse orçamento não existir, o material fica preparado aqui e não publicado.</li>
+      </ol>
+      <fieldset class="ch-sess-quem">
+        <legend>Quem vai sinalizar?</legend>
+        <label><input type="radio" name="sess-quem" value="eu" checked> Sou eu.</label>
+        <label><input type="radio" name="sess-quem" value="outra"> É outra pessoa.</label>
+      </fieldset>
+      <div class="ch-checks">
+        <label class="ch-check"><input type="checkbox" class="sess-ok"> A pessoa que vai aparecer sabe que
+          isto é uma gravação para o dicionário de LGA e concordou.</label>
+        <label class="ch-check"><input type="checkbox" class="sess-ok"> Sei que a gravação pode acabar a meio
+          e ser apagada, e que nada é enviado por este site.</label>
+        <label class="ch-check"><input type="checkbox" class="sess-ok"> O microfone fica desligado e não há
+          som nesta sessão.</label>
+        <label class="ch-check sess-outra" id="sess-outra-caixa" hidden><input type="checkbox" class="sess-ok">
+          É outra pessoa: comprometo-me a entregar à equipa a autorização escrita dela antes de qualquer
+          publicação, e a garantir que ela recebe o pagamento combinado.</label>
+      </div>
+      <div class="ch-sess-campos">
+        <p class="ch-campo"><label for="sess-palavra">Palavra a gravar</label>
+          <input id="sess-palavra" type="text" maxlength="48" autocomplete="off" required
+            value="${esc(palavra || '')}" placeholder="ex.: banana"></p>
+        <p class="ch-campo"><label for="sess-tema">Tema</label>
+          <select id="sess-tema">${temas.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('')}</select></p>
+      </div>
+      <p class="ch-ac">
+        <button class="btn btn-p btn-sm" type="submit" id="sess-comecar" disabled ${pode ? '' : 'data-sem-cam="1"'}>
+          ${I.video} Aceitar e começar a sessão</button>
+        <span class="muted" id="sess-hint">Faltam as três confirmações em cima.</span>
+      </p>
+    </form>
+
+    <div class="ch-sess-pista" id="ch-sess-pista" hidden></div>
+    <p class="ch-msg" id="sess-msg" role="status" aria-live="polite"></p>
+  </section>`;
+}
+
+/* a pista é montada por JS porque muda de estado a cada repetição */
+function sessPistaHTML(alvo) {
+  return `
+  <p class="ch-sess-titulo">${I.clock} Sessão em curso</p>
+  <div class="sess-cam-caixa">
+    <video id="sess-cam" class="sess-cam" playsinline muted
+      aria-label="Pré-visualização da câmara: a pessoa que sinaliza vê-se enquanto grava"></video>
+    <p class="sess-alvo-h">Palavra a sinalizar</p>
+    <p class="sess-alvo" id="sess-alvo">${esc(alvo)}</p>
+  </div>
+  <p class="sess-passo" id="sess-passo" role="status" aria-live="polite">A ligar a câmara…</p>
+  <div class="sess-barra" id="sess-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+    aria-valuenow="0" aria-label="Tempo da repetição"><span id="sess-fill"></span></div>
+  <p class="sess-cont" id="sess-cont">A preparar a primeira repetição…</p>
+  <ul class="sess-quadros" id="sess-quadros" aria-label="Quadros capturados nesta sessão"></ul>
+  <ul class="sess-clips" id="sess-clips" aria-label="Clipes para descarregar"></ul>
+  <p class="ch-ac">
+    <button class="btn btn-o btn-sm" type="button" id="sess-pausa">Pausar</button>
+    <button class="btn btn-a btn-sm" type="button" id="sess-fim">Terminar e guardar</button>
+    <button class="btn btn-o btn-sm sess-revoga" type="button" id="sess-revogar">Revogar e apagar</button>
+  </p>
+  <p class="sess-aviso muted">${I.info} Nada fica guardado enquanto a sessão decorre: carrega em
+    <strong>Terminar e guardar</strong> no fim. Se saíres desta página a meio, a sessão perde-se — é assim
+    que este site funciona, porque não há servidor onde guardar.</p>
+  <p class="ch-msg" id="sess-msg" role="status"></p>`;
+}
+
+let SESS = null;
+let sessTiqueId = null;
+
+function sessMsg(t) { const m = $('#sess-msg'); if (m) m.textContent = t; }
+
+function sessPassoTexto() {
+  if (!SESS) return '';
+  const r = SESS_REPS[SESS.rep];
+  const total = SESS_REPS.length;
+  if (SESS.fase === 'preparar') {
+    return `Repetição ${SESS.rep + 1} de ${total} · ${r.ritmo} — prepara-te. Quando a barra começar, faz o sinal `
+      + 'do princípio ao fim, uma vez só, com as mãos visíveis.';
+  }
+  if (SESS.fase === 'intervalo') return 'Repetição registada. A preparar a seguinte…';
+  return `Repetição ${SESS.rep + 1} de ${total} · ritmo ${r.ritmo}${r.ritmo === 'lento'
+    ? ' — desta vez DEVAGAR, bem devagar, para a equipa ver cada posição da mão.'
+    : ' — faz o sinal uma vez, completo.'}`;
+}
+
+function sessPinta() {
+  if (!SESS) return;
+  const passo = $('#sess-passo'), cont = $('#sess-cont'), fill = $('#sess-fill'), barra = $('#sess-barra');
+  if (!passo || !cont || !fill) return;
+  passo.textContent = sessPassoTexto();
+  const r = SESS_REPS[SESS.rep];
+  const feito = SESS.fase === 'gravar' ? Math.min(1, SESS.decorrido / r.ms) : SESS.fase === 'preparar' ? 0 : 1;
+  fill.style.width = Math.round(feito * 100) + '%';
+  if (barra) {
+    barra.setAttribute('aria-valuenow', String(Math.round(feito * 100)));
+    /* na respiração o cronómetro conta para os 1,6 s de preparação, não para a duração
+       da repetição — dizer «9 de 8 segundos» seria só mentira */
+    const total = SESS.fase === 'preparar' ? SESS_PREP_MS : r.ms;
+    const faseTxt = SESS.parada ? 'Em pausa'
+      : SESS.fase === 'preparar' ? 'A preparar'
+        : SESS.fase === 'intervalo' ? 'Repetição registada' : 'A gravar';
+    barra.setAttribute('aria-valuetext', `${faseTxt} — repetição ${SESS.rep + 1} de ${SESS_REPS.length}, `
+      + (Math.min(SESS.decorrido, total) / 1000).toFixed(1) + ' de ' + (total / 1000).toFixed(1) + ' segundos');
+  }
+  const q = SESS.repeticoes.reduce((n, x) => n + x.quadros.length, 0) + (SESS.atual ? SESS.atual.quadros.length : 0);
+  cont.textContent = SESS.parada
+    ? `Em pausa · ${q} ${pl(q, 'quadro capturado', 'quadros capturados')}`
+    : `Repetição ${SESS.rep + 1} de ${SESS_REPS.length} · ${q} ${pl(q, 'quadro capturado', 'quadros capturados')}`;
+}
+
+function sessPintaQuadros() {
+  const ul = $('#sess-quadros');
+  if (!ul || !SESS) return;
+  const todos = SESS.repeticoes.concat(SESS.atual ? [SESS.atual] : []);
+  ul.innerHTML = todos.map(rp => rp.quadros.map((f, n) =>
+    `<li><img src="${f}" alt="Repetição ${rp.rep}, ${rp.ritmo}, quadro ${n + 1}" loading="lazy" decoding="async"></li>`
+  ).join('')).join('');
+}
+
+function sessPintaClips() {
+  const ul = $('#sess-clips');
+  if (!ul || !SESS) return;
+  if (!SESS.clips.length) {
+    ul.innerHTML = SESS.semRecorder ? `<li class="sess-aviso">${I.info} Este browser não grava vídeo — `
+      : `<li class="sess-aviso">${I.info} Os quadros já ficam guardados. Cada repetição também virou um `;
+    ul.innerHTML += SESS.semRecorder
+      ? 'os quadros continuam a ser capturados, e é com eles que a equipa desenha o sinal.</li>'
+      : 'clipe .webm. <strong>Descarrega-os</strong>: vivem só na memória desta página e apagam-se ao sair.</li>';
+    return;
+  }
+  ul.innerHTML = SESS.clips.map(c => `<li><a class="btn btn-o btn-sm" href="${c.url}" download="${esc(c.nome)}">`
+    + `Descarregar repetição ${c.rep} (${c.ritmo}, ${Math.round(c.bytes / 1024)} KB)</a></li>`).join('')
+    + `<li class="sess-aviso">${I.info} Os clipes não são enviados por ninguém: descarrega-os e junta-os ao `
+    + 'pacote quando enviares à equipa.</li>';
+}
+
+/* --- máquina de estados: preparar → gravar → (clipes) → repetição seguinte --- */
+function sessTique() {
+  if (!SESS || SESS.parada) return;
+  SESS.decorrido = performance.now() - SESS.t0;
+  if (SESS.fase === 'preparar') {
+    if (SESS.decorrido >= SESS_PREP_MS) sessComecaGravar();
+    sessPinta();
+    return;
+  }
+  if (SESS.fase !== 'gravar') { sessPinta(); return; }
+  const alvo = SESS_REPS[SESS.rep].ms;
+  while (SESS.proximo < SESS_QUADROS_EM.length && SESS.decorrido >= SESS_QUADROS_EM[SESS.proximo] * alvo) {
+    sessCaptura();
+    SESS.proximo += 1;
+  }
+  if (SESS.decorrido >= alvo) sessAcabaGravar();
+  else sessPinta();
+}
+
+function sessCaptura() {
+  const v = $('#sess-cam');
+  if (!v || !SESS || !SESS.atual) return;
+  const c = document.createElement('canvas');
+  c.width = SESS_LARGURA; c.height = SESS_ALTURA;
+  try {
+    c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+    SESS.atual.quadros.push(c.toDataURL('image/jpeg', 0.55));
+  } catch (e) {
+    sessMsg('O browser bloqueou a leitura da imagem. A sessão continua a contar o tempo.');
+  }
+  sessPintaQuadros();
+  sessPinta();
+}
+
+function sessPrepara(rep) {
+  SESS.rep = rep;
+  SESS.fase = 'preparar';
+  SESS.proximo = 0;
+  SESS.atual = { rep: rep + 1, ritmo: SESS_REPS[rep].ritmo, ms: SESS_REPS[rep].ms, quadros: [], inicio: new Date().toISOString() };
+  SESS.t0 = performance.now();
+  if (SESS.rec) { const r = SESS.rec; SESS.rec = null; try { r.stop(); } catch (e) { /* já parado */ } }
+  sessPinta();
+}
+
+function sessComecaGravar() {
+  SESS.fase = 'gravar';
+  SESS.t0 = performance.now();
+  SESS.decorrido = 0;
+  if (window.MediaRecorder && SESS.stream && SESS.stream.getVideoTracks().length) {
+    try {
+      SESS.rec = new MediaRecorder(SESS.stream);
+      SESS.atual.segmentos = [];
+      SESS.rec.ondataavailable = (ev) => {
+        if (ev && ev.data && ev.data.size && SESS && SESS.atual) (SESS.atual.segmentos = SESS.atual.segmentos || []).push(ev.data);
+      };
+      SESS.rec.start();
+    } catch (e) { SESS.rec = null; SESS.semRecorder = true; }
+  } else SESS.semRecorder = true;
+  sessPinta();
+}
+
+function sessAcabaGravar() {
+  SESS.fase = 'intervalo';
+  const rec = SESS.rec, atual = SESS.atual;
+  SESS.rec = null;
+  sessPinta();
+  if (!rec) { sessAvanca(); return; }
+  rec.onstop = () => {
+    if (!SESS) return;
+    const bytes = (atual.segmentos || []).reduce((n, b) => n + b.size, 0);
+    if (atual.segmentos && atual.segmentos.length && bytes) {
+      const blob = new Blob(atual.segmentos, { type: rec.mimeType || 'video/webm' });
+      const nome = sessNomeDaPalavra(SESS.palavra) + '-rep' + atual.rep + '-' + atual.ritmo + '.webm';
+      SESS.clips.push({ rep: atual.rep, ritmo: atual.ritmo, url: URL.createObjectURL(blob), bytes, nome });
+      sessPintaClips();
+    }
+    sessAvanca();
+  };
+  try { rec.stop(); } catch (e) { atual.segmentos = null; sessAvanca(); }
+}
+
+function sessAvanca() {
+  if (!SESS) return;
+  if (SESS.atual) SESS.repeticoes.push(SESS.atual);
+  SESS.atual = null;
+  sessPintaQuadros();
+  if (SESS.rep + 1 >= SESS_REPS.length) { sessFecha(true); return; }
+  sessPrepara(SESS.rep + 1);
+}
+
+function sessNomeDaPalavra(p) {
+  return String(p || 'sinal').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32) || 'sinal';
+}
+
+function sessFecha(completa) {
+  if (!SESS) return;
+  const reps = SESS.repeticoes.concat(SESS.atual && SESS.atual.quadros.length ? [SESS.atual] : []);
+  const id = SESS.id, palavra = SESS.palavra, tema = SESS.tema, consent = SESS.consentimento;
+  const clips = SESS.clips;
+  sessPararTudo();
+  if (!reps.length) {
+    const m = $('#ch-status');
+    if (m) m.textContent = 'Sessão terminada sem repetições completas: não ficou nada guardado.';
+    return;
+  }
+  const registo = {
+    palavra: palavra,
+    tema: tema,
+    estado: 'colhido',
+    data: new Date().toISOString().slice(0, 10),
+    tipo: 'sessao',
+    sessao: {
+      schema: SCHEMA_SESSAO, id: id, consentimento: consent, audio: false,
+      completa: !!completa, gerada: new Date().toISOString(),
+      repeticoes: reps.map(r => ({ rep: r.rep, ritmo: r.ritmo, dur_ms: r.ms, inicio: r.inicio, quadros: r.quadros })),
+    },
+    fotos: reps.reduce((acc, r) => acc.concat(r.quadros), []),
+    configuracao: '', lugar: '', movimento: '', mnm: '', fonte: '', video: '', nota: '',
+  };
+  const lista = lerColheita();
+  const dup = lista.findIndex(x => norm(x.palavra) === norm(palavra));
+  if (dup >= 0) lista[dup] = { ...lista[dup], ...registo };
+  else lista.unshift(registo);
+  if (!guardarColheita(lista)) {
+    const m = $('#ch-status');
+    if (m) m.textContent = 'O aparelho já não tem espaço para guardar a sessão. Exporta o pacote, apaga '
+      + 'registos antigos e grava de novo — os quadros desta sessão ainda estão na tela.';
+    return;
+  }
+  registrarExtra([registo]);
+  pintaListaColheita();
+  const pista = $('#ch-sess-pista');
+  if (pista) {
+    pista.innerHTML = `<p class="ch-sess-titulo">${I.check} Sessão de «${esc(palavra)}» guardada</p>
+      <p class="sess-sumario">${reps.length} ${pl(reps.length, 'repetição', 'repetições')} ·
+        ${reps.reduce((n, r) => n + r.quadros.length, 0)} quadros ·
+        ${Math.round(reps.reduce((n, r) => n + r.ms, 0) / 1000)} segundos de sinal ·
+        estado <strong>colhido</strong> (só um sinalizador surdo pode validar).</p>
+      ${completa ? '' : `<p class="sess-sumario">${I.info} Sessão incompleta: gravaste ${reps.length} das
+        ${SESS_REPS.length} repetições. Guarda mesmo assim — a equipa vê o que falta no ficheiro.</p>`}
+      <p class="sess-sumario muted">Falta a parte escrita: descreve o sinal no formulário de cima
+        (configuração da mão, lugar, movimento, expressão). A gravação sozinha não chega para o dicionário.</p>
+      ${clips.length ? `<p class="sess-sumario">${I.info} Ainda tens ${clips.length} ${pl(clips.length, 'clipe', 'clipes')}
+        na memória desta página. Descarrega-os antes de sair.</p>
+        <ul class="sess-clips">${clips.map(c => `<li><a class="btn btn-o btn-sm" href="${c.url}" download="${esc(c.nome)}">Descarregar repetição ${c.rep} (${c.ritmo})</a></li>`).join('')}</ul>` : ''}
+      <p class="ch-ac"><button class="btn btn-p btn-sm" type="button" id="sess-descreve">Descrever agora</button>
+        <button class="btn btn-a btn-sm" type="button" id="sess-export">Exportar sessões (JSONL)</button></p>`;
+    const d = $('#sess-descreve');
+    if (d) d.addEventListener('click', () => {
+      const inp = $('#ch-palavra');
+      if (inp) inp.value = palavra;
+      if (inp) inp.focus();
+      $('#ch-form-h').scrollIntoView({ block: 'center', behavior: movReduzido() ? 'auto' : 'smooth' });
+    });
+    const ex = $('#sess-export');
+    if (ex) ex.addEventListener('click', exportarSessoes);
+  }
+  const m = $('#ch-status');
+  if (m) m.textContent = `Sessão guardada neste aparelho: «${palavra}» com ${reps.length} repetições. `
+    + 'Exporta quando quiseres — o site não envia nada.';
+  /* a forma de consentimento volta a aparecer: uma sessão por palavra é o normal —
+     a pessoa grava dez sinais seguidos sem recarregar a página */
+  const f = $('#ch-sess-consent');
+  if (f) {
+    f.hidden = false;
+    f.querySelectorAll('.sess-ok').forEach(c => (c.checked = false));
+    const inp = $('#sess-palavra');
+    if (inp) inp.value = '';
+    const b = $('#sess-comecar');
+    if (b) b.disabled = true;
+    const h = $('#sess-hint');
+    if (h) h.textContent = 'Faltam as três confirmações em cima.';
+    const outra = $('[name="sess-quem"][value="eu"]');
+    if (outra) outra.checked = true;
+    const caixa = $('#sess-outra-caixa');
+    if (caixa) caixa.hidden = true;
+    if (inp) inp.focus();
+  }
+}
+
+function sessPararTudo() {
+  if (sessTiqueId) { clearInterval(sessTiqueId); sessTiqueId = null; }
+  if (!SESS) return;
+  try { SESS.rec && SESS.rec.state !== 'inactive' && SESS.rec.stop(); } catch (e) { /* já parado */ }
+  SESS.rec = null;
+  try { SESS.stream && SESS.stream.getTracks().forEach(t => t.stop()); } catch (e) { /* já fechada */ }
+  SESS.stream = null;
+}
+
+function pararSessao() {
+  if (!SESS) return;
+  const s = SESS;
+  SESS = null;                      /* primeiro: nenhum callback do MediaRecorder avança depois */
+  if (sessTiqueId) { clearInterval(sessTiqueId); sessTiqueId = null; }
+  try { s.rec && s.rec.state !== 'inactive' && s.rec.stop(); } catch (e) { /* já parado */ }
+  try { s.stream && s.stream.getTracks().forEach(t => t.stop()); } catch (e) { /* já fechada */ }
+  /* os clipes são memória desta página: ao sair da Colheita deixam de existir, e é isso que dizemos */
+  s.clips.forEach(c => { try { URL.revokeObjectURL(c.url); } catch (e) { /* já liberto */ } });
+  s.repeticoes.length = 0;
+  s.atual = null;
+}
+
+function exportarSessoes() {
+  const avisar = (t) => { const m = $('#ch-status'); if (m) m.textContent = t; };
+  const entradas = lerColheita();
+  const sess = entradas.filter(e => e && e.sessao && Array.isArray(e.sessao.repeticoes));
+  if (!sess.length) { avisar('Ainda não há sessões de gravação guardadas neste aparelho — usa «Sessão de gravação de um sinal».'); return; }
+  const gerado = new Date().toISOString();
+  const linhas = [];
+  let reps = 0;
+  sess.forEach(e => e.sessao.repeticoes.forEach(r => {
+    reps += 1;
+    linhas.push(JSON.stringify({
+      schema: SCHEMA_SESSAO, tipo: 'pamosii-sessao',
+      sessao: e.sessao.id, palavra: e.palavra, tema: e.tema || 'Colheita', data: e.data || undefined,
+      rep: r.rep, ritmo: r.ritmo, dur_ms: r.dur_ms, inicio: r.inicio || undefined,
+      completa: !!e.sessao.completa, audio: false,
+      consentimento: e.sessao.consentimento,
+      configuracao: e.configuracao || undefined, lugar: e.lugar || undefined,
+      movimento: e.movimento || undefined, mnm: e.mnm || undefined,
+      fonte: e.fonte || undefined, nota: e.nota || undefined,
+      estado: e.estado || 'colhido', validado_por: e.validado_por || undefined,
+      quadros: r.quadros || [],
+      aparelho: 'local', gerado_em: gerado,
+    }));
+  }));
+  const dia = new Date().toISOString().slice(0, 10);
+  descarregarFicheiro(`pamosii-sessoes-${dia}.jsonl`, linhas.join('\n') + '\n', 'application/x-ndjson;charset=utf-8');
+  avisar(`JSONL descarregado: ${sess.length} ${pl(sess.length, 'sessão', 'sessões')} e ${reps} `
+    + pl(reps, 'repetição', 'repetições') + ', uma linha por repetição'
+    + (entradas.length - sess.length ? ` (${entradas.length - sess.length} registos só-descritiva${entradas.length - sess.length > 1 ? 's' : ''} ficam no pacote JSON)` : '')
+    + '. O site não envia nada.');
+}
+
+function bindSessao() {
+  const form = $('#ch-sess-consent');
+  if (!form) return;
+  const okCaixas = [...form.querySelectorAll('.sess-ok')];
+  const comecar = $('#sess-comecar');
+  const hint = $('#sess-hint');
+  const caixaOutra = $('#sess-outra-caixa');
+
+  const revalidar = () => {
+    const precisam = okCaixas.filter(c => !c.closest('[hidden]'));
+    const falta = precisam.filter(c => !c.checked).length;
+    if (comecar) comecar.disabled = falta > 0;
+    if (hint) hint.textContent = falta ? `Falta confirmar ${falta} ${pl(falta, 'ponto', 'pontos')} em cima.`
+      : 'Pode começar: a câmara liga sem áudio.';
+  };
+  const quem = () => ((form.querySelector('[name="sess-quem"]:checked') || {}).value) || 'eu';
+  okCaixas.forEach(c => c.addEventListener('change', revalidar));
+  form.querySelectorAll('[name="sess-quem"]').forEach(r => r.addEventListener('change', () => {
+    if (caixaOutra) caixaOutra.hidden = quem() !== 'outra';
+    revalidar();
+  }));
+  if (caixaOutra) caixaOutra.hidden = quem() !== 'outra';
+  revalidar();
+
+  form.addEventListener('submit', async ev => {
+    ev.preventDefault();
+    if (SESS) { sessMsg('Já há uma sessão em curso.'); return; }
+    const palavra = ($('#sess-palavra') && $('#sess-palavra').value || '').trim();
+    if (palavra.length < 2) { sessMsg('Escreve a palavra primeiro.'); const i = $('#sess-palavra'); if (i) i.focus(); return; }
+    const quem = (form.querySelector('[name="sess-quem"]:checked') || {}).value || 'eu';
+    const comeco = new Date().toISOString();
+    comecar.disabled = true;
+    sessMsg('A pedir a câmara sem áudio…');
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false,
+      });
+    } catch (e) {
+      comecar.disabled = false;
+      sessMsg('A câmara não abriu (permissão negada ou indisponível). A descrição escrita continua a funcionar.');
+      return;
+    }
+    if (!document.getElementById('ch-sess-pista')) { stream.getTracks().forEach(t => t.stop()); return; }
+    SESS = {
+      id: 's' + Date.now().toString(36),
+      palavra: palavra.slice(0, 48),
+      tema: ($('#sess-tema') && $('#sess-tema').value) || 'Colheita',
+      consentimento: { quem, em: comeco, audio: false },
+      stream, rec: null, clips: [], repeticoes: [], atual: null,
+      rep: 0, fase: 'preparar', proximo: 0, parada: false, semRecorder: !window.MediaRecorder,
+      decorrido: 0, t0: performance.now(),
+    };
+    const pista = $('#ch-sess-pista');
+    pista.innerHTML = sessPistaHTML(SESS.palavra);
+    pista.hidden = false;
+    form.hidden = true;
+    const v = $('#sess-cam');
+    v.srcObject = stream;
+    v.classList.add('on');
+    await v.play().catch(() => {});
+    sessPintaClips();
+    sessPintaQuadros();
+    sessPinta();
+    $('#sess-pausa').addEventListener('click', sessPausar);
+    $('#sess-fim').addEventListener('click', () => sessFecha(false));
+    $('#sess-revogar').addEventListener('click', sessRevogar);
+    sessTiqueId = setInterval(sessTique, 100);
+    sessPrepara(0);
+  });
+}
+
+function sessPausar() {
+  if (!SESS) return;
+  const b = $('#sess-pausa');
+  if (!SESS.parada) {
+    SESS.parada = true;
+    SESS.paradaEm = performance.now();
+    if (b) b.textContent = 'Retomar';
+    /* o clipe parcial desta repetição descarta-se: um clipe a meio não serve para desenhar nada */
+    if (SESS.rec) {
+      const r = SESS.rec;
+      SESS.rec = null;
+      r.onstop = () => { if (SESS && SESS.atual) SESS.atual.segmentos = null; };
+      try { r.stop(); } catch (e) { /* já parado */ }
+      SESS.atual && (SESS.atual.quadros.length = 0);
+      sessPintaQuadros();
+    }
+    sessMsg('Em pausa: nada é contado nem capturado. A luz da câmara pode continuar acesa — para a desligar '
+      + 'de todo usa «Revogar e apagar».');
+    sessPinta();
+    return;
+  }
+  SESS.parada = false;
+  if (b) b.textContent = 'Pausar';
+  /* retoma-se sempre no princípio da repetição, com a respiração de volta */
+  sessPrepara(SESS.rep);
+  sessMsg('A retomar a repetição ' + (SESS.rep + 1) + '.');
+}
+
+function sessRevogar() {
+  if (!SESS) return;
+  const id = SESS.id, palavra = SESS.palavra;
+  const total = SESS.repeticoes.concat(SESS.atual ? [SESS.atual] : [])
+    .reduce((n, r) => n + r.quadros.length, 0);
+  const clipes = SESS.clips.length;
+  sessPararTudo();
+  const antes = lerColheita();
+  const lista = antes.filter(e => !(e && e.sessao && e.sessao.id === id));
+  const apagados = antes.length - lista.length;
+  if (apagados) guardarColheita(lista);
+  pintaListaColheita();
+  pararSessao();
+  const pista = $('#ch-sess-pista');
+  if (pista) {
+    pista.hidden = true;
+    pista.innerHTML = '';
+    const f = $('#ch-sess-consent');
+    if (f) { f.hidden = false; f.querySelectorAll('.sess-ok').forEach(c => (c.checked = false)); }
+    const b = $('#sess-comecar');
+    if (b) { b.disabled = true; }
+    const h = $('#sess-hint');
+    if (h) h.textContent = 'Faltam as confirmações em cima.';
+  }
+  const m = $('#ch-status');
+  if (m) m.textContent = `Sessão «${palavra}» revogada: a câmara desligou-se e apagaram-se os ${total} `
+    + pl(total, 'quadro capturado', 'quadros capturados')
+    + (clipes ? ' e os ' + clipes + pl(clipes, ' clipe guardado', ' clipes guardados') : '')
+    + ' que estavam na memória. '
+    + (apagados ? `Também removi ${apagados} ${pl(apagados, 'registo guardado', 'registos guardados')} desta gravação.`
+      : 'Nada tinha sido guardado nem enviado.') + ' O tempo desta sessão deixa de contar para qualquer pagamento.';
+}
+
+/* lista re-desenhada a partir do localStorage — é o caminho que as sessões usam */
+function pintaListaColheita() {
+  const lista = lerColheita();
+  const n = $('#ch-n');
+  if (n) n.textContent = String(lista.length);
+  const sec = document.querySelector('.ch-minhas');
+  if (!sec) return;
+  let ul = $('#ch-lista');
+  if (!lista.length) {
+    if (ul) ul.remove();
+    if (!sec.querySelector('.ch-vazio')) {
+      sec.querySelector('h2').insertAdjacentHTML('afterend', '<p class="ch-vazio">Ainda não guardaste sinais.</p>');
+    }
+    return;
+  }
+  const vazio = sec.querySelector('.ch-vazio');
+  if (vazio) vazio.remove();
+  if (!ul) {
+    sec.querySelector('h2').insertAdjacentHTML('afterend', '<ul class="ch-lista" id="ch-lista"></ul>');
+    ul = $('#ch-lista');
+  }
+  ul.innerHTML = lista.map(chItemHTML).join('');
+}
+
 function vistaColheita(args) {
   const palavra = args && args.palavra ? decodeURIComponent(args.palavra) : '';
   return {
     active: '/colher',
     h: shell(colheitaHTML(palavra), '/colher'),
     bind: bindColheita,
-    meta: { t: 'Colheita participada de sinais LGA — ajuda a encher o dicionário', d: 'Registar sinais de Língua Gestual Angolana com método: configuração da mão, lugar, movimento e expressão. Tudo fica no teu aparelho e é exportado num ficheiro para a equipa validar.' },
+    meta: { t: 'Colheita participada de sinais LGA — ajuda a encher o dicionário', d: 'Descrever sinais de Língua Gestual Angolana com método (configuração da mão, lugar, movimento, expressão) ou gravar uma sessão guiada com consentimento: 3 repetições ao ritmo natural e uma lenta, sempre sem áudio. Fica no teu aparelho e exporta-se em JSON, TXT ou JSONL.' },
   };
 }
 
@@ -3599,11 +4568,15 @@ function desligarColheitaCam() {
 
 function bindColheita() {
   const aviso = (t) => { const m = $('#ch-status'); if (m) m.textContent = t; };
+  bindSessao();
 
   document.querySelectorAll('[data-ch-preenche]').forEach(b => b.addEventListener('click', () => {
     const inp = $('#ch-palavra');
     if (!inp) return;
     inp.value = b.dataset.chPreenche;
+    /* a sessão de gravação é o caminho recomendado para uma palavra nova: poupa um passo */
+    const sp = $('#sess-palavra');
+    if (sp && !sp.value) sp.value = b.dataset.chPreenche;
     inp.focus();
     $('#ch-form-h').scrollIntoView({ block: 'center', behavior: movReduzido() ? 'auto' : 'smooth' });
   }));
@@ -3645,17 +4618,9 @@ function bindColheita() {
     if (!guardarColheita(lista)) { aviso('Este aparelho já não tem espaço para guardar mais: exporta o pacote e apaga registos antigos.'); return; }
     registrarExtra([registo]);
     aviso(`Guardado: «${palavra}» fica já visível no dicionário e no Pamosii como colhido, só neste aparelho.`);
-    const listaEl = $('#ch-lista');
-    const vazio = document.querySelector('.ch-minhas .ch-vazio');
-    if (vazio) vazio.remove();
-    /* a página vinha com "ainda não guardaste sinais" no sítio da lista: sem isto o primeiro
-       registo guardava-se mas nunca aparecia em ecrã */
-    if (!listaEl) {
-      document.querySelector('.ch-minhas h2').insertAdjacentHTML('afterend', '<ul class="ch-lista" id="ch-lista"></ul>');
-    }
-    document.getElementById('ch-lista').insertAdjacentHTML('afterbegin', chItemHTML(lista[0]));
-    const n = $('#ch-n'); if (n) n.textContent = String(lista.length);
-    reindexarLista();
+    /* a lista redesenha-se a partir do que está guardado: inserir só o item novo deixava
+       duas cópias quando a pessoa voltava a gravar uma palavra que já cá estava */
+    pintaListaColheita();
     if (chCam) { chCam.fotos.length = 0; pintarFotos(); }
     form.reset();
     $('#ch-palavra').focus();
@@ -3712,6 +4677,9 @@ function bindColheita() {
   }); });
   const copiar = $('#ch-copiar');
   if (copiar) copiar.addEventListener('click', () => copiarTexto(textoPacote(pacote()), copiar));
+
+  const jsonl = $('#ch-export-jsonl');
+  if (jsonl) jsonl.addEventListener('click', exportarSessoes);
 
   const imp = $('#ch-import-file');
   if (imp) imp.addEventListener('change', () => {
@@ -4511,13 +5479,123 @@ function vistaMarcacoes() {
 
 on('/marcar', vistaMarcacoes);
 
+/* ---------------- vista: FORA DESTE SITE ----------------
+   Três formas de usar o Signer fora desta página: parteilhar texto no telemóvel,
+   instalar a extensão do Chrome, e incorporar o painel noutro site.
+   Regras de integridade (as mesmas do Signer):
+     - nada é enviado para um servidor: o texto escolhido vai para o painel, e o
+       painel só conhece o glossário que já está dentro de app.js;
+     - o resultado é glosa de estudo, não tradução automática, e continua
+       "A validar" pela comunidade surda angolana;
+     - não há reconhecimento de imagem nem de voz: só texto já escrito. */
+on('/fora', () => {
+  const base = location.origin + location.pathname.replace(/index\.html$/, '');
+  const iframe = `<iframe src="${base}?emb=1#/pamosii"\n        title="Pamosii Signer" width="430" height="620"\n        style="border:0"></iframe>`;
+  const post = `// quando a pessoa escolhe um texto no teu site\npostMessage({ tipo: 'pamosii-sinalizar', texto: trecho }, '${base.replace(/\/+$/, '')}');`;
+  return {
+    active: '/fora',
+    h: shell(`
+<div class="wrap page-head">
+  <h1>Usar o Pamosii Signer fora deste site</h1>
+  <p class="lead">O painel de sinais não precisa de viver só aqui. Podes levá-lo para o telemóvel (Partilhar),
+  para o computador (extensão do Chrome) ou para outro site (painel incorporado). Em nenhum dos casos
+  o texto sai do teu aparelho para um servidor nosso — não temos servidores.</p>
+</div>
+<section class="section tight">
+  <div class="wrap fora-grid">
+    <article class="fact-card rv">
+      <h2>${I.access} 1. No telemóvel — Partilhar para o Pamosii</h2>
+      <p>Funciona no Android (Chrome). Primeiro instala a app:</p>
+      <ol class="fora-passos">
+        <li>Abre este site no Chrome do telemóvel.</li>
+        <li>Menu <span class="kbd">⋮</span> → <strong>Adicionar ao ecrã principal</strong>.</li>
+        <li>Noutro app (WhatsApp, navegador, PDF), selecciona o texto e toca em <strong>Partilhar → Pamosii</strong>.</li>
+        <li>O Pamosii abre já com a sequência de sinais desse texto. Sem reescrever nada.</li>
+      </ol>
+      <p class="muted" style="font-size:13.5px">No iPhone (Safari) o menu Partilhar ainda não aceita apps instaladas desta
+        forma — nesse caso usa o campo do painel, ou o botão <strong>Sinalizar esta página</strong>.</p>
+      <p><a class="btn btn-o btn-sm" href="#/pamosii">Abrir o Pamosii ${I.arrow}</a></p>
+    </article>
+
+    <article class="fact-card rv">
+      <h2>${I.spark} 2. No computador — extensão do Chrome</h2>
+      <p>A extensão põe um botão <strong>Pamosii</strong> em qualquer site. Ao carregar, abre o mesmo painel
+      desta vez do teu lado do ecrã, e dá duas maneiras de escolher o texto:</p>
+      <ul>
+        <li><strong>Apontar a um texto</strong> — carregas numa frase ou parágrafo da página e só esse trecho é sinalizado.</li>
+        <li><strong>Sinalizar a selecção</strong> — marcas o texto primeiro, depois carregas no botão.</li>
+      </ul>
+      <p>Com o teclado: <span class="kbd">←</span> <span class="kbd">→</span> percorrem os textos da página e
+        <span class="kbd">Enter</span> sinaliza o que está marcado; <span class="kbd">Esc</span> sai do modo apontar.</p>
+      <p class="muted" style="font-size:13.5px">A extensão <strong>não tem nenhuma permissão</strong>: não lê os teus dados,
+        não guarda nada, não fala com servidores. O painel é este site dentro de uma janela — por isso
+        precisa de ligação à internet na primeira vez.</p>
+      <div class="fora-instalar">
+        <h3>Instalar (2 minutos, sem loja)</h3>
+        <ol class="fora-passos">
+          <li>Descarrega a extensão: <a href="extensao/pamosii-signer.zip" download><strong>pamosii-signer.zip</strong></a> (16 KB) e descompacta-a numa pasta.</li>
+          <li>No Chrome, abre <span class="kbd">chrome://extensions</span>.</li>
+          <li>Liga o <strong>Modo de programador</strong> (canto superior direito).</li>
+          <li>Carrega em <strong>Carregar sem compactar</strong> e escolhe a pasta que acabaste de descompactar
+            (tem de ser a pasta onde está o <code>manifest.json</code>).</li>
+          <li>Clica no ícone do Pamosii na barra do Chrome, em qualquer site.</li>
+        </ol>
+        <p style="font-size:12.5px">Não é uma ligação da loja: é a mesma pasta, distribuída por nós. Por isso o Chrome
+          mostra o aviso de extensão de programador — é esperado, e é também por isso que a extensão não pede permissão nenhuma.</p>
+        <p>${extLink('https://github.com/7Dark7Cloud7/pamosii-viva-surdo/tree/main/extension', 'Ver o código da extensão no GitHub')}</p>
+      </div>
+    </article>
+
+    <article class="fact-card rv">
+      <h2>${I.doc} 3. Noutro site — painel incorporado</h2>
+      <p>Qualquer site pode mostrar o painel do Signer dentro de um <em>iframe</em>. Este é o endereço do
+        modo incorporado — sem cabeçalho, sem menu, só o painel:</p>
+      <pre class="ch-json"><code>${esc(iframe)}</code></pre>
+      <p style="margin-top:14px">Para mandar um texto teu para o painel (por exemplo o parágrafo que a pessoa está a ler):</p>
+      <pre class="ch-json"><code>${esc(post)}</code></pre>
+      <p class="muted" style="font-size:13.5px">Limites honestos: o painel aceita até 6 000 caracteres por mensagem e
+        só responde quando está dentro de um iframe. Não há chave de API, não há registo, não há
+        analítica — e o glossário que ele usa é o mesmo deste site, marcado <strong>A validar</strong>.</p>
+    </article>
+  </div>
+
+  <div class="note-band" style="margin-top:30px">
+    ${I.shield}
+    <div>
+      <p style="margin:0"><strong>O que nenhuma destas formas faz.</strong> Nenhuma delas traduz automaticamente
+      fala para LGA nem LGA para fala, nenhuma reconhece sinais por câmara, e nenhuma envia o teu texto
+      para um servidor. O que o Pamosii faz é uma <em>glosa de estudo</em>: procura as palavras no glossário
+      e mostra os sinais por ordem. A forma correcta do sinal está nos vídeos das aulas, e a validação
+      pertence às pessoas surdas angolanas — não a este site.</p>
+    </div>
+  </div>
+  <div style="margin-top:22px;display:flex;flex-wrap:wrap;gap:10px">
+    <a class="btn btn-p" href="#/pamosii">Usar o Pamosii aqui ${I.arrow}</a>
+    <a class="btn btn-o" href="#/colher">Registar sinais que faltam ${I.arrow}</a>
+    <a class="btn btn-o" href="#/contacto">Falar com a Viva Surdo ${I.arrow}</a>
+  </div>
+</section>`, '/fora'),
+    meta: {
+      t: 'Usar o Pamosii Signer fora deste site — partilhar, extensão e painel incorporado',
+      d: 'Como levar o Pamosii Signer para fora deste site: partilhar texto no Android, instalar a extensão do Chrome (sem permissões) ou incorporar o painel num iframe. Nenhum texto sai do aparelho.',
+    },
+  };
+});
+
 function iniciarApp() {
   aplicarPrefs(lerPrefs());
-  montarPainelA11y();
+  if (!EMB) montarPainelA11y();
   montarSigner();
-  render();
+  /* texto chegado pelo menu Partilhar do Android: a app abre nessa página, não no Início */
+  const haPartilha = !EMB && /[?&](title|text|url)=/.test(location.search);
+  const partilhado = haPartilha ? lerPartilha() : null;
+  if (haPartilha) {
+    try { history.replaceState(null, '', location.pathname + '#/pamosii'); } catch (e) { /* file:// não deixa */ }
+  }
+  render().then(() => { if (partilhado) receberPartilha(partilhado); });
   carregarGlossarioExtra();
   carregarMarcacoes();
+  if (EMB) montarWidget();
 }
 
 /* Voltou a ligação: retira os avisos de "sem rede" para não deixar um estado fantasma
