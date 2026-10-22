@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "tipo": "pamosii-marcacoes",
+  "geradoEm": "2026-10-22",
+  "nota": "Gerado por tools/ingerir-marcacoes.cjs a partir de ficheiros exportados pela página /marcar. Não editar à mão: voltar a correr o ingestor. estado \"a validar\" = ninguém confirmou ainda que aquele momento do vídeo é o sinal daquela palavra; \"confirmado\" só com validado_por (pessoa surda sinalizadora). Esta versão está vazia de propósito: ainda ninguém marcou nada — é o primeiro trabalho pedido à equipa e a quem queira ajudar.",
+  "total": 0,
+  "palavrasDistintas": 0,
+  "marcacoes": []
+}

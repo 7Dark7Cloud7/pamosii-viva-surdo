@@ -1414,7 +1414,7 @@ html.sg-on .sg-fab{display:none}
 .ch-item-a{margin:10px 0 0}
 .ch-import{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-weight:700;font-size:14px;color:var(--ink)}
 .ch-import .ic{width:18px;height:18px;color:var(--teal-deep)}
-#ch-import-file{margin-top:8px;font-size:14px;max-width:100%}
+#ch-import-file,#mk-import-file{margin-top:8px;font-size:14px;max-width:100%;min-height:44px}
 .ch-envio{background:var(--cream);border-color:var(--amber-line)}
 .ch-envio h2 .ic{color:var(--amber-ink)}
 .ch-passo{margin:12px 0 0;padding-left:22px;display:grid;gap:9px;font-size:15px;line-height:1.6}
@@ -1434,4 +1434,76 @@ html.sg-on .sg-fab{display:none}
   .ch-cam-grid{grid-template-columns:1fr}
   .ch-ac .btn,.ch-lacunas .btn,.ch-item-a .btn{flex:1 1 auto;justify-content:center}
   .dic-ico{width:44px;height:44px}
+}
+
+/* ============================================================================
+   15. MARCAÇÃO DE TEMPOS POR SINAL (`/marcar`) — ferramenta de quem vê as aulas
+   para dizer ONDE está cada sinal. Mesma linguagem visual da Colheita: cartões
+   de papel, âmbar apenas para o que está "por validar", nada a depender de
+   animação para se entender.
+   ============================================================================ */
+.mk-aula,.mk-form,.mk-minhas,.mk-cobertura{background:var(--paper);border:1.5px solid var(--line);
+  border-radius:var(--radius-lg);padding:20px 22px;margin:0 0 18px;box-shadow:var(--shadow)}
+.mk-para{background:var(--cream);border:1.5px solid var(--amber-line);border-radius:var(--radius-lg);
+  padding:20px 22px;margin:0 0 18px}
+.mk-aula h2,.mk-form h2,.mk-minhas h2,.mk-cobertura h2,.mk-para h2{margin:0 0 6px;
+  font-family:var(--font-h);font-size:21px;line-height:1.25}
+.mk-aula h2 .ic,.mk-form h2 .ic,.mk-minhas h2 .ic,.mk-cobertura h2 .ic,.mk-para h2 .ic{
+  width:21px;height:21px;color:var(--teal-deep);vertical-align:-3px}
+.mk-video{max-width:640px;border-radius:12px;overflow:hidden;margin:8px 0 0}
+/* vive sobre o fundo escuro da fachada: texto claro, e branco em contraste alto */
+.mk-video-aviso{margin:0;padding:16px 18px;font-size:14px;line-height:1.5;color:#DCEBE4}
+[data-contraste-alto] .mk-video-aviso{color:#fff}
+.mk-campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:14px;margin-top:14px}
+.mk-campo{display:flex;flex-direction:column;gap:6px;margin:0;min-width:0}
+.mk-campo-lg{grid-column:1 / -1}
+.mk-campo label{font-weight:700;font-size:13.5px;color:var(--ink-soft)}
+.mk-campo input,.mk-campo select{font:inherit;font-size:16px;padding:11px 13px;border:1.5px solid var(--line);
+  border-radius:12px;background:var(--surface);color:var(--ink);width:100%;min-width:0}
+.mk-hint{font-size:12.5px;color:var(--muted);min-height:16px;overflow-wrap:anywhere}
+.mk-time{display:flex;align-items:stretch;gap:8px;min-width:0}
+.mk-time input{flex:1 1 auto;min-width:0;font-variant-numeric:tabular-nums}
+.mk-readout{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0 0}
+.mk-clock{display:inline-flex;align-items:center;gap:9px;border:1.5px solid var(--line);border-radius:12px;
+  padding:7px 13px;background:var(--surface);font-variant-numeric:tabular-nums}
+.mk-clock-k{font-size:11.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.mk-clock strong{font-family:var(--font-h);font-size:19px;color:var(--ink)}
+.mk-msg{margin:10px 0 0;font-size:14px;font-weight:700;color:var(--teal-deep);min-height:20px;overflow-wrap:anywhere}
+.mk-ac{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:14px 0 0}
+.mk-dur{font-size:13.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.mk-lista{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:10px}
+.mk-item{border:1.5px solid var(--line-soft);border-radius:var(--radius);padding:12px 14px;background:var(--surface)}
+.mk-item-p{margin:0;display:flex;align-items:center;flex-wrap:wrap;gap:9px}
+.mk-w{font-family:var(--font-h);font-weight:800;font-size:18px;overflow-wrap:anywhere}
+.mk-chip{font-size:13px;font-weight:800;color:var(--teal-deep);background:var(--teal-tint);border-radius:999px;
+  padding:4px 10px;font-variant-numeric:tabular-nums}
+.mk-item-t{margin:6px 0 0;font-size:12.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.mk-item-n{margin:6px 0 0;font-size:13.5px;color:var(--ink-soft);font-style:italic;overflow-wrap:anywhere}
+.mk-item-a{margin:10px 0 0;display:flex;flex-wrap:wrap;gap:8px}
+.mk-teclas{margin:16px 0 0}
+.mk-teclas summary{font-weight:800;font-size:14px;cursor:pointer;min-height:44px;display:inline-flex;align-items:center}
+.mk-teclas ul{margin:6px 0 0;padding-left:20px;display:grid;gap:9px;font-size:14px;color:var(--ink-soft);line-height:1.55}
+.mk-teclas kbd{font-family:var(--font-b);font-weight:800;font-size:12.5px;background:var(--cream);
+  border:1.5px solid var(--line);border-bottom-width:3px;border-radius:6px;padding:2px 7px}
+.mk-stats{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:10px;
+  grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr))}
+.mk-stats li{border:1.5px solid var(--line-soft);border-radius:12px;padding:10px 12px;background:var(--surface);
+  display:flex;flex-direction:column;gap:2px}
+.mk-stats strong{font-family:var(--font-h);font-size:24px;line-height:1.2;color:var(--teal-deep);font-variant-numeric:tabular-nums}
+.mk-stats span{font-size:13px;color:var(--muted)}
+/* a tabela pode ser mais larga que o ecrã: quem desce é a tabela, nunca a página */
+.mk-tab-wrap{overflow-x:auto;margin-top:12px;-webkit-overflow-scrolling:touch}
+.mk-tab{border-collapse:collapse;width:100%;min-width:420px;font-size:14px}
+.mk-tab th,.mk-tab td{padding:9px 10px;border-bottom:1.5px solid var(--line-soft);text-align:left;vertical-align:top}
+.mk-tab thead th{font-size:12.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.mk-tab tbody th{font-weight:700;color:var(--ink)}
+.mk-num{text-align:right;font-variant-numeric:tabular-nums;font-weight:800;white-space:nowrap}
+.mk-aqui th,.mk-aqui td{background:var(--teal-tint)}
+@media(max-width:720px){
+  .mk-aula,.mk-form,.mk-minhas,.mk-cobertura,.mk-para{padding:16px 15px}
+  .mk-item-a .btn,.mk-ac .btn{flex:1 1 auto;justify-content:center}
+  .mk-readout{gap:6px}
+  .mk-clock{width:100%;justify-content:space-between}
+  .mk-time{flex-wrap:wrap}
+  .mk-time .btn{flex:1 1 40%}
 }

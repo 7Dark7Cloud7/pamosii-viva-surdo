@@ -1473,6 +1473,7 @@ const META = {
   '/evangelismo': { t: 'Evangelismo acessível — Pamosii Viva Surdo', d: 'Roteiros curtos de partilha da Bíblia para usar com pessoas surdas: frases em português com glosa de sinais, áudio e copiar. Conteúdo de estudo, sem promessas de tradução automática.' },
   '/sobre': { t: 'Sobre — Pamosii Viva Surdo', d: 'Pamosii é a plataforma da Viva Surdo, iniciativa angolana de inclusão das pessoas surdas através da educação, da formação e da Língua Gestual Angolana (LGA).' },
   '/colher': { t: 'Colheita participada de sinais LGA — Pamosii Viva Surdo', d: 'Registar sinais de Língua Gestual Angolana com método (configuração da mão, lugar, movimento, expressão). Tudo fica no aparelho de quem regista e é exportado num ficheiro para a equipa validar.' },
+  '/marcar': { t: 'Marcação de tempos por sinal — Pamosii Viva Surdo', d: 'Ferramenta para marcar os segundos em que o sinal de cada palavra aparece nas 17 aulas de LGA. As marcações ficam no aparelho e exportam-se em JSON para a equipa cortar os clipes.' },
   '/contacto': { t: 'Contacto — Pamosii Viva Surdo', d: 'Canais oficiais verificados da Viva Surdo: Facebook, Instagram e YouTube. Telefone e e-mail serão divulgados após confirmação.' },
 };
 
@@ -1527,6 +1528,7 @@ const NAV_ITENS = [
   { path: '/biblia', rotulo: 'Bíblia' },
   { path: '/evangelismo', rotulo: 'Evangelismo' },
   { path: '/colher', rotulo: 'Colheita', extra: true },
+  { path: '/marcar', rotulo: 'Marcação', extra: true },
   { path: '/sobre', rotulo: 'Sobre' },
   { path: '/contacto', rotulo: 'Contacto' },
 ];
@@ -2031,11 +2033,14 @@ function bindDicionario(state) {
           : soonBadge()}</div>
       </header>
       <ul class="dic-words">
-        ${termos.map(t => `<li>
+        ${termos.map(t => {
+          const mo = momentoDe(t.palavra);
+          return `<li>
           <span class="dic-w">${esc(t.palavra)}</span>
           <span class="dic-badge is-${t.estado}" title="${esc(ESTADO_GLOSSARIO[t.estado].nota)}">${esc(ESTADO_GLOSSARIO[t.estado].rotulo)}</span>
+          ${mo ? `<span class="mk-chip" title="${esc('momento ' + (mo.estado === 'confirmado' ? 'confirmado' : 'por validar')) + ' — ' + esc(mo.aulaTitulo || '')}">${I.clock} ${esc(fmtT(mo.inicio))} → ${esc(fmtT(mo.fim))}</span>` : ''}
           <button class="dic-ico" type="button" data-signer data-texto="${esc(t.palavra)}" aria-label="Mostrar ${esc(t.palavra)} no Signer">${I.video}</button>
-        </li>`).join('')}
+        </li>`; }).join('')}
       </ul>
     </section>`;
   };
@@ -2105,9 +2110,12 @@ function pmCard(it, n) {
   if (it.expressao) notas.push('Um só sinal para várias palavras.');
   if (it.origem) notas.push(`Forma de «${it.origem}» no dicionário.`);
   if (e.plural) notas.push('Plural: repete-se o sinal.');
+  const momento = it.aula ? momentoDe(it.palavra, it.aula.id) : null;
+  if (momento) notas.push(chipMomento(momento));
   const midia = it.aula
     ? `<div class="vfacade pm-facade"><button class="vplay" type="button" data-play="${it.aula.id}" data-titulo="${esc(it.aula.titulo)}"
-         aria-label="Ver o vídeo do sinal de ${esc(it.palavra)} na aula ${esc(it.aula.titulo)}">
+         ${momento ? `data-start="${momento.inicio}" data-end="${momento.fim}"` : ''}
+         aria-label="Ver o vídeo do sinal de ${esc(it.palavra)} na aula ${esc(it.aula.titulo)}${momento ? ', a partir de ' + fmtT(momento.inicio) : ''}">
          <img src="https://i.ytimg.com/vi/${it.aula.id}/hqdefault.jpg" alt="Quadro da aula «${esc(it.aula.titulo)}»" loading="lazy" decoding="async" width="480" height="360">
          <span class="vbtn">${I.play}</span></button></div>`
     : `<div class="pm-facade pm-novideo">${pmGlifo(e.tema, '', abc)}<span class="pm-sem-video">${I.info} Ainda sem vídeo deste sinal</span></div>`;
@@ -2897,6 +2905,7 @@ async function render() {
   desligarVLibras();   /* o avatar externo vive fora do #app: sem isto ficaria a pairar na página nova */
   signerParar();
   desligarColheitaCam();
+  desligarMarcacoes();   /* o leitor do YouTube vive dentro desta rota: sai com ela */
   const m = matchRoute(hash);
   const resultado = m ? await m.view({ args: m.args }) : notFound();
   const app = $('#app');
@@ -2952,8 +2961,14 @@ document.addEventListener('click', e => {
     return;
   }
   const criarFrame = () => {
+    /* data-start/data-end vêm de uma marcação de tempo (secção 14, `#/marcar`):
+       o cartão deixa de dizer «é nesta aula» e passa a abrir o momento do sinal. */
+    const q = ['autoplay=1', 'rel=0'];
+    const st = Number(btn.dataset.start), en = Number(btn.dataset.end);
+    if (isFinite(st) && st > 0) q.push('start=' + Math.floor(st));
+    if (isFinite(en) && en > st) q.push('end=' + Math.ceil(en));
     const frame = document.createElement('iframe');
-    frame.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0`;
+    frame.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?${q.join('&')}`;
     frame.title = titulo;
     frame.setAttribute('allow', 'accelerometer; encrypted-media; gyroscope; picture-in-picture');
     frame.setAttribute('allowfullscreen', '');
@@ -3045,6 +3060,7 @@ function sgPintar() {
   const palco = $('#sg-palco'), live = $('#sg-live'), faixa = $('#sg-strip');
   if (!palco) return;
   const p = sgPassoActual();
+  const pMo = p && p.aula ? momentoDe(p.palavra, p.aula.id) : null;
   const total = sgEstado.passos.length;
   palco.innerHTML = total
     ? `${sgFigura(p.tema, p.letra)}
@@ -3053,9 +3069,10 @@ function sgPintar() {
          : esc(p.tema) + ' · ' + esc(ESTADO_GLOSSARIO[p.estado] ? ESTADO_GLOSSARIO[p.estado].rotulo : 'A validar')}</p>
        ${p.nota ? `<p class="sg-nota">${esc(p.nota)}</p>` : ''}
        ${p.aula ? `<div class="vfacade pm-facade sg-video"><button class="vplay" type="button" data-play="${p.aula.id}"
-           data-titulo="${esc(p.aula.titulo)}" aria-label="Ver o vídeo real deste sinal: ${esc(p.aula.titulo)}">
+           data-titulo="${esc(p.aula.titulo)}"${pMo ? ` data-start="${pMo.inicio}" data-end="${pMo.fim}"` : ''}
+           aria-label="Ver o vídeo real deste sinal: ${esc(p.aula.titulo)}${pMo ? ', a partir de ' + fmtT(pMo.inicio) : ''}">
            <img src="https://i.ytimg.com/vi/${p.aula.id}/hqdefault.jpg" alt="" loading="lazy" decoding="async" width="480" height="360">
-           <span class="vbtn">${I.play}</span></button><p class="sg-vid-note">O vídeo é que faz fé: o boneco só mostra a família de movimento.</p></div>`
+           <span class="vbtn">${I.play}</span></button><p class="sg-vid-note">${pMo ? 'O sinal está em ' + esc(fmtT(pMo.inicio)) + ' → ' + esc(fmtT(pMo.fim)) + (pMo.estado === 'confirmado' ? ' (momento confirmado). ' : ' (a validar). ') : ''}O vídeo é que faz fé: o boneco só mostra a família de movimento.</p></div>`
          : `<p class="sg-sem-video">${I.info} Ainda sem vídeo deste sinal.</p>
             <p class="sg-convite"><a href="#/colher/${encodeURIComponent(p.daPalavra || p.palavra)}">Conheces este sinal? Ajuda a registá-lo</a></p>`}`
     : `<p class="sg-vazio">Escreve uma frase, ou pede “Sinalizar esta página”, e a sequência de sinais aparece aqui.</p>`;
@@ -3764,12 +3781,743 @@ function pintarFotos() {
 on('/colher', () => vistaColheita(null));
 on('/colher/:palavra', ({ args }) => vistaColheita(args));
 
+/* ============================================================================
+   14. MARCAÇÃO DE TEMPOS POR SINAL — `#/marcar`
+   ----------------------------------------------------------------------------
+   Para que serve: ver uma aula e registar em que segundos da aula começa e
+   acaba o sinal de uma palavra. É o passo que transforma «a palavra X é
+   ensinada nesta aula» em «o sinal X é este clipe de 3 segundos» — sem estas
+   marcações não há clipe isolado no dicionário, no Pamosii nem no Signer, e
+   por isso é a primeira coisa desta fase (README, FASE 1B).
+
+   Regras de integridade (ler antes de editar):
+     - O estado de qualquer marcação nova é «por validar». Marcar um momento
+       num vídeo NÃO valida o sinal: validar é trabalho de um sinalizador surdo
+       angolano (a fila de validação é outra ferramenta, ainda por construir).
+     - Nada é enviado por este site. As marcações ficam no localStorage do
+       aparelho e saem num ficheiro JSON que a pessoa escolhe entregar à equipa.
+     - O leitor do YouTube é opcional. Se o script não carregar (sem rede,
+       bloqueado, política da escola), a ferramenta continua a funcionar com os
+       tempos escritos à mão — e diz isso mesmo em vez de fingir que lê a hora.
+     - O JSON exportado traz sempre {aula, palavra, inicio, fim, estado}, o
+       formato combinado com a equipa; as chaves a mais servem para saber de
+       onde veio cada marcação.
+   ============================================================================ */
+
+const MK_CHAVE = 'vs.marcar';
+const SCHEMA_MK = 1;
+const MK_MAX_DURACAO = 120;   /* segundos: um sinal isolado não é uma aula inteira */
+const pl = (n, um, mais) => n === 1 ? um : mais;
+
+function lerMarcacoes() {
+  try { const d = JSON.parse(localStorage.getItem(MK_CHAVE) || '[]'); return Array.isArray(d) ? d : []; } catch (e) { return []; }
+}
+function guardarMarcacoes(l) {
+  try { localStorage.setItem(MK_CHAVE, JSON.stringify(l)); invalidarMkIndice(); return true; } catch (e) { return false; }
+}
+
+const mkId = () => 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const chavePalavra = (p) => norm(p).replace(/[….:;?!]/g, '').trim();
+const aulaPorId = (id) => LGA_AULAS.find(a => a.id === id) || null;
+
+/* As marcações que a equipa publicou em assets/marcacoes.json (depois de juntar os
+   ficheiros de toda a gente). Juntam-se às deste aparelho: é isto que faz um cartão do
+   dicionário dizer «o sinal está em 0:31–0:34 desta aula» em vez de «é nesta aula». */
+let MARCADAS = [];
+let MK_INDICE = null;
+function invalidarMkIndice() { MK_INDICE = null; }
+function mkIndice() {
+  if (MK_INDICE) return MK_INDICE;
+  const local = lerMarcacoes().map(m => ({ ...m, palavraChave: m.palavraChave || chavePalavra(m.palavra), estado: m.estado === 'por validar' ? 'a validar' : m.estado }));
+  MK_INDICE = new Map();
+  MARCADAS.concat(local).forEach(m => {
+    const c = m.palavraChave;
+    if (!c) return;
+    if (!MK_INDICE.has(c)) MK_INDICE.set(c, []);
+    MK_INDICE.get(c).push(m);
+  });
+  MK_INDICE.forEach(l => l.sort((a, b) => a.inicio - b.inicio));
+  return MK_INDICE;
+}
+function momentoDe(palavra, aulaId) {
+  const c = chavePalavra(palavra);
+  if (!c) return null;
+  const pool = mkIndice().get(c);
+  if (!pool || !pool.length) return null;
+  const desta = aulaId ? pool.filter(m => m.aula === aulaId) : [];
+  return desta.length ? desta[0] : pool[0];
+}
+const chipMomento = (m) => m
+  ? 'Sinal visível em ' + fmtT(m.inicio) + ' → ' + fmtT(m.fim) + ' desta aula (' +
+    (m.estado === 'confirmado' ? 'momento confirmado' : 'momento ainda por validar') + ').'
+  : '';
+
+/* mm:ss.d — é o formato que a equipa lê em voz alta ("31 vírgula 4 segundos") */
+function fmtT(s) {
+  if (s == null || !isFinite(s)) return '—';
+  let t = Math.round(Math.max(0, s) * 10) / 10;
+  let m = Math.floor(t / 60), seg = Math.round((t - m * 60) * 10) / 10;
+  if (seg >= 60) { m += 1; seg -= 60; }
+  return m + ':' + seg.toFixed(1).padStart(4, '0');
+}
+function parseT(x) {
+  const t = String(x == null ? '' : x).trim().replace(',', '.');
+  if (!t) return null;
+  if (/^\d+(\.\d+)?$/.test(t)) return Math.round(Number(t) * 10) / 10;
+  const p = t.split(':');
+  if (p.length < 2 || p.length > 3) return null;
+  const n = p.map(v => Number(v));
+  if (n.some(v => !isFinite(v) || v < 0)) return null;
+  const seg = n[n.length - 1], min = n.length === 2 ? n[0] : n[1], h = n.length === 3 ? n[0] : 0;
+  if (min >= 60 || seg >= 60) return null;
+  return Math.round((h * 3600 + min * 60 + seg) * 10) / 10;
+}
+
+/* estado vivo da ferramenta (não é persistido: só as marcações é que contam) */
+const mk = { aula: LGA_AULAS[1].id, t: 0, player: null, rel: null, mod: 'manual', rever: null, editar: null, campo: 'inicio', mao: false };
+let mkTecla = null, mkTempoYT = null;
+
+function mkInfoPalavra(p) {
+  const c = chavePalavra(p);
+  if (!c) return null;
+  const idx = typeof PAMOSSI_INDICE !== 'undefined' ? PAMOSSI_INDICE.get(c) : null;
+  if (idx) return { tema: idx.tema, estado: idx.estado };
+  for (const g of GLOSSARIO) {
+    const t = g.termos.find(x => chavePalavra(x.palavra) === c);
+    if (t) return { tema: g.tema, estado: t.estado };
+  }
+  return null;
+}
+const mkPalavras = () => {
+  const vistas = new Set(), out = [];
+  GLOSSARIO.forEach(g => g.termos.forEach(t => {
+    const c = chavePalavra(t.palavra);
+    if (c && !vistas.has(c)) { vistas.add(c); out.push(t.palavra); }
+  }));
+  return out.sort((a, b) => a.localeCompare(b, 'pt'));
+};
+
+/* --- 14.1 o leitor: lê a hora do vídeo quando puder, e diz quando não puder --- */
+function mkPintarModo(msg) {
+  const el = $('#mk-mod');
+  if (el) el.textContent = msg || '';
+  const cap = $$('[data-mk-capt]');
+  cap.forEach(b => { b.disabled = mk.mod !== 'leitor'; });
+  const play = $('#mk-play');
+  if (play) play.disabled = mk.mod !== 'leitor';
+  const relogio = $('#mk-relogio');
+  if (relogio) relogio.dataset.vivo = mk.mod === 'leitor' ? 'sim' : 'nao';
+}
+
+function mkNovoPlayer(id) {
+  const caixa = $('#mk-video');
+  if (!caixa || !(window.YT && window.YT.Player)) return;
+  caixa.innerHTML = '<div id="mk-leitor"></div>';
+  try {
+    mk.player = new window.YT.Player('mk-leitor', {
+      host: 'https://www.youtube-nocookie.com',
+      videoId: id,
+      playerVars: { rel: 0, playsinline: 1, modestbranding: 1 },
+      events: {
+        onReady: () => { mk.mod = 'leitor'; mkPintarModo('O leitor está ligado: a hora do vídeo é lida automaticamente. Usa Capturar (ou as teclas i e f).'); mkIniciarTick(); },
+        onStateChange: (ev) => { const p = $('#mk-play'); if (p && mk.player) p.textContent = ev.data === 1 ? 'Pausar' : 'Reproduzir'; },
+        onError: (ev) => { mk.mod = 'manual'; mkPintarModo('O YouTube não deixou abrir o vídeo neste browser (código ' + ev.data + '). Podes marcar os tempos à mão — a ferramenta não depende do leitor.'); },
+      },
+    });
+  } catch (e) {
+    mk.mod = 'manual';
+    mkPintarModo('Não foi possível usar o leitor neste browser. Marca os tempos à mão.');
+  }
+}
+
+function mkMontarLeitor(id) {
+  mkPararLeitor();
+  mk.aula = id;
+  if (!$('#mk-video')) return;
+  if (!navigator.onLine) { mk.mod = 'manual'; mkPintarModo('Sem ligação: o vídeo não abre aqui, mas podes marcar os tempos à mão (vê a aula noutro ecrã e escreve mm:ss).'); return; }
+  mk.mod = 'a-carregar'; mkPintarModo('A carregar o leitor do YouTube…');
+  if (window.YT && window.YT.Player) { mkNovoPlayer(id); return; }
+  window.onYouTubeIframeAPIReady = () => { if (!mk.player) mkNovoPlayer(mk.aula); };
+  clearTimeout(mkTempoYT);
+  mkTempoYT = setTimeout(() => {
+    if (!mk.player) { mk.mod = 'manual'; mkPintarModo('O leitor demorou a responder. Marca os tempos à mão, ou muda de aula para tentar de novo.'); }
+  }, 12000);
+  const s = document.createElement('script');
+  s.src = 'https://www.youtube.com/iframe_api';
+  s.async = true;
+  s.onerror = () => { mk.mod = 'manual'; mkPintarModo('A rede bloqueou o leitor do YouTube. A marcação manual continua a funcionar.'); };
+  document.head.appendChild(s);
+}
+
+function mkIniciarTick() {
+  if (mk.rel) clearInterval(mk.rel);
+  mk.rel = setInterval(mkPulsar, 200);
+}
+function mkPulsar() {
+  const p = mk.player;
+  if (!p || !p.getCurrentTime) return;
+  let t;
+  try { t = Number(p.getCurrentTime()) || 0; } catch (e) { return; }
+  mk.t = t;
+  const c = $('#mk-relogio');
+  if (c) {
+    let dur = '';
+    try { const d = Number(p.getDuration && p.getDuration()); dur = d > 0 ? ' / ' + fmtT(d) : ''; } catch (e) { /* ainda sem duração */ }
+    c.textContent = fmtT(t) + dur;
+  }
+  if (mk.rever != null && t >= mk.rever) {
+    mk.rever = null;
+    try { p.pauseVideo(); } catch (e) { /* já parado */ }
+    const m = $('#mk-status');
+    if (m) m.textContent = 'Chegaste ao fim da marcação — parei o vídeo.';
+  }
+}
+function mkPararLeitor() {
+  if (mk.rel) { clearInterval(mk.rel); mk.rel = null; }
+  clearTimeout(mkTempoYT);
+  mk.rever = null;
+  const p = mk.player; mk.player = null;
+  if (p && typeof p.destroy === 'function') { try { p.destroy(); } catch (e) { /* leitor ainda não estava pronto */ } }
+  mk.mod = 'manual'; mk.t = 0;
+}
+/* chamado em cada mudança de rota, ao lado dos outros desligadores */
+function desligarMarcacoes() {
+  mkPararLeitor();
+  if (mkTecla) { document.removeEventListener('keydown', mkTecla); mkTecla = null; }
+  mk.editar = null;
+}
+
+function mkCapturar(qual) {
+  if (mk.mod !== 'leitor') {
+    const m = $('#mk-status');
+    if (m) m.textContent = 'Sem leitor ligado não há hora para capturar — escreve mm:ss no campo de ' + (qual === 'inicio' ? 'início' : 'fim') + '.';
+    return;
+  }
+  const campo = $(qual === 'inicio' ? '#mk-inicio' : '#mk-fim');
+  if (!campo) return;
+  campo.value = fmtT(mk.t);
+  mk.campo = qual;
+  mkRegra();
+}
+function mkAjustar(d) {
+  const campo = $(mk.campo === 'fim' ? '#mk-fim' : '#mk-inicio');
+  if (!campo) return;
+  const base = parseT(campo.value);
+  const valor = base == null ? (mk.mod === 'leitor' ? mk.t : 0) : base;
+  campo.value = fmtT(Math.max(0, valor + d));
+  mkRegra();
+}
+/* o leitor só serve para ouvir o trecho marcado: início → fim, e pára */
+function mkRever(id) {
+  const m = lerMarcacoes().find(x => x.id === id);
+  if (!m) return;
+  if (mk.mod !== 'leitor') {
+    const a = $('#mk-status');
+    if (a) a.textContent = 'Sem leitor ligado não consigo saltar para o momento. A marcação continua guardada.';
+    return;
+  }
+  try {
+    mk.rever = m.fim;
+    mk.player.seekTo(m.inicio, true);
+    mk.player.playVideo();
+    window.scrollTo({ top: 0, behavior: movReduzido() ? 'auto' : 'smooth' });
+  } catch (e) {
+    mk.rever = null;
+    const a = $('#mk-status');
+    if (a) a.textContent = 'O leitor não aceitou o salto. Tenta reproduzir normalmente.';
+  }
+}
+function mkPlayPause() {
+  if (mk.mod !== 'leitor' || !mk.player) return;
+  try {
+    if (mk.player.getPlayerState && mk.player.getPlayerState() === 1) mk.player.pauseVideo();
+    else mk.player.playVideo();
+  } catch (e) { /* leitor ainda a carregar */ }
+}
+
+/* --- 14.2 regras e gravação --- */
+function mkRegra() {
+  const i = parseT(($('#mk-inicio') || {}).value), f = parseT(($('#mk-fim') || {}).value);
+  const d = $('#mk-dur');
+  if (d) d.textContent = (i == null || f == null) ? '—' : (f > i ? fmtT(f - i).replace(/^\d+:/, '') + 's' : 'fim depois do início?');
+  return true;
+}
+function mkGuardar(form) {
+  const fd = new FormData(form);
+  const palavra = String(fd.get('palavra') || '').trim();
+  const inicio = parseT(fd.get('inicio')), fim = parseT(fd.get('fim'));
+  const msg = (t) => { const m = $('#mk-status'); if (m) m.textContent = t; };
+
+  if (palavra.length < 2) { msg('Escreve a palavra primeiro.'); $('#mk-palavra').focus(); return; }
+  if (palavra.length > 48) { msg('Palavra demasiado longa (máx. 48 caracteres).'); return; }
+  if (inicio == null) { msg('Falta o tempo de início — captura do leitor ou escreve mm:ss.'); $('#mk-inicio').focus(); return; }
+  if (fim == null) { msg('Falta o tempo de fim — captura do leitor ou escreve mm:ss.'); $('#mk-fim').focus(); return; }
+  if (fim <= inicio) { msg('O fim tem de vir depois do início.'); $('#mk-fim').focus(); return; }
+  if (fim - inicio > MK_MAX_DURACAO) {
+    msg('Demasiado longo para um sinal isolado (' + fmtT(fim - inicio) + '). Marca só o momento do sinal, não a explicação toda.');
+    return;
+  }
+
+  const lista = lerMarcacoes();
+  const info = mkInfoPalavra(palavra);
+  const registo = {
+    id: mk.editar || mkId(),
+    aula: mk.aula,
+    videoId: mk.aula,
+    aulaTitulo: (aulaPorId(mk.aula) || {}).titulo || '',
+    temaDaAula: (aulaPorId(mk.aula) || {}).tema || '',
+    palavra: palavra,
+    palavraChave: chavePalavra(palavra),
+    tema: info ? info.tema : 'Fora do glossário',
+    estadoGlossario: info ? info.estado : null,
+    inicio: inicio,
+    fim: fim,
+    estado: 'por validar',
+    origem: mk.editar ? 'correção' : (mk.mod === 'leitor' ? (mk.mao ? 'leitor + escrito à mão' : 'leitor') : 'escrito à mão'),
+    marcadoEm: new Date().toISOString(),
+    nota: String(fd.get('nota') || '').trim(),
+  };
+  const i = lista.findIndex(x => x.id === registo.id);
+  if (i >= 0) { lista[i] = Object.assign({}, lista[i], registo, { corrigidoEm: new Date().toISOString() }); }
+  else lista.push(registo);
+  if (!guardarMarcacoes(lista)) { msg('O aparelho está cheio: exporta e apaga marcações antigas, depois tenta de novo.'); return; }
+
+  const antigo = mk.editar;
+  mk.editar = null;
+  mk.mao = false;
+  $('#mk-inicio').value = ''; $('#mk-fim').value = '';
+  $$('[data-mk-estado]').forEach(b => b.remove());
+  msg((antigo ? 'Corrigida: ' : 'Guardada: ') + '«' + palavra + '» ' + fmtT(inicio) + ' → ' + fmtT(fim) +
+    ' · estado: por validar (só um sinalizador surdo confirma).');
+  mkPintarLista();
+  mkPintarContadores();
+  mkRegra();
+  $('#mk-palavra').focus();
+}
+function mkApagar(id) {
+  const lista = lerMarcacoes();
+  const m = lista.find(x => x.id === id);
+  const fica = lista.filter(x => x.id !== id);
+  guardarMarcacoes(fica);
+  if (mk.editar === id) { mk.editar = null; $('#mk-palavra').value = ''; $('#mk-inicio').value = ''; $('#mk-fim').value = ''; }
+  mkPintarLista();
+  mkPintarContadores();
+  const s = $('#mk-status');
+  if (s) s.textContent = 'Apagada a marcação de «' + ((m && m.palavra) || '?') + '» deste aparelho.';
+}
+function mkEditar(id) {
+  const m = lerMarcacoes().find(x => x.id === id);
+  if (!m) return;
+  mk.editar = m.id;
+  if (m.aula !== mk.aula) {
+    const sel = $('#mk-aula');
+    if (sel) { sel.value = m.aula; mkMontarLeitor(m.aula); mkPintarLista(); }
+  }
+  $('#mk-palavra').value = m.palavra;
+  $('#mk-inicio').value = fmtT(m.inicio);
+  $('#mk-fim').value = fmtT(m.fim);
+  if (m.nota) $('#mk-nota').value = m.nota;
+  mkRegra();
+  const h = $('#mk-ac-h'); if (h) h.textContent = 'Guardar alteração';
+  const b = mkEstadoBotao();
+  $('#mk-ac').insertAdjacentElement('afterbegin', b);
+  $('#mk-palavra').focus();
+  const s = $('#mk-status');
+  if (s) s.textContent = 'A corrigir «' + m.palavra + '». Muda os tempos e carrega em Guardar alteração.';
+}
+function mkEstadoBotao() {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'btn btn-o btn-sm';
+  b.dataset.mkEstado = '';
+  b.textContent = 'Cancelar correção';
+  b.addEventListener('click', () => {
+    mk.editar = null; b.remove();
+    $('#mk-palavra').value = ''; $('#mk-inicio').value = ''; $('#mk-fim').value = '';
+    const h = $('#mk-ac-h'); if (h) h.textContent = 'Guardar marcação';
+  });
+  return b;
+}
+
+/* --- 14.3 listas e contadores --- */
+function mkItemHTML(m) {
+  return `<li class="mk-item" data-mk-id="${esc(m.id)}">
+    <p class="mk-item-p"><span class="mk-w">${esc(m.palavra)}</span>
+      <span class="dic-badge is-a-validar">por validar</span>
+      <span class="mk-chip">${esc(fmtT(m.inicio))} → ${esc(fmtT(m.fim))}</span>
+      <span class="mk-chip mk-chip-d">${esc(fmtT(m.fim - m.inicio).replace(/^\d+:/, ''))}s</span></p>
+    ${m.nota ? `<p class="mk-item-n">${esc(m.nota)}</p>` : ''}
+    <p class="mk-item-a">
+      <button class="btn btn-o btn-sm" type="button" data-mk-rev="${esc(m.id)}">${I.play} Rever o trecho</button>
+      <button class="btn btn-o btn-sm" type="button" data-mk-edit="${esc(m.id)}">Corrigir</button>
+      <button class="btn btn-o btn-sm" type="button" data-mk-apaga="${esc(m.id)}">Apagar</button>
+    </p>
+  </li>`;
+}
+const mkDaAula = (id) => lerMarcacoes().filter(m => m.aula === id).sort((a, b) => a.inicio - b.inicio);
+
+function mkListaVazia() {
+  return '<li class="ch-vazio">Ainda sem marcações nesta aula. Escolhe a aula, vê o momento do sinal e carrega em Capturar.</li>';
+}
+function mkPintarLista() {
+  const ul = $('#mk-lista');
+  if (!ul) return;
+  const itens = mkDaAula(mk.aula);
+  ul.innerHTML = itens.length ? itens.map(mkItemHTML).join('') : mkListaVazia();
+  const n = $('#mk-n-aula');
+  if (n) n.textContent = String(itens.length);
+}
+function mkPintarContadores() {
+  const todas = lerMarcacoes();
+  const unicas = new Set(todas.map(m => m.palavraChave));
+  const glossario = mkPalavras();
+  const cobertas = glossario.filter(p => unicas.has(chavePalavra(p))).length;
+  const setEl = (id, txt) => { const el = $(id); if (el) el.textContent = txt; };
+  setEl('#mk-n-tot', String(todas.length));
+  setEl('#mk-n-pal', String(unicas.size));
+  setEl('#mk-cob', String(cobertas));
+  setEl('#mk-cob-total', String(glossario.length));
+  const tabela = $('#mk-cobertura');
+  if (tabela) {
+    tabela.innerHTML = LGA_AULAS.map(a => {
+      const ms = mkDaAula(a.id);
+      const pal = new Set(ms.map(m => m.palavraChave)).size;
+      return `<tr${a.id === mk.aula ? ' class="mk-aqui"' : ''}>
+        <th scope="row">${esc(a.titulo)}</th>
+        <td class="mk-num">${ms.length}</td>
+        <td class="mk-num">${pal}</td>
+        <td class="mk-num">${ms.length ? esc(fmtT(Math.max.apply(null, ms.map(m => m.fim)))) : '—'}</td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+/* --- 14.4 exportar e importar (o único caminho para fora do aparelho) --- */
+function pacoteMarcacoes() {
+  return {
+    schema: SCHEMA_MK,
+    tipo: 'pamosii-marcacoes',
+    geradoEm: new Date().toISOString(),
+    formato: '{aula, palavra, inicio, fim, estado} + origem de cada marcação',
+    total: lerMarcacoes().length,
+    marcacoes: lerMarcacoes(),
+  };
+}
+function importarMarcacoes(texto) {
+  const msg = (t) => { const m = $('#mk-status'); if (m) m.textContent = t; };
+  let dados;
+  try { dados = JSON.parse(texto); } catch (e) { msg('O ficheiro não é JSON válido.'); return; }
+  const lista = Array.isArray(dados) ? dados : (dados && Array.isArray(dados.marcacoes) ? dados.marcacoes : null);
+  if (!lista) { msg('Não encontrei a lista de marcações neste ficheiro.'); return; }
+  if (dados && dados.schema && dados.schema > SCHEMA_MK) { msg('Este ficheiro é de um esquema mais novo que este site.'); return; }
+  const actual = lerMarcacoes();
+  const chaves = new Set(actual.map(m => [m.aula, m.palavraChave, m.inicio].join('|')));
+  let novos = 0, repetidos = 0, maus = 0;
+  lista.forEach(r => {
+    const palavra = String((r && r.palavra) || '').trim();
+    const inicio = parseT(r && r.inicio != null ? r.inicio : ''), fim = parseT(r && r.fim != null ? r.fim : '');
+    const aula = String((r && r.aula) || '');
+    if (!palavra || inicio == null || fim == null || fim <= inicio || fim - inicio > MK_MAX_DURACAO || !aulaPorId(aula)) { maus += 1; return; }
+    const chave = [aula, chavePalavra(palavra), inicio].join('|');
+    if (chaves.has(chave)) { repetidos += 1; return; }
+    chaves.add(chave);
+    novos += 1;
+    actual.push({
+      id: r.id || mkId(), aula: aula, videoId: aula,
+      aulaTitulo: (aulaPorId(aula) || {}).titulo || r.aulaTitulo || '',
+      temaDaAula: (aulaPorId(aula) || {}).tema || '',
+      palavra: palavra, palavraChave: chavePalavra(palavra),
+      tema: r.tema || (mkInfoPalavra(palavra) || {}).tema || 'Fora do glossário',
+      estadoGlossario: (mkInfoPalavra(palavra) || {}).estado || null,
+      inicio: inicio, fim: fim,
+      estado: 'por validar',
+      origem: 'importado',
+      marcadoEm: r.marcadoEm || new Date().toISOString(),
+      nota: String(r.nota || '').trim(),
+    });
+  });
+  if (!guardarMarcacoes(actual)) { msg('Não coube tudo: o aparelho está cheio.'); return; }
+  msg('Importação: ' + novos + ' ' + pl(novos, 'marcação nova', 'marcações novas') + ', '
+    + repetidos + ' ' + pl(repetidos, 'que já cá estava', 'que já cá estavam') + ', '
+    + maus + ' ' + pl(maus, 'sem formato válido (ignorada)', 'sem formato válido (ignoradas)') + '.');
+  mkPintarLista();
+  mkPintarContadores();
+}
+
+/* --- 14.5 o que a equipa publicou chega a todos os cartões --- */
+async function carregarMarcacoes() {
+  try {
+    const res = await fetch('assets/marcacoes.json', { cache: 'no-cache' });
+    if (!res.ok) return;
+    const dados = await res.json();
+    const l = Array.isArray(dados) ? dados : (dados && Array.isArray(dados.marcacoes) ? dados.marcacoes : []);
+    MARCADAS = l
+      .filter(m => m && aulaPorId(m.aula) && isFinite(Number(m.inicio)) && isFinite(Number(m.fim)) && m.fim > m.inicio)
+      .map(m => ({ ...m, inicio: Number(m.inicio), fim: Number(m.fim), palavraChave: chavePalavra(m.palavra) }));
+    invalidarMkIndice();
+  } catch (e) { /* sem ficheiro publicado (ou sem rede): ficam só as marcações deste aparelho */ }
+}
+
+/* --- 14.7 a página --- */
+function marcacoesHTML() {
+  const aulas = LGA_AULAS.map(a => `<option value="${esc(a.id)}">${esc(a.ordem + ' · ' + a.titulo)}</option>`).join('');
+  const palavras = mkPalavras();
+  return `
+<div class="wrap page-head">
+  <p class="eyebrow">${I.clock} Marcação de tempos</p>
+  <h1 id="mk-h">Onde está o sinal dentro da aula?</h1>
+  <p class="lead">As 17 aulas ensinam os sinais, mas o dicionário só consegue dizer «é nesta aula».
+  Esta ferramenta serve para marcar <strong>os segundos em que o sinal de uma palavra começa e acaba</strong>.
+  É esse mapa que permite depois mostrar um clipe curto do sinal em vez de uma aula inteira.</p>
+</div>
+<div class="wrap mk-wrap">
+  <div class="note-band">
+    <p>${I.shield} <strong>Marcar não é validar.</strong> Toda a marcação sai daqui com o estado
+    <em>por validar</em>: tu dizes <em>onde</em> está o sinal, não <em>se</em> aquela palavra é mesmo aquele sinal.
+    A confirmação é de uma pessoa surda sinalizadora de LGA.</p>
+    <p>${I.info} <strong>Nada é enviado por este site.</strong> As marcações ficam guardadas neste aparelho
+    e só saem quando fores tu a descarregar o ficheiro JSON. Não pedimos nome, telefone nem contas.</p>
+  </div>
+
+  <section class="mk-aula" aria-labelledby="mk-aula-h">
+    <h2 id="mk-aula-h">${I.video} 1 · Escolhe a aula</h2>
+    <p class="mk-campo">
+      <label for="mk-aula">Aula do mini-curso</label>
+      <select id="mk-aula">${aulas}</select>
+    </p>
+    <div class="vfacade mk-video" id="mk-video"><p class="mk-video-aviso">O leitor aparece aqui quando escolheres uma aula. Sem rede, a marcação continua a funcionar à mão.</p></div>
+    <p class="mk-readout">
+      <span class="mk-clock"><span class="mk-clock-k">hora no vídeo</span> <strong id="mk-relogio" data-vivo="nao">0:00.0</strong></span>
+      <button class="btn btn-o btn-sm" type="button" id="mk-play" disabled>Reproduzir</button>
+      <button class="btn btn-o btn-sm" type="button" data-mk-aj="-1" aria-label="Retroceder um segundo">−1s</button>
+      <button class="btn btn-o btn-sm" type="button" data-mk-aj="1" aria-label="Avançar um segundo">+1s</button>
+    </p>
+    <p class="mk-msg" id="mk-mod" role="status"></p>
+  </section>
+
+  <section class="mk-form" aria-labelledby="mk-form-h">
+    <h2 id="mk-form-h">${I.target} 2 · Marca um sinal</h2>
+    <form id="mk-nova" class="mk-campos">
+      <p class="mk-campo mk-campo-lg">
+        <label for="mk-palavra">Palavra ou frase sinalizada</label>
+        <input id="mk-palavra" name="palavra" type="text" maxlength="48" autocomplete="off" list="mk-palavras"
+          required placeholder="ex.: obrigado">
+        <span class="mk-hint" id="mk-info"></span>
+      </p>
+      <datalist id="mk-palavras">${palavras.map(p => `<option value="${esc(p)}"></option>`).join('')}</datalist>
+      <p class="mk-campo">
+        <label for="mk-inicio">Início do sinal</label>
+        <span class="mk-time">
+          <input id="mk-inicio" name="inicio" type="text" inputmode="decimal" autocomplete="off" placeholder="mm:ss">
+          <button class="btn btn-a btn-sm" type="button" data-mk-capt="inicio" disabled>Capturar</button>
+        </span>
+      </p>
+      <p class="mk-campo">
+        <label for="mk-fim">Fim do sinal</label>
+        <span class="mk-time">
+          <input id="mk-fim" name="fim" type="text" inputmode="decimal" autocomplete="off" placeholder="mm:ss">
+          <button class="btn btn-a btn-sm" type="button" data-mk-capt="fim" disabled>Capturar</button>
+        </span>
+      </p>
+      <p class="mk-campo mk-campo-lg">
+        <label for="mk-nota">Nota (opcional) — variante, mão, contexto</label>
+        <input id="mk-nota" name="nota" type="text" maxlength="160" autocomplete="off"
+          placeholder="ex.: faz duas vezes; em Luanda é com a mão direita">
+      </p>
+      <p class="mk-ac" id="mk-ac">
+        <button class="btn btn-p btn-sm" type="submit">${I.check} <span id="mk-ac-h">Guardar marcação</span></button>
+        <span class="mk-dur">duração: <strong id="mk-dur">—</strong></span>
+        <span class="muted">estado: <strong>por validar</strong></span>
+      </p>
+    </form>
+    <p class="mk-msg" id="mk-status" role="status" aria-live="polite"></p>
+    <details class="mk-teclas">
+      <summary>Atalhos de teclado desta ferramenta</summary>
+      <ul>
+        <li><kbd>i</kbd> capturar o início · <kbd>f</kbd> capturar o fim · <kbd>s</kbd> guardar</li>
+        <li><kbd>espaço</kbd> reproduzir/pausar · <kbd>[</kbd> e <kbd>]</kbd> um segundo para trás / para a frente</li>
+        <li>as teclas simples só actuam quando <strong>não</strong> estás a escrever num campo — se carregares
+        dentro do leitor do YouTube, o teclado passa para ele; faz <kbd>Tab</kbd> até «Palavra» para voltar.</li>
+      </ul>
+    </details>
+  </section>
+
+  <section class="mk-minhas" aria-labelledby="mk-minhas-h">
+    <h2 id="mk-minhas-h">${I.book} 3 · Marcações desta aula <span class="ch-n" id="mk-n-aula">0</span></h2>
+    <ul class="mk-lista" id="mk-lista"></ul>
+    <p class="mk-ac">
+      <button class="btn btn-a btn-sm" type="button" id="mk-export">${I.doc} Exportar JSON ({aula, palavra, inicio, fim, estado})</button>
+      <button class="btn btn-o btn-sm" type="button" id="mk-todas">Ver todas as aulas</button>
+      <button class="btn btn-o btn-sm" type="button" id="mk-apagar-tudo">Apagar as marcações deste aparelho</button>
+    </p>
+    <p class="mk-ac">
+      <label class="ch-import" for="mk-import-file">${I.search} Continuar o trabalho de outra pessoa <span class="muted">(importar JSON, só neste aparelho)</span></label>
+      <input id="mk-import-file" type="file" accept="application/json,.json">
+    </p>
+  </section>
+
+  <section class="mk-cobertura" aria-labelledby="mk-cob-h">
+    <h2 id="mk-cob-h">${I.spark} 4 · Cobertura deste aparelho</h2>
+    <p class="muted">Contas feitas às marcações guardadas aqui — é o que a equipa precisa de ver antes de
+    cortar os clipes: quantas marcações, quantas palavras diferentes, e o ponto mais longe de cada aula.</p>
+    <ul class="mk-stats">
+      <li><strong id="mk-n-tot">0</strong><span>marcações no total</span></li>
+      <li><strong id="mk-n-pal">0</strong><span>palavras diferentes</span></li>
+      <li><strong><span id="mk-cob">0</span>/<span id="mk-cob-total">0</span></strong><span>palavras do glossário com momento marcado</span></li>
+    </ul>
+    <div class="mk-tab-wrap">
+      <table class="mk-tab">
+        <caption class="sr-only">Marcações por aula do mini-curso</caption>
+        <thead><tr><th scope="col">Aula</th><th scope="col">Marcações</th><th scope="col">Palavras</th><th scope="col">Até</th></tr></thead>
+        <tbody id="mk-cobertura"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="mk-para" aria-labelledby="mk-para-h">
+    <h2 id="mk-para-h">${I.chat} Para que serve o ficheiro</h2>
+    <ol class="ch-passo">
+      <li><strong>Exportas</strong> aqui em cima → descarrega <code>pamosii-marcacoes-AAAA-MM-DD.json</code>.</li>
+      <li><strong>A equipa junta</strong> os ficheiros de várias pessoas (cada sinalizador marca o que conhece) e
+      elimina duplicados — o script <code>tools/ingerir-marcacoes.cjs</code> faz essa contagem.</li>
+      <li><strong>Cortam-se os clipes</strong> nos momentos marcados e o dicionário passa a mostrar o sinal,
+      não a aula inteira.</li>
+      <li><strong>Um sinalizador surdo valida</strong> cada clipe (correto / variante regional / errado).
+      Só depois a palavra muda de «por validar» para «confirmado».</li>
+    </ol>
+    <p class="muted">Enquanto não houver clipes cortados, o que a marcação muda no site é discreto mas honesto:
+    os cartões do dicionário e do Pamosii passam a mostrar «o sinal está em 0:31–0:34 desta aula (a validar)」
+    e o botão abre o vídeo nesse ponto.</p>
+  </section>
+</div>`;
+}
+
+function bindMarcacoes() {
+  const sel = $('#mk-aula');
+  if (sel) {
+    sel.value = mk.aula;
+    sel.addEventListener('change', () => { mkMontarLeitor(sel.value); mkPintarLista(); mkPintarContadores(); });
+  }
+  mkMontarLeitor(mk.aula);
+
+  const form = $('#mk-nova');
+  if (form) form.addEventListener('submit', e => { e.preventDefault(); mkGuardar(form); });
+
+  $$('[data-mk-capt]').forEach(b => b.addEventListener('click', () => mkCapturar(b.dataset.mkCapt)));
+  $$('[data-mk-aj]').forEach(b => b.addEventListener('click', () => mkAjustar(Number(b.dataset.mkAj))));
+  const play = $('#mk-play');
+  if (play) play.addEventListener('click', mkPlayPause);
+  ['#mk-inicio', '#mk-fim'].forEach(s => { const i = $(s); if (i) i.addEventListener('input', () => { mk.mao = true; mkRegra(); }); });
+
+  const palavra = $('#mk-palavra');
+  if (palavra) palavra.addEventListener('input', () => {
+    const h = $('#mk-info');
+    if (!h) return;
+    const info = mkInfoPalavra(palavra.value);
+    h.textContent = !palavra.value.trim() ? ''
+      : info ? `tema: ${info.tema} · no glossário: ${ESTADO_GLOSSARIO[info.estado] ? ESTADO_GLOSSARIO[info.estado].rotulo : info.estado}`
+        : 'fora do glossário — mesmo assim vale: é uma palavra que falta';
+  });
+
+  const lista = $('#mk-lista');
+  if (lista) lista.addEventListener('click', e => {
+    const rev = e.target.closest('[data-mk-rev]');
+    if (rev) return mkRever(rev.dataset.mkRev);
+    const ed = e.target.closest('[data-mk-edit]');
+    if (ed) return mkEditar(ed.dataset.mkEdit);
+    const del = e.target.closest('[data-mk-apaga]');
+    if (del) {
+      const m = lerMarcacoes().find(x => x.id === del.dataset.mkApaga);
+      if (!window.confirm('Apagar a marcação de «' + ((m && m.palavra) || '?') + '» deste aparelho?')) return;
+      return mkApagar(del.dataset.mkApaga);
+    }
+  });
+
+  const exp = $('#mk-export');
+  if (exp) exp.addEventListener('click', () => {
+    const p = pacoteMarcacoes();
+    if (!p.total) { const s = $('#mk-status'); if (s) s.textContent = 'Ainda não há marcações para exportar.'; return; }
+    descarregarFicheiro('pamosii-marcacoes-' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify(p, null, 2));
+    const s = $('#mk-status');
+    if (s) s.textContent = 'Ficheiro descarregado com ' + p.total + ' ' + pl(p.total, 'marcação.', 'marcações.') + ' Entrega-o à equipa — o site não o envia por ti.';
+  });
+
+  const imp = $('#mk-import-file');
+  if (imp) imp.addEventListener('change', () => {
+    const f = imp.files && imp.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => { importarMarcacoes(String(r.result || '')); imp.value = ''; };
+    r.onerror = () => { const s = $('#mk-status'); if (s) s.textContent = 'Não consegui ler esse ficheiro.'; };
+    r.readAsText(f);
+  });
+
+  const todas = $('#mk-todas');
+  if (todas) todas.addEventListener('click', () => {
+    const ul = $('#mk-lista');
+    if (!ul) return;
+    const mostrar = todas.dataset.mkModo === 'todas';
+    if (mostrar) { todas.dataset.mkModo = ''; todas.textContent = 'Ver todas as aulas'; mkPintarLista(); return; }
+    todas.dataset.mkModo = 'todas';
+    todas.textContent = 'Ver só esta aula';
+    const todas_itens = lerMarcacoes().sort((a, b) => a.inicio - b.inicio);
+    ul.innerHTML = todas_itens.length ? todas_itens.map(m => `<li class="mk-item">
+      <p class="mk-item-p"><span class="mk-w">${esc(m.palavra)}</span>
+        <span class="dic-badge is-a-validar">por validar</span>
+        <span class="mk-chip">${esc(fmtT(m.inicio))} → ${esc(fmtT(m.fim))}</span></p>
+      <p class="mk-item-t">${esc(m.aulaTitulo || m.aula)}</p></li>`).join('') : mkListaVazia();
+  });
+
+  const limpar = $('#mk-apagar-tudo');
+  if (limpar) limpar.addEventListener('click', () => {
+    const n = lerMarcacoes().length;
+    if (!n) { const s = $('#mk-status'); if (s) s.textContent = 'Não há nada guardado neste aparelho.'; return; }
+    if (!window.confirm('Apagar as ' + n + ' ' + pl(n, 'marcação', 'marcações') + ' deste aparelho? Se ainda não exportaste, o trabalho perde-se.')) return;
+    guardarMarcacoes([]);
+    mkPintarLista(); mkPintarContadores();
+    const s = $('#mk-status');
+    if (s) s.textContent = 'Marcações apagadas deste aparelho.';
+  });
+
+  if (mkTecla) document.removeEventListener('keydown', mkTecla);
+  mkTecla = (e) => {
+    const alvo = e.target;
+    const escreve = alvo && alvo.closest && alvo.closest('input,textarea,select,[contenteditable]');
+    if (!escreve && mk.mod === 'leitor' && (e.key === ' ' || e.code === 'Space')) { e.preventDefault(); mkPlayPause(); return; }
+    if (escreve || (alvo && alvo.closest && alvo.closest('button,a'))) return;
+    const k = e.key.toLowerCase();
+    if (k === 'i') { e.preventDefault(); mkCapturar('inicio'); }
+    else if (k === 'f') { e.preventDefault(); mkCapturar('fim'); }
+    else if (k === 's') { e.preventDefault(); const f = $('#mk-nova'); if (f) f.requestSubmit(); }
+    else if (k === '[') { e.preventDefault(); mkAjustar(-1); }
+    else if (k === ']') { e.preventDefault(); mkAjustar(1); }
+  };
+  document.addEventListener('keydown', mkTecla);
+
+  mkPintarLista();
+  mkPintarContadores();
+  mkRegra();
+  mkPintarModo($('#mk-mod') ? $('#mk-mod').textContent : '');
+}
+
+function vistaMarcacoes() {
+  return {
+    active: '/marcar',
+    h: shell(marcacoesHTML(), '/marcar'),
+    bind: bindMarcacoes,
+    meta: { t: 'Marcação de tempos por sinal — Pamosii Viva Surdo', d: 'Ferramenta para marcar os segundos em que o sinal de cada palavra aparece nas 17 aulas de LGA. As marcações ficam no aparelho e exportam-se em JSON {aula, palavra, inicio, fim, estado} para a equipa cortar os clipes.' },
+  };
+}
+
+on('/marcar', vistaMarcacoes);
+
 function iniciarApp() {
   aplicarPrefs(lerPrefs());
   montarPainelA11y();
   montarSigner();
   render();
   carregarGlossarioExtra();
+  carregarMarcacoes();
 }
 
 /* Voltou a ligação: retira os avisos de "sem rede" para não deixar um estado fantasma
