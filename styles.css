@@ -574,6 +574,10 @@ select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 .foot-list .ic{width:15px;height:15px}
 .foot-bottom{border-top:1px solid rgba(255,255,255,.14);padding:18px 0;display:flex;flex-wrap:wrap;gap:8px 24px;
   justify-content:space-between;font-size:12.5px;color:rgba(255,255,255,.6)}
+/* o credito das equipas e a primeira linha do rodape em todas as paginas:
+   branca e um pouco maior que as notas legais, para se ler sem procurar */
+.foot-creditos{color:#fff;font-size:13.5px;font-weight:600;flex:1 1 100%}
+.foot-creditos strong{font-weight:800}
 
 /* ---------- 404 ---------- */
 .nf{padding:80px 0;text-align:center}
@@ -1507,3 +1511,146 @@ html.sg-on .sg-fab{display:none}
   .mk-time{flex-wrap:wrap}
   .mk-time .btn{flex:1 1 40%}
 }
+
+/* ============================================================
+   16. SIGNER — MODO APONTAR (carregar num texto e só ele é sinalizado)
+   ============================================================ */
+html.sg-apontando #conteudo{cursor:crosshair}
+/* enquanto se aponta, o painel encolhe para um barra: o texto da página fica à vista
+   e continua possível carregar-lhe por cima */
+html.sg-apontando .sg-painel{max-height:min(46vh,380px)}
+html.sg-apontando .sg-aviso,html.sg-apontando .sg-fonte,
+html.sg-apontando .sg-priv,html.sg-apontando .sg-strip,html.sg-apontando .sg-falta{display:none}
+.sg-alvo{outline:3px solid var(--amber-ink);outline-offset:5px;border-radius:8px;
+  background:var(--amber-soft)}
+.sg-aponta-aviso{margin:10px 0 0;font-size:13px;line-height:1.65;color:var(--ink-soft);
+  background:var(--cream);border:1.5px solid var(--amber-line);border-radius:12px;padding:10px 12px}
+#sg-aponta-sair{margin:8px 0 0}
+.sg-aponta-aviso kbd{display:inline-block;min-width:20px;padding:2px 6px;margin:0 1px;font:inherit;font-size:12px;
+  font-weight:700;text-align:center;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);
+  border-radius:7px;box-shadow:0 1px 0 var(--line)}
+.sg-aponta-onde{display:block;margin-top:7px;font-weight:700;font-size:12.5px;color:var(--teal-deep);
+  overflow-wrap:anywhere}
+@media(max-width:720px){
+  .sg-aponta-aviso{font-size:12.5px;padding:9px 11px}
+  .sg-alvo{outline-offset:3px}
+}
+[data-contraste-alto] .sg-alvo{outline-width:4px;outline-color:#000;background:#FFF3C4}
+[data-contraste-alto] .sg-aponta-aviso{background:#fff;color:#000;border-width:2px}
+
+/* ============================================================
+   17. MODO WIDGET — `?emb=1`: só o painel do Signer, para outros
+   sites (iframe) e para a extensão Chrome. Sem cabeçalho, sem
+   barra de tabs, sem botão flutuante: o iframe É o painel.
+   ============================================================ */
+html.emb body{background:var(--paper)}
+html.emb #app{font-size:calc(16px * var(--escala,1))}
+html.emb .emb-main{padding:16px 18px;outline:none}
+html.emb .emb-aviso{margin:0;font-size:13.5px;line-height:1.6;color:var(--muted)}
+html.emb .sg-fab{display:none}
+html.emb .sg-painel{position:fixed;inset:0;width:auto;max-width:none;max-height:none;
+  border:0;border-radius:0;box-shadow:none;z-index:1;padding:12px 14px 16px}
+/* dentro do widget não faz sentido apontar para a página do iframe nem "esta página" */
+html.emb #sg-pagina,html.emb #sg-aponta,html.emb #sg-aponta-aviso{display:none}
+
+/* ============================================================
+   18. PÁGINA "FORA DESTE SITE" (/fora) — partilhar no telemóvel,
+   extensão Chrome e painel incorporado. Reaproveita os cartões da
+   secção Sobre; só a coluna e os passos numerados são daqui.
+   ============================================================ */
+/* minmax(0,1fr): sem o 0 o <pre> de código do cartão 3 dita a largura minima
+   da coluna e a pagina inteira passa-se do ecra no telemovel */
+.fora-grid{display:grid;gap:20px;grid-template-columns:minmax(0,1fr)}
+.fora-grid>*{min-width:0}
+.fora-grid .fact-card{margin:0}
+.fora-grid .fact-card h2{font-size:18.5px}
+.fora-grid .fact-card p,.fora-grid .fact-card li{font-size:14.5px}
+.fora-grid ul{margin:0 0 12px;padding-left:20px}
+.fora-grid li{margin:0 0 6px;line-height:1.6;color:var(--ink-soft)}
+.fora-grid code{font-family:ui-monospace,SFMono-Regular,"Cascadia Mono",Consolas,monospace;
+  font-size:13px;background:var(--cream);border:1px solid var(--line-soft);border-radius:6px;padding:1px 6px}
+.fora-passos{margin:0 0 12px;padding-left:22px}
+.fora-passos li{margin:0 0 7px}
+.fora-instalar{margin-top:14px;background:var(--cream);border:1.5px solid var(--amber-line);
+  border-radius:var(--radius);padding:14px 16px}
+.fora-instalar h3{margin:0 0 8px;font-family:var(--font-h);font-size:16px;color:var(--amber-ink,inherit)}
+.fora-instalar p:last-child{margin:6px 0 0}
+/* tecla / botão do sistema citado no texto — mais leve que o <kbd> do modo apontar */
+.kbd{display:inline-block;min-width:19px;padding:1px 6px;margin:0 1px;font-size:12.5px;font-weight:700;
+  text-align:center;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);
+  border-bottom-width:2.5px;border-radius:7px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+@media(min-width:1080px){.fora-grid{grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}}
+@media(max-width:720px){
+  .fora-grid .fact-card{padding:18px 16px}
+  .fora-instalar{padding:12px 13px}
+  .ch-json{font-size:11.5px}
+}
+[data-contraste-alto] .fora-instalar{background:#fff;border-color:#000}
+[data-contraste-alto] .kbd{background:#fff;color:#000;border-color:#000}
+
+/* ============================================================
+   19. SESSÃO DE GRAVAÇÃO (/colher) — consentimento antes do
+   primeiro quadro, palavra em grande, barra de tempo por
+   repetição, quadros e clipes. Tudo local.
+   ============================================================ */
+.ch-sess{background:var(--paper);border:1.5px solid var(--teal-deep);border-radius:var(--radius-lg);
+  padding:20px 22px;margin:0 0 18px;box-shadow:var(--shadow)}
+.ch-sess h2{margin:0 0 6px;font-family:var(--font-h);font-size:21px;line-height:1.25}
+.ch-sess h2 .ic{width:21px;height:21px;color:var(--teal-deep);vertical-align:-3px}
+.ch-sess-caixa{margin:16px 0 0;padding:16px 17px;background:var(--surface);
+  border:1.5px dashed var(--line);border-radius:var(--radius)}
+.ch-sess-titulo{margin:0 0 10px;font-family:var(--font-h);font-weight:800;font-size:16.5px;color:var(--teal-deep)}
+.ch-sess-titulo .ic{width:18px;height:18px;vertical-align:-2px}
+.ch-sess-regras{margin:0 0 14px;padding-left:22px;display:grid;gap:8px;font-size:14.5px;line-height:1.6;color:var(--ink-soft)}
+.ch-sess-regras li::marker{font-weight:800;color:var(--amber-ink)}
+.ch-sess-sem{margin:12px 0 0;font-size:14.5px;line-height:1.55;background:var(--cream);
+  border:1.5px solid var(--amber-line);border-radius:12px;padding:11px 13px}
+.ch-sess-quem{border:1.5px solid var(--line);border-radius:12px;padding:10px 14px;margin:0 0 12px}
+.ch-sess-quem legend{font-weight:700;font-size:13.5px;padding:0 6px;color:var(--ink-soft)}
+.ch-sess-quem label{display:inline-flex;align-items:center;gap:7px;margin:0 18px 0 0;font-size:15px;min-height:36px;cursor:pointer}
+.ch-sess-quem input{width:19px;height:19px;accent-color:var(--teal-deep)}
+.ch-checks{display:grid;gap:8px;margin:0 0 14px}
+.ch-check{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;line-height:1.55;
+  border:1.5px solid var(--line-soft);border-radius:12px;padding:10px 12px;background:var(--paper);cursor:pointer}
+.ch-check:hover{border-color:var(--teal)}
+.ch-check input{flex:none;width:20px;height:20px;margin-top:2px;accent-color:var(--teal-deep)}
+.ch-sess .ch-campo{margin:0 0 12px}
+.ch-sess-campos .ch-campo{margin-bottom:0}
+/* a pista: o que a pessoa que sinaliza vê */
+.ch-sess-pista{margin:16px 0 0;padding:16px 17px;background:var(--surface);
+  border:1.5px solid var(--teal-deep);border-radius:var(--radius)}
+.sess-cam-caixa{display:grid;grid-template-columns:minmax(0,240px) minmax(0,1fr);gap:16px;align-items:center}
+/* espelhada só na pré-visualização: o quadro guardado não é espelhado, porque é o que
+   a equipa vê ao desenhar o sinal com a mão direita à esquerda de quem olha */
+.sess-cam{display:none;width:100%;border-radius:12px;background:#000;border:1.5px solid var(--line);transform:scaleX(-1)}
+.sess-cam.on{display:block}
+.sess-alvo-h{margin:0;font-size:12.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.sess-alvo{margin:2px 0 0;font-family:var(--font-h);font-weight:900;font-size:clamp(30px,7vw,56px);
+  line-height:1.05;color:var(--teal-deep);overflow-wrap:anywhere}
+.sess-passo{margin:14px 0 0;font-size:15.5px;font-weight:700;line-height:1.5;min-height:24px}
+.sess-barra{margin:10px 0 0;height:14px;border-radius:999px;background:var(--cream);
+  border:1.5px solid var(--line);overflow:hidden}
+.sess-barra span{display:block;height:100%;width:0;background:var(--amber);border-radius:999px}
+.sess-cont{margin:8px 0 0;font-size:13.5px;font-weight:700;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.sess-quadros{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.sess-quadros li{width:84px}
+.sess-quadros img{width:84px;height:63px;object-fit:cover;border-radius:9px;border:1.5px solid var(--line);display:block}
+.sess-clips{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
+.sess-aviso{font-size:13.5px;color:var(--ink-soft);line-height:1.55}
+.sess-sumario{margin:10px 0 0;font-size:14.5px;line-height:1.55}
+.sess-sumario strong{font-weight:800}
+.dic-badge.is-sessao{background:var(--amber-soft);color:var(--amber-ink);border:1.5px solid var(--amber-line)}
+@media(min-width:760px){
+  .ch-sess-campos{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:12px;align-items:end}
+}
+@media(max-width:720px){
+  .ch-sess,.ch-sess-pista{padding:16px 15px}
+  .sess-cam-caixa{grid-template-columns:1fr}
+  .ch-sess-quem label{display:flex;margin:0 0 6px}
+  .sess-quadros li,.sess-quadros img{width:76px}
+  .sess-quadros img{height:57px}
+}
+[data-contraste-alto] .ch-sess,[data-contraste-alto] .ch-sess-caixa,
+[data-contraste-alto] .ch-sess-pista,[data-contraste-alto] .ch-check{background:#fff;border-color:#000}
+[data-contraste-alto] .sess-barra{border-color:#000;background:#fff}
+[data-contraste-alto] .sess-barra span{background:#000}
