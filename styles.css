@@ -533,10 +533,12 @@ select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 .chan-card h3{margin:0}
 .chan-card p{margin:0;color:var(--muted);font-size:14px;flex:1}
 .chan-card .btn{align-self:flex-start}
-.note-band{display:flex;gap:14px;align-items:flex-start;background:var(--teal-tint);border:1.5px solid var(--note-line);
+.note-band{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;background:var(--teal-tint);border:1.5px solid var(--note-line);
   border-radius:var(--radius-lg);padding:20px 22px}
 .note-band .ic{width:22px;height:22px;flex:none;color:var(--teal-deep);margin-top:2px}
-.note-band p{margin:0;font-size:14.5px;color:var(--ink-soft)}
+/* as duas notas em banda larga ficam lado a lado; a 320px com texto a 150%
+   um <p> não enrolava e a página ganhava 8px de scroll horizontal medido */
+.note-band p{margin:0;flex:1 1 220px;min-width:0;overflow-wrap:anywhere;font-size:14.5px;color:var(--ink-soft)}
 .note-band.is-demo{background:var(--amber-soft);border-color:var(--amber-line)}
 .note-band.is-demo .ic{color:var(--amber-ink)}
 .note-band + .note-band{margin-top:14px}
@@ -653,7 +655,8 @@ select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 .a11y-read .ic{width:18px;height:18px}
 .a11y-note{font-size:12.5px;color:var(--muted);margin:12px 0 0;line-height:1.55}
 .a11y-reset{margin-top:10px;background:none;border:0;color:var(--teal-deep);font:inherit;font-size:13px;font-weight:700;
-  text-decoration:underline;cursor:pointer;padding:6px 0}
+  text-decoration:underline;cursor:pointer;padding:6px 0;min-height:44px;display:inline-flex;align-items:center;
+  justify-content:center}
 
 /* ============================================================================
    Dicionário português <-> LGA
@@ -942,8 +945,10 @@ select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 /* barra de áudio */
 .bib-audio{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:16px 0 6px;padding:14px;
   border-radius:var(--radius);background:var(--surface-soft);border:1.5px solid var(--line-soft)}
-.bib-vel{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;color:var(--ink-soft)}
+.bib-vel{display:inline-flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0;max-width:100%;
+  font-size:13.5px;font-weight:700;color:var(--ink-soft)}
 .bib-vel select{min-height:44px;font:inherit;font-size:14px;padding:6px 10px;border-radius:10px;
+  min-width:0;flex:1 1 120px;max-width:100%;
   border:1.5px solid var(--line);background:var(--surface);color:var(--ink)}
 .bib-verso-cont{margin-left:auto;font-size:12.5px;font-weight:800;color:var(--muted)}
 .bib-live{margin:6px 0 14px;font-size:13.5px;font-weight:700;color:var(--teal-deep);min-height:20px}
@@ -959,7 +964,7 @@ select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
   color:var(--teal-deep);font-family:var(--font-h);font-weight:800;font-size:14.5px}
 .bib-v.is-on .bib-vn{background:var(--amber);color:var(--teal-dark)}
 .bib-vt{margin:0;font-size:17px;line-height:1.62;color:var(--ink);overflow-wrap:anywhere}
-.bib-vact{display:flex;gap:4px;flex:none}
+.bib-vact{display:flex;flex-wrap:wrap;gap:4px;flex:none;min-width:0}
 .bib-ico{width:44px;height:44px;display:grid;place-items:center;border:1.5px solid var(--line);border-radius:11px;
   background:var(--surface);color:var(--ink-soft);cursor:pointer;transition:.15s}
 .bib-ico:hover{border-color:var(--teal);color:var(--teal-deep);background:var(--teal-tint)}
@@ -968,8 +973,8 @@ select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 
 /* glosa por versículo */
 .bib-glosa{grid-column:2 / -1;margin:2px 0 6px}
-.bib-glosa>summary{display:inline-flex;align-items:center;gap:9px;min-height:44px;cursor:pointer;
-  font-size:13.5px;font-weight:800;color:var(--teal-deep);list-style:none}
+.bib-glosa>summary{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 9px;min-height:44px;cursor:pointer;
+  font-size:13.5px;font-weight:800;color:var(--teal-deep);list-style:none;max-width:100%}
 .bib-glosa>summary::-webkit-details-marker{display:none}
 .bib-glosa>summary::before{content:"+";display:grid;place-items:center;width:24px;height:24px;flex:none;
   border:1.5px solid var(--teal-deep);border-radius:8px;font-weight:800}
@@ -981,6 +986,10 @@ select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 .bib-gloss strong{display:block;font-size:11.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--teal-deep);margin-bottom:4px}
 .bib-falta{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:12px 0 0;font-size:13px;color:var(--ink-soft)}
 .bib-falta .ic{width:16px;height:16px;flex:none;color:var(--amber-ink)}
+/* numa banda flex o <a> deixa de ser inline e perde a excepção do WCAG para
+   alvos no meio do texto; 24px de altura é então o mínimo que lhe exige */
+.bib-falta a,.bib-falta-l a,.pm-hint a{display:inline-flex;align-items:center;min-height:24px;
+  padding:2px 4px;margin:-2px -2px;border-radius:7px;text-underline-offset:2px}
 
 /* modo de teste Libras (vídeo + avatar) */
 .bib-libras{margin-top:24px;padding:18px;border:1.5px dashed var(--amber-line);border-radius:var(--radius);
@@ -1011,12 +1020,16 @@ select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 .bib-quiz h3{display:flex;align-items:center;gap:9px;margin:0 0 8px;font-size:18px}
 .bib-quiz h3 .ic{width:19px;height:19px;flex:none;color:var(--amber-ink)}
 .bib-qform{display:flex;flex-direction:column;gap:14px;margin-top:14px}
-.bib-q{border:1.5px solid var(--line);border-radius:var(--radius);background:var(--surface);padding:16px 18px}
-.bib-q legend{font-size:14px;font-weight:800;color:var(--teal-deep);padding:0 6px}
+/* <fieldset> traz min-width:min-content do browser: sem isto, com a escala de
+   texto a 150% a palavra mais longa da pergunta alargava a página toda */
+.bib-q{min-width:0;border:1.5px solid var(--line);border-radius:var(--radius);background:var(--surface);padding:16px 18px}
+.bib-q legend{font-size:14px;font-weight:800;color:var(--teal-deep);padding:0 6px;overflow-wrap:anywhere}
 .bib-q-t{margin:0 0 12px;font-size:16px;line-height:1.6;color:var(--ink);overflow-wrap:anywhere}
 .bib-q-opts{display:flex;flex-wrap:wrap;gap:9px}
-.bib-qo{display:inline-flex;align-items:center;gap:9px;min-height:46px;padding:8px 15px;border-radius:999px;
+.bib-qo{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 9px;min-height:46px;padding:8px 15px;border-radius:999px;
+  max-width:100%;
   border:1.5px solid var(--line);background:var(--paper);font-weight:700;font-size:14.5px;cursor:pointer;transition:.15s}
+.bib-qo span{min-width:0;overflow-wrap:anywhere}
 .bib-qo:hover{border-color:var(--teal)}
 .bib-qo input{width:20px;height:20px;flex:none;accent-color:var(--primary)}
 .bib-qo:has(input:checked){border-color:var(--teal-deep);background:var(--teal-tint);color:var(--teal-deep)}
@@ -1576,7 +1589,7 @@ html.emb #sg-pagina,html.emb #sg-aponta,html.emb #sg-aponta-aviso{display:none}
 .fora-instalar h3{margin:0 0 8px;font-family:var(--font-h);font-size:16px;color:var(--amber-ink,inherit)}
 .fora-instalar p:last-child{margin:6px 0 0}
 /* tecla / botão do sistema citado no texto — mais leve que o <kbd> do modo apontar */
-.kbd{display:inline-block;min-width:19px;padding:1px 6px;margin:0 1px;font-size:12.5px;font-weight:700;
+.kbd{display:inline-block;min-width:19px;max-width:100%;overflow-wrap:anywhere;padding:1px 6px;margin:0 1px;font-size:12.5px;font-weight:700;
   text-align:center;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);
   border-bottom-width:2.5px;border-radius:7px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
 @media(min-width:1080px){.fora-grid{grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}}
