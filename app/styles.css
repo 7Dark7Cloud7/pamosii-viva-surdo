@@ -1771,3 +1771,64 @@ html.emb #sg-pagina,html.emb #sg-aponta,html.emb #sg-aponta-aviso{display:none}
 [data-contraste-alto] .vq-item.is-validado,[data-contraste-alto] .vq-c{background:#fff}
 [data-contraste-alto] .vq-v[aria-pressed=true],[data-contraste-alto] .vq-filtros .btn.is-on{background:#000;color:#fff;border-color:#000}
 [data-contraste-alto] .dic-badge.is-aprovado,[data-contraste-alto] .vq-selo.is-variante{background:#fff;color:#000;border-color:#000}
+
+/* ============================================================
+   21. COBERTURA DO GLOSSÁRIO (/cobertura) — contas, não promessas.
+   A barra é decorativa (a tabela ao lado tem os mesmos números); cada
+   segmento tem um padrão próprio para quem não distingue as cores.
+   ============================================================ */
+.cov-cards{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:12px;
+  grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr))}
+.cov-cards li{border:1.5px solid var(--line);border-radius:var(--radius);background:var(--paper);
+  padding:14px 16px;display:flex;flex-direction:column;gap:3px;box-shadow:var(--shadow)}
+.cov-cards strong{font-family:var(--font-h);font-size:30px;line-height:1.15;color:var(--teal-deep);
+  font-variant-numeric:tabular-nums}
+.cov-cards span{font-size:14px;font-weight:700;color:var(--ink);line-height:1.4}
+.cov-cards small{font-size:12.5px;color:var(--muted);line-height:1.45}
+.cov-cards-4{grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr))}
+.cov-bloco{margin:26px 0 0;background:var(--paper);border:1.5px solid var(--line);
+  border-radius:var(--radius-lg);padding:20px 22px;box-shadow:var(--shadow)}
+.cov-bloco h2{margin:0 0 6px;font-family:var(--font-h);font-size:21px;line-height:1.25}
+.cov-bloco h2 .ic{width:21px;height:21px;color:var(--teal-deep);vertical-align:-3px}
+.cov-bloco .cov-cards{margin-top:14px}
+.cov-bloco .cov-cards li{box-shadow:none}
+.cov-bar{display:flex;height:18px;border-radius:999px;overflow:hidden;border:1.5px solid var(--line);
+  margin:12px 0 16px;background:var(--cream)}
+.cov-seg{display:block;height:100%}
+.cov-seg-a-validar{background:repeating-linear-gradient(135deg,var(--teal-tint) 0 6px,var(--paper) 6px 12px);
+  box-shadow:inset 0 0 0 1px var(--line)}
+.cov-seg-colhido{background:var(--amber)}
+.cov-seg-confirmado{background:var(--teal)}
+.cov-seg-aprovado{background:var(--teal-deep)}
+.cov-seg-demonstracao{background:repeating-linear-gradient(135deg,var(--line-soft) 0 5px,var(--paper) 5px 10px)}
+.cov-seg-rejeitado{background:var(--ink)}
+.cov-tab-wrap{overflow-x:auto;margin:10px 0 0;-webkit-overflow-scrolling:touch}
+.cov-tab{border-collapse:collapse;width:100%;min-width:520px;font-size:14px}
+.cov-tab th,.cov-tab td{padding:9px 10px;border-bottom:1.5px solid var(--line-soft);text-align:left;vertical-align:top}
+.cov-tab thead th{font-size:12.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;
+  color:var(--muted);white-space:nowrap}
+.cov-tab tbody th{font-weight:700;color:var(--ink)}
+.cov-tab td:last-child{font-size:13.5px;color:var(--ink-soft);line-height:1.5}
+.cov-num{text-align:right;font-variant-numeric:tabular-nums;font-weight:800;white-space:nowrap}
+.cov-total th,.cov-total td{border-top:2px solid var(--line);font-weight:800}
+.cov-tab-temas{min-width:660px}
+.cov-lac{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
+.cov-lac li{display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:9px 12px;
+  border:1.5px solid var(--line-soft);border-radius:12px;background:var(--cream)}
+.cov-lac-w{font-weight:800;color:var(--ink)}
+.cov-lac-n{font-size:13px;font-weight:800;color:var(--muted);margin-right:auto;
+  font-variant-numeric:tabular-nums}
+.cov-ac{display:flex;flex-wrap:wrap;gap:9px;margin:16px 0 0}
+@media(max-width:720px){
+  .cov-bloco{padding:16px 15px}
+  .cov-cards strong{font-size:26px}
+  .cov-lac li{gap:7px}
+}
+[data-contraste-alto] .cov-cards li,[data-contraste-alto] .cov-bloco,
+[data-contraste-alto] .cov-lac li{background:#fff;border-color:#000;color:#000}
+[data-contraste-alto] .cov-bar{border-color:#000}
+[data-contraste-alto] .cov-seg-a-validar,[data-contraste-alto] .cov-seg-demonstracao{
+  background:repeating-linear-gradient(135deg,#000 0 3px,#fff 3px 6px);box-shadow:none}
+[data-contraste-alto] .cov-seg-colhido{background:#ffd666}
+[data-contraste-alto] .cov-seg-confirmado{background:#00443c}
+[data-contraste-alto] .cov-seg-aprovado,[data-contraste-alto] .cov-seg-rejeitado{background:#000}

@@ -185,6 +185,10 @@ const FONTES_PUBLICAS = {
    Para validar uma palavra: mudar estado para 'confirmado' e, se houver
    vídeo próprio do sinal, indicar o ID do YouTube em `sinal`.
    ============================================================================ */
+/* Força de cada estado: a colheita e os pacotes só sobem o que mostram, nunca descem
+   uma decisão da equipa. 'rejeitado' fica no topo para não ser desfeito por um pacote velho. */
+const RANK_ESTADO = { 'demonstracao': 0, 'a-validar': 1, 'colhido': 2, 'confirmado': 3, 'aprovado': 4, 'rejeitado': 5 };
+
 const ESTADO_GLOSSARIO = {
   'a-validar': { rotulo: 'A validar', nota: 'Associação entre a palavra e o sinal ainda não validada por utilizadores de LGA.' },
   'confirmado': { rotulo: 'Confirmado', nota: 'Validado pela equipa / comunidade surda.' },
@@ -227,6 +231,10 @@ const GLOSSARIO = [
     sinal: null, // ID de vídeo próprio do sinal, quando existir e for aprovado
   })),
 }));
+
+/* Retrato do glossário de origem, antes de a colheita acrescentar palavras. A página
+   /cobertura mostra as duas contas: o que o site ensina e o que a comunidade trouxe. */
+const GLOSSARIO_BASE_QTD = GLOSSARIO.reduce((n, g) => n + g.termos.length, 0);
 
 const norm = (s) => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 const aulasDeTema = (tema) => LGA_AULAS.filter(a => a.tema === tema);
@@ -1479,6 +1487,7 @@ const META = {
   '/colher': { t: 'Colheita participada de sinais LGA — Pamosii Viva Surdo', d: 'Registar sinais de Língua Gestual Angolana com método (configuração da mão, lugar, movimento, expressão) ou gravar uma sessão guiada: consentimento no início, 3 repetições e uma lenta, sem áudio. Tudo fica no aparelho de quem regista e é exportado para a equipa validar.' },
   '/marcar': { t: 'Marcação de tempos por sinal — Pamosii Viva Surdo', d: 'Ferramenta para marcar os segundos em que o sinal de cada palavra aparece nas 17 aulas de LGA. As marcações ficam no aparelho e exportam-se em JSON para a equipa cortar os clipes.' },
   '/validar': { t: 'Fila de validação de sinais LGA — Pamosii Viva Surdo', d: 'Três veredictos para cada sinal recolhido — correcto, variante regional ou errado — assinados por um apelido, com região e data. Ficam neste browser e exportam-se em JSONL para a equipa promover o estado no dicionário.' },
+  '/cobertura': { t: 'Cobertura do glossário LGA — Pamosii Viva Surdo', d: 'Quantas palavras do dicionário têm sinal confirmado, quais continuam por validar, quais são demonstração e que palavras as pessoas procuraram e não encontraram. Contas honestas, sem prometer cobertura total da LGA.' },
   '/contacto': { t: 'Contacto — Pamosii Viva Surdo', d: 'Canais oficiais verificados da Viva Surdo: Facebook, Instagram e YouTube. Telefone e e-mail serão divulgados após confirmação.' },
 };
 
@@ -1541,6 +1550,7 @@ const NAV_ITENS = [
   { path: '/evangelismo', rotulo: 'Evangelismo' },
   { path: '/colher', rotulo: 'Colheita', extra: true },
   { path: '/validar', rotulo: 'Validação', extra: true },
+  { path: '/cobertura', rotulo: 'Cobertura', extra: true },
   { path: '/marcar', rotulo: 'Marcação', extra: true },
   { path: '/fora', rotulo: 'Fora deste site', extra: true },
   { path: '/sobre', rotulo: 'Sobre' },
@@ -2017,6 +2027,7 @@ on('/dicionario', () => {
       <p><strong>Isto ainda não é um tradutor automático.</strong> Não existe tecnologia validada que converta fala em Língua Gestual Angolana, ou gestos em português, de forma fiável. Esta página é um glossário: liga palavras a aulas reais. O vídeo de cada sinal isolado será acrescentado quando for gravado e confirmado pela comunidade surda.</p>
     </div>
     <p class="dic-cta">${I.arrow} <a href="#/pamosii">Queres uma frase inteira? O <strong>Pamosii</strong> decompõe a frase e mostra os sinais por ordem, com vídeo e ditado por voz.</a></p>
+    <p class="dic-cta">${I.spark} <a href="#/cobertura"><strong>Ver a cobertura do glossário</strong></a> — quantas palavras já têm sinal confirmado e quais continuam por validar.</p>
     <form class="filters" role="search" onsubmit="return false" style="margin-top:26px">
       <div class="f-field">
         <label for="dic-q">Procurar palavra em português</label>
@@ -3683,6 +3694,9 @@ document.addEventListener('click', e => {
 const CH_COLHEITA = 'vs.colheita';
 const CH_LACUNAS = 'vs.lacunas';
 const CH_EXTRA = 'vs.extra';
+/* o que veio no último assets/glossario-extra.json — a página /cobertura conta-o à parte
+   do que está só neste aparelho, para não misturar «publicado» com «a minha cópia» */
+let EXTRA_PUBLICADO = [];
 const SCHEMA_COLHEITA = 1;
 
 /* palavras sem sinal, contadas neste aparelho — é a lista de compras da equipa */
@@ -3713,7 +3727,12 @@ function indexarTermo(palavraRaw, tema, estado, extra) {
   const chave = norm(palavraRaw).replace(/[….:;?!]/g, '').trim();
   if (!chave) return false;
   const entrada = { palavra: String(palavraRaw), tema: tema || 'Colheita', estado: estado || 'colhido', sinal: (extra && extra.video) || null };
-  if (!PAMOSSI_INDICE.has(chave)) PAMOSSI_INDICE.set(chave, entrada);
+  const atual = PAMOSSI_INDICE.get(chave);
+  if (!atual) PAMOSSI_INDICE.set(chave, entrada);
+  else if ((RANK_ESTADO[entrada.estado] || 0) > (RANK_ESTADO[atual.estado] || 0)) {
+    atual.estado = entrada.estado;
+    if (entrada.sinal) atual.sinal = entrada.sinal;
+  }
   const partes = [];
   tokenizar(chave).forEach(tk => dividirPalavra(tk).forEach(p => partes.push(norm(p))));
   if (partes.length > 1) {
@@ -3742,8 +3761,13 @@ function registrarExtra(termos) {
     const estado = ['confirmado', 'aprovado', 'rejeitado'].indexOf(t.estado) >= 0 ? t.estado : 'colhido';
     const tema = t.tema || 'Colheita';
     const g = grupoTema(tema);
-    if (!g.termos.some(x => norm(x.palavra) === chave)) {
+    const igual = g.termos.find(x => norm(x.palavra) === chave);
+    if (!igual) {
       g.termos.push({ palavra: palavra, estado: estado, sinal: t.video || null });
+    } else if ((RANK_ESTADO[estado] || 0) > (RANK_ESTADO[igual.estado] || 0)) {
+      /* o dicionário mostra o estado que a equipa publicou; o site só o lê, não o decide */
+      igual.estado = estado;
+      if (t.video) igual.sinal = t.video;
     }
     indexarTermo(palavra, tema, estado, t);
     if (!contadas.has(chave)) { contadas.add(chave); vista.push(palavra); }
@@ -3757,10 +3781,14 @@ async function carregarGlossarioExtra() {
     const dados = res.ok ? await res.json() : null;
     publicados = dados && Array.isArray(dados.termos) ? dados.termos : [];
   } catch (e) { /* o ficheiro ainda não existe: o site continua igual */ }
+  EXTRA_PUBLICADO = publicados;
   const locais = (function () { try { const d = JSON.parse(localStorage.getItem(CH_EXTRA) || '[]'); return Array.isArray(d) ? d : []; } catch (e) { return []; } })();
   /* os registos que a própria pessoa guardou neste aparelho valem como glossário local:
      sem isto «kuduro» aparecia no dicionário até carregares de novo, e depois sumia-se */
   const n = registrarExtra(publicados.concat(locais, lerColheita())).length;
+  /* estas duas vistas desenham-se antes de o ficheiro chegar (o fetch é assíncrono):
+     se ele trouxe estados, redesenha-as agora que o glossário já os tem */
+  if (/^#\/(cobertura|dicionario)\b/.test(location.hash)) render();
   if (n) {
     const aviso = $('#route-live');
     if (aviso) aviso.textContent = `${n} ${n === 1 ? 'sinal em fase de colheita disponível' : 'sinais em fase de colheita disponíveis'} neste aparelho.`;
@@ -5227,6 +5255,8 @@ function validarlheiraHTML() {
     <code>tools/ingerir-validacoes.cjs</code> sobre o ficheiro que exportares, o sinal continua «colhido» no
     site. Um veredicto assinado chega para <em>confirmado</em>; dois assinadores diferentes chegam para
     <em>aprovado</em>; «errado» passa a <em>rejeitado</em> e sai da lista de ensino.</p>
+    <p>${I.spark} Depois da importação, o resultado vê-se na <a href="#/cobertura">cobertura do glossário</a>:
+    quantas palavras subiram de estado e quantas continuam à espera.</p>
   </div>
   <p class="vq-aviso" id="vq-aviso" role="status"></p>
   ${vaQuemHTML(quem)}
@@ -5481,6 +5511,236 @@ on('/validar', () => ({
   meta: {
     t: 'Fila de validação de sinais LGA — Pamosii Viva Surdo',
     d: 'Três veredictos por sinal recolhido — correcto, variante regional ou errado — assinados por um apelido, com região e data. Fica neste browser e exporta-se em JSONL para a equipa promover o estado no dicionário. O site nunca se auto-valida.',
+  },
+}));
+
+/* ============================================================================
+   13.6 COBERTURA DO GLOSSÁRIO — `#/cobertura`
+   ----------------------------------------------------------------------------
+   Uma página de contas, não de promessas. Separa sempre três coisas:
+     - o glossário do site (203 palavras de origem, 33 delas só demonstração);
+     - o que veio no último assets/glossario-extra.json (a equipa publicou);
+     - o que existe só neste aparelho (vs.colheita, vs.extra, vs.validar, vs.lacunas).
+   Regra de integridade: esta página LÊ estados, nunca os promove. Nenhum número aqui
+   transforma «colhido» em «confirmado»; isso só acontece em tools/ingerir-validacoes.cjs.
+   ============================================================================ */
+const COV_ESTADOS = ['a-validar', 'colhido', 'confirmado', 'aprovado', 'demonstracao', 'rejeitado'];
+
+function covImportados() {
+  try {
+    const d = JSON.parse(localStorage.getItem(CH_EXTRA) || '[]');
+    return Array.isArray(d) ? d : [];
+  } catch (e) { return []; }
+}
+
+function covDados() {
+  const por = {};
+  COV_ESTADOS.forEach(e => { por[e] = 0; });
+  const temas = GLOSSARIO.map(g => {
+    const c = { tema: g.tema, n: 0, aulas: aulasDeTema(g.tema).length };
+    COV_ESTADOS.forEach(e => { c[e] = 0; });
+    g.termos.forEach(t => {
+      c.n++;
+      c[t.estado] = (c[t.estado] || 0) + 1;
+      por[t.estado] = (por[t.estado] || 0) + 1;
+    });
+    return c;
+  });
+  const total = temas.reduce((n, c) => n + c.n, 0);
+  const base = GLOSSARIO_BASE_QTD;
+  const ligadas = temas.reduce((n, c) => n + (c.aulas ? c.n : 0), 0);
+  const acrescentadas = Math.max(0, total - base);
+
+  const colheita = lerColheita();
+  let sessoes = 0, segundos = 0, quadros = 0;
+  colheita.forEach(r => {
+    quadros += Array.isArray(r.fotos) ? r.fotos.length : 0;
+    if (r.sessao && Array.isArray(r.sessao.repeticoes)) {
+      sessoes++;
+      segundos += Math.round(r.sessao.repeticoes.reduce((s, x) => s + Number(x.dur_ms || 0), 0) / 1000);
+    }
+  });
+
+  const publicados = (Array.isArray(EXTRA_PUBLICADO) ? EXTRA_PUBLICADO : []).filter(t => t && typeof t.palavra === 'string');
+  const pubPor = { confirmado: 0, aprovado: 0, colhido: 0, rejeitado: 0 };
+  publicados.forEach(t => { if (pubPor[t.estado] !== undefined) pubPor[t.estado]++; });
+  const pubVideo = publicados.filter(t => t.video).length;
+
+  const importados = covImportados().filter(t => t && typeof t.palavra === 'string');
+
+  const lac = lerLacunas();
+  const lacunas = Object.keys(lac)
+    .map(p => ({ p, n: Number(lac[p]) || 1 }))
+    .sort((a, b) => b.n - a.n || a.p.localeCompare(b.p, 'pt'));
+
+  return {
+    por, temas, total, base, ligadas, acrescentadas,
+    colheita, sessoes, segundos, quadros,
+    validacoes: Object.keys(lerValidacoes()).length,
+    publicados, pubPor, pubVideo, importados, lacunas,
+  };
+}
+
+const covPct = (n, total) => total ? String(Math.round(n * 1000 / total) / 10).replace('.', ',') : '0';
+
+function coberturaHTML() {
+  const d = covDados();
+  const publicadasNaEquipa = d.por.confirmado + d.por.aprovado;
+  const resumoBarra = COV_ESTADOS.filter(e => d.por[e])
+    .map(e => `${d.por[e]} ${ESTADO_GLOSSARIO[e].rotulo.toLowerCase()}`).join(', ');
+
+  return `
+<div class="wrap page-head">
+  <p class="eyebrow">${I.spark} Cobertura</p>
+  <h1>O que este site já cobre</h1>
+  <p class="lead">Quantas palavras o glossário tem, quantas já têm um sinal que a equipa publicou,
+  quantas continuam à espera de uma pessoa surda — e que palavras as pessoas procuraram e não
+  encontraram. Contas feitas ao glossário, ao ficheiro publicado pela equipa e aos registos
+  deste aparelho.</p>
+</div>
+<section class="section tight"><div class="wrap">
+  <div class="note-band">
+    ${I.info}
+    <p><strong>Estes números não medem a LGA inteira.</strong> Não existe um censo público de sinais
+    de Língua Gestual Angolana; o que aqui se conta é <strong>este site</strong> e o que a comunidade
+    trouxe para ele. A página lê estados — não valida nada. Quem valida são pessoas surdas, pela
+    <a href="#/validar">fila de validação</a>.</p>
+  </div>
+
+  <ul class="cov-cards">
+    <li><strong>${d.base}</strong><span>palavras no glossário</span><small>${d.ligadas} ligadas às 17 aulas · ${d.por.demonstracao} de demonstração</small></li>
+    <li><strong>${publicadasNaEquipa}</strong><span>com sinal confirmado</span><small>${d.por.confirmado} confirmada${d.por.confirmado === 1 ? '' : 's'} · ${d.por.aprovado} aprovada${d.por.aprovado === 1 ? '' : 's'}</small></li>
+    <li><strong>${d.por.colhido}</strong><span>colhidas, ainda por validar</span><small>alguém registou, ninguém confirmou</small></li>
+    <li><strong>${d.por.demonstracao}</strong><span>só demonstração</span><small>sem vídeo — não são LGA</small></li>
+    <li><strong>${d.acrescentadas}</strong><span>acrescentadas pela colheita</span><small>${d.acrescentadas ? 'palavras que não estavam no glossário' : 'nenhuma palavra nova até agora'}</small></li>
+    <li><strong>${d.lacunas.length}</strong><span>lacunas pedidas</span><small>procuradas e não encontradas</small></li>
+  </ul>
+
+  <section class="cov-bloco" aria-labelledby="cov-estado-h">
+    <h2 id="cov-estado-h">${I.check} Estado das ${d.total} palavras do glossário</h2>
+    ${d.total ? `<div class="cov-bar" role="img" aria-label="Distribuição por estado: ${esc(resumoBarra)}.">
+      ${COV_ESTADOS.filter(e => d.por[e]).map(e =>
+        `<span class="cov-seg cov-seg-${e}" style="width:${(d.por[e] * 100 / d.total).toFixed(3)}%"></span>`).join('')}
+    </div>` : ''}
+    <div class="cov-tab-wrap">
+      <table class="cov-tab">
+        <caption class="sr-only">Estado de cada palavra do glossário e o que esse estado significa</caption>
+        <thead><tr><th scope="col">Estado</th><th scope="col">Palavras</th><th scope="col">Do glossário</th><th scope="col">O que significa</th></tr></thead>
+        <tbody>
+          ${COV_ESTADOS.map(e => `<tr>
+            <th scope="row"><span class="dic-badge is-${e}">${esc(ESTADO_GLOSSARIO[e].rotulo)}</span></th>
+            <td class="cov-num">${d.por[e]}</td>
+            <td class="cov-num">${covPct(d.por[e], d.total)}%</td>
+            <td>${esc(ESTADO_GLOSSARIO[e].nota)}</td></tr>`).join('')}
+          <tr class="cov-total"><th scope="row">Total</th><td class="cov-num">${d.total}</td><td class="cov-num">100%</td>
+            <td>${d.base} de origem${d.acrescentadas ? ` + ${d.acrescentadas} ${pl(d.acrescentadas, 'acrescentada', 'acrescentadas')} pela colheita` : ''}.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    ${d.por.rejeitado ? `<p class="muted">${d.por.rejeitado} ${pl(d.por.rejeitado, 'palavra rejeitada continua', 'palavras rejeitadas continuam')}
+      no glossário para a equipa voltar a recolher — mas não ${d.por.rejeitado === 1 ? 'é ensinada' : 'são ensinadas'}.</p>` : ''}
+  </section>
+
+  <section class="cov-bloco" aria-labelledby="cov-tema-h">
+    <h2 id="cov-tema-h">${I.book} Cobertura por tema</h2>
+    <p class="muted">«Com sinal da equipa» soma confirmadas e aprovadas. «Colhidas» são registos que
+    ninguém confirmou ainda. «Demonstração» são palavras de exemplo do painel, sem vídeo.</p>
+    <div class="cov-tab-wrap">
+      <table class="cov-tab cov-tab-temas">
+        <caption class="sr-only">Palavras do glossário por tema e por estado</caption>
+        <thead><tr><th scope="col">Tema</th><th scope="col">Palavras</th><th scope="col">Com sinal da equipa</th>
+          <th scope="col">Colhidas</th><th scope="col">A validar</th><th scope="col">Demonstração</th><th scope="col">Aulas</th></tr></thead>
+        <tbody>${d.temas.map(t => `<tr>
+          <th scope="row">${esc(t.tema)}</th>
+          <td class="cov-num">${t.n}</td>
+          <td class="cov-num">${t.confirmado + t.aprovado}</td>
+          <td class="cov-num">${t.colhido}</td>
+          <td class="cov-num">${t['a-validar']}</td>
+          <td class="cov-num">${t.demonstracao}</td>
+          <td class="cov-num">${t.aulas || '—'}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="cov-bloco" aria-labelledby="cov-equipa-h">
+    <h2 id="cov-equipa-h">${I.doc} O que a equipa publicou</h2>
+    ${d.publicados.length ? `
+      <ul class="cov-cards cov-cards-4">
+        <li><strong>${d.publicados.length}</strong><span>sinais em <code>glossario-extra.json</code></span><small>ficheiro lido por todos os visitantes</small></li>
+        <li><strong>${d.pubPor.confirmado}</strong><span>confirmados</span><small>uma pessoa surda validou</small></li>
+        <li><strong>${d.pubPor.aprovado}</strong><span>aprovados</span><small>duas pessoas surdas independentes</small></li>
+        <li><strong>${d.pubVideo}</strong><span>com vídeo do sinal</span><small>${d.publicados.length - d.pubVideo} sem clipe publicado</small></li>
+      </ul>
+      <p class="muted">${d.pubPor.colhido} ${pl(d.pubPor.colhido, 'chegou', 'chegaram')} como colhido${d.pubPor.colhido === 1 ? '' : 's'} e ${d.pubPor.rejeitado} como rejeitado${d.pubPor.rejeitado === 1 ? '' : 's'}.
+      O ficheiro é gerado por <code>tools/ingerir-colheita.cjs</code> e <code>tools/ingerir-validacoes.cjs</code> — não se edita à mão.</p>`
+    : `<p class="ch-vazio">A equipa ainda não publicou nenhum sinal em <code>assets/glossario-extra.json</code>.
+      Por isso «com sinal publicado pela equipa» está a zero. Não é uma avaria: é o ponto de partida.
+      Quando o primeiro lote for ingerido, esta página conta-o sem ninguém mexer no código.</p>`}
+  </section>
+
+  <section class="cov-bloco" aria-labelledby="cov-local-h">
+    <h2 id="cov-local-h">${I.shield} Neste aparelho</h2>
+    <p class="muted">Tudo o que está aqui foi registado <strong>neste browser</strong>: não há servidor nem
+    contas, e nada disto foi enviado para a equipa. Para entregar, exporta na Colheita e na Validação.</p>
+    <ul class="cov-cards cov-cards-4">
+      <li><strong>${d.colheita.length}</strong><span>sinais colhidos</span><small>${d.sessoes} em sessão de gravação</small></li>
+      <li><strong>${d.segundos}s</strong><span>de sinal gravado</span><small>soma das repetições</small></li>
+      <li><strong>${d.quadros}</strong><span>quadros de imagem guardados</span><small>ficam no aparelho, não no site</small></li>
+      <li><strong>${d.validacoes}</strong><span>veredictos assinados</span><small>à espera de ser exportados</small></li>
+      ${d.importados.length ? `<li><strong>${d.importados.length}</strong><span>sinais importados de um pacote</span><small>visíveis só neste aparelho</small></li>` : ''}
+    </ul>
+    <p class="cov-ac">
+      <a class="btn btn-p btn-sm" href="#/colher">Registar ou exportar sinais ${I.arrow}</a>
+      <a class="btn btn-o btn-sm" href="#/validar">Validar sinais recolhidos</a>
+      <a class="btn btn-o btn-sm" href="#/marcar">Marcar tempos nas aulas</a>
+    </p>
+  </section>
+
+  <section class="cov-bloco" aria-labelledby="cov-lacunas-h">
+    <h2 id="cov-lacunas-h">${I.search} Lacunas: palavras procuradas e não encontradas <span class="ch-n">${d.lacunas.length}</span></h2>
+    ${d.lacunas.length ? `
+      <p class="muted">Cada vez que o Pamosii procura uma palavra que não está no glossário, conta-a aqui.
+      É a lista de compras da equipa — e qualquer pessoa pode adiantar-se e registar o sinal.</p>
+      <ol class="cov-lac">
+        ${d.lacunas.slice(0, 12).map(({ p, n }) => `<li>
+          <span class="cov-lac-w">${esc(p)}</span>
+          <span class="cov-lac-n" title="${n} ${esc(pl(n, 'vez', 'vezes'))}">${n}×</span>
+          <a class="btn btn-o btn-sm" href="#/colher/${esc(encodeURIComponent(p))}">Registar este sinal</a>
+        </li>`).join('')}
+      </ol>
+      ${d.lacunas.length > 12 ? `<p class="muted">… e mais ${d.lacunas.length - 12} ${pl(d.lacunas.length - 12, 'palavra', 'palavras')}.
+        A lista completa e a exportação estão na <a href="#/colher">Colheita</a>.</p>` : ''}`
+    : `<p class="ch-vazio">Ainda não há lacunas neste aparelho. Quando alguém procurar uma palavra que
+      o dicionário não tem, ela aparece aqui — sem nomes nem dados pessoais, só a palavra e quantas vezes
+      foi pedida.</p>`}
+  </section>
+
+  <section class="cov-bloco" aria-labelledby="cov-subir-h">
+    <h2 id="cov-subir-h">${I.arrow} Como é que um número sobe</h2>
+    <ol class="ch-passo">
+      <li><strong>Alguém regista o sinal</strong> na <a href="#/colher">Colheita</a> — por escrito ou numa
+        sessão guiada com consentimento. O estado passa a «colhido».</li>
+      <li><strong>Uma pessoa surda valida</strong> na <a href="#/validar">fila de validação</a>: correcto,
+        variante regional ou errado. Essa pessoa fica identificada no ficheiro que exporta.</li>
+      <li><strong>A equipa importa</strong> o JSONL: <code>tools/ingerir-validacoes.cjs</code> escreve
+        «confirmado» (uma assinatura) ou «aprovado» (duas pessoas diferentes) em
+        <code>assets/glossario-extra.json</code>.</li>
+      <li><strong>O site volta a ler o ficheiro</strong> e esta página conta o novo estado. Nenhum passo
+        acontece sozinho — e nenhum é feito por esta página.</li>
+    </ol>
+    <p class="muted">O protocolo completo, incluindo quem assina e como se paga a quem sinaliza, está em
+    <code>docs/colheita-sinais-lga.md</code>.</p>
+  </section>
+</div></section>`;
+}
+
+on('/cobertura', () => ({
+  active: '/cobertura',
+  h: shell(coberturaHTML(), '/cobertura'),
+  meta: {
+    t: 'Cobertura do glossário LGA — Pamosii Viva Surdo',
+    d: 'Quantas palavras do dicionário têm sinal confirmado, quais continuam por validar, quais são demonstração e que palavras as pessoas procuraram e não encontraram. Contas honestas, sem prometer cobertura total da LGA.',
   },
 }));
 

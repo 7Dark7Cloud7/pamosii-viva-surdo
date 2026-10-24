@@ -297,6 +297,11 @@ telefone, nome completo ou dados de saúde.
 - A cadeia completa, num sítio só: `/colher` → `ingerir-colheita.cjs` → `#/validar` →
   `ingerir-validacoes.cjs` → `app/assets/glossario-extra.json`. Ambos os scripts aceitam
   `--destino=` para ensaiar a corrente inteira sobre uma cópia.
+- **O resultado da cadeia vê-se na `#/cobertura`**: totais por estado, cobertura por tema,
+  o que o ficheiro publicado traz e as lacunas deste aparelho. A página lê o mesmo
+  `glossario-extra.json` e o mesmo `vs.*` que o dicionário — não tem fonte própria, e não
+  promove nenhum estado. Quando uma palavra de origem sobe a `confirmado`, o dicionário,
+  o Pamosii e a cobertura mostram o mesmo (o estado só sobe: `RANK_ESTADO` em `app.js`).
 - As marcações de tempo (`#/marcar`) têm a sua própria ponte:
   `node tools/ingerir-marcacoes.cjs marcacoes.json --dry-run` produz os segmentos a cortar
   por palavra — o que falta para o Signer encadear clipes reais em vez de glifos.

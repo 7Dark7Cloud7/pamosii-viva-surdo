@@ -163,12 +163,13 @@ Fora do repositório de trabalho: `.deploy-gh/` é o clone ligado ao repo public
 | `#/colher`        | Colheita participada          | Qualquer pessoa regista sinais que conhece — por escrito ou numa sessão de gravação guiada (consentimento + 3 repetições + 1 lenta, sem áudio); lista das palavras sem sinal encontradas no site; exportação local em JSON/TXT/JSONL |
 | `#/colher/:palavra` | Registar uma palavra        | Abre o formulário já preenchido com essa palavra (venha do dicionário, do Pamosii, da Bíblia ou do Signer) |
 | `#/validar`       | Fila de validação              | Três veredictos por sinal colhido — **correcto / variante regional / errado** — assinados por um apelido, com região; fica no aparelho e exporta-se em JSONL para a equipa. A página nunca promove estados |
+| `#/cobertura`     | Cobertura do glossário         | Contas honestas: quantas palavras têm sinal confirmado/aprovado, quantas estão colhidas ou só em demonstração, a cobertura por tema, o que a equipa publicou e as lacunas pedidas neste aparelho. Lê estados, nunca os promove |
 | `#/marcar`        | Marcação de tempos            | Ferramenta de revisão: marca os segundos em que o sinal de cada palavra aparece nas 17 aulas; exporta JSON/TXT e come-se em `tools/ingerir-marcacoes.cjs` |
 | `#/fora`          | Fora deste site               | As três formas de usar o Signer fora desta página: partilhar no Android, extensão Chrome, e incorporar por iframe |
 | `#/sobre`         | Sobre                         | Missão, modelo (fontes públicas), reconhecimento com atribuição de fonte, valores |
 | `#/contacto`      | Contacto                      | Apenas canais verificados: Facebook, Instagram, YouTube + playlist |
 
-A rota antiga `#/catalogo` redirecciona para `#/cursos`. Além destas 18 vistas registadas, há dois widgets que não são rotas: o **Pamosii Signer** (botão flutuante presente em todas as páginas) e o **painel de acessibilidade**.
+A rota antiga `#/catalogo` redirecciona para `#/cursos`. Além destas 19 vistas registadas, há dois widgets que não são rotas: o **Pamosii Signer** (botão flutuante presente em todas as páginas) e o **painel de acessibilidade**.
 
 ---
 
@@ -353,6 +354,28 @@ O que a página **não** faz, e `tools/integridade-test.cjs` vigia: nenhuma inte
 
 ---
 
+## Cobertura do glossário (`#/cobertura`) — contas, não promessas
+
+Uma página para responder à pergunta que o site tem de saber responder sem inventar: **quanto é que isto já cobre?** Não mede a LGA inteira — não existe censo público de sinais — mede o site. Separa sempre três fontes:
+
+1. **O glossário do site.** 236 palavras no total: **203 ligadas às 17 aulas** e **33 só de demonstração** (sem vídeo, marcadas como não-LGA). Uma constante `GLOSSARIO_BASE_QTD` guarda esse retrato antes de a colheita acrescentar palavras, para as duas contas nunca se misturarem.
+2. **`assets/glossario-extra.json`** — o que a equipa publicou. A página mostra quantos sinais tem o ficheiro, quantos são `confirmado`, `aprovado`, `colhido` ou `rejeitado`, e quantos trazem vídeo. Se o ficheiro estiver vazio (estado actual), a página diz que é o ponto de partida — não finge uma cobertura que não existe.
+3. **Este aparelho** — `vs.colheita`, `vs.extra`, `vs.validar` e `vs.lacunas`, com uma frase que não deixa dúvida: não há servidor, e nada disto foi enviado para a equipa até alguém exportar.
+
+O que a página faz, em concreto:
+
+- **Barra + tabela do mesmo número.** Os seis estados (`a-validar`, `colhido`, `confirmado`, `aprovado`, `demonstracao`, `rejeitado`) com contagem, percentagem e a explicação de cada um. A barra é decorativa e tem um padrão próprio por segmento, para não depender da cor; os números estão na tabela ao lado.
+- **Cobertura por tema**: palavras, com sinal da equipa, colhidas, a validar, demonstração e quantas aulas cobrem o tema. Temas sem aula (Demonstração, Colheita) mostram `—`.
+- **Lacunas**: as palavras que o Pamosii procurou e não encontrou, ordenadas por vezes pedidas, cada uma com um atalho «Registar este sinal» para `#/colher/:palavra`. Nenhum nome ou dado pessoal entra nesta lista.
+- **Como um número sobe**: gravar → validar → importar (`tools/ingerir-validacoes.cjs`) → o site relê o ficheiro. O último passo é o único que muda o que a página conta.
+
+Duas regras de integridade que esta vista obrigou a tornar explícitas no código:
+
+- **Um estado publicado sobe a entrada que já existia.** `registrarExtra()` e `indexarTermo()` comparam com `RANK_ESTADO` (`demonstracao < a-validar < colhido < confirmado < aprovado < rejeitado`) e só aceitam um estado mais forte. Sem isto, uma palavra de origem que a equipa confirmasse continuava «A validar» no dicionário e no Pamosii, e a cobertura contradizia o ficheiro. O movimento é sempre para cima: um pacote antigo não desfaz uma decisão da equipa.
+- **A vista nunca promove nada.** Lê `EXTRA_PUBLICADO`, `vs.*` e o `GLOSSARIO` já carregado; não escreve estado nenhum. `tools/integridade-test.cjs` continua a falhar se alguma página escrever `confirmado`/`aprovado`/`rejeitado`.
+
+---
+
 ## Marcação de tempos por sinal (`#/marcar`)
 
 Para o Signer deixar de ser um boneco e passar a mostrar **o sinal real de cada palavra** é preciso saber em que segundos de cada aula ele aparece. Ninguém tem esse mapa — é trabalho de revisão, e faz-se aqui, no browser de quem revê, sem backend:
@@ -489,7 +512,7 @@ node tools/integridade-test.cjs      # lê app.js/index.html/sw.js/extension e f
 node tools/ingerir-colheita.cjs tools/exemplos/sessoes-exemplo.jsonl --dry-run
 node tools/ingerir-validacoes.cjs tools/exemplos/validacoes-exemplo.jsonl --dry-run
 node tools/auditoria-visual.cjs      # abre o Chrome instalado em headless (CDP, sem dependências)
-                              # e mede as 16 rotas: scroll horizontal, alvos <24px e contraste
+                              # e mede as 17 rotas: scroll horizontal, alvos <24px e contraste
                               # (<4,5:1, ou 3:1 em texto grande). Flags: --rotas=/validar,/colher,
                               # --largura=, --altura=, --escala=150, --tema=claro|escuro|alto
 node tools/make-icons.cjs   # regenera os PNG do manifest a partir da marca (sem dependências)
@@ -502,11 +525,13 @@ Teste manual recomendado: navegar por todas as rotas, abrir pelo menos um vídeo
 
 Verificado nesta entrega (medição no browser em `http://127.0.0.1:8123`; telemóvel 320px / 360px / 390px, tablet 1012px, e escala de texto do painel de acessibilidade a 100% / 130% / 150%):
 
-- **As 16 rotas de `tools/auditoria-visual.cjs`** medidas a 320×640 com texto a 150% (claro) e a 390×844 (escuro): `scrollWidth − clientWidth = 0`, 0 alvos abaixo de 24×24 e 0 falhas de contraste em todas. A ferramenta é nova nesta entrega porque o Chrome de depuração deste ambiente deixou de responder a meio da sessão: passou a falar CDP directo com o Chrome instalado (Node 24 traz `WebSocket` global), sem `puppeteer` nem dependências.
+- **As 17 rotas de `tools/auditoria-visual.cjs`** medidas a 320×640 com texto a 150% (claro) e a 390×844 (escuro) — mais `#/cobertura` em contraste alto a 150%: `scrollWidth − clientWidth = 0`, 0 alvos abaixo de 24×24 e 0 falhas de contraste em todas. A ferramenta é nova nesta entrega porque o Chrome de depuração deste ambiente deixou de responder a meio da sessão: passou a falar CDP directo com o Chrome instalado (Node 24 traz `WebSocket` global), sem `puppeteer` nem dependências.
 - **`#/validar` com dados reais na fila** (três registos, um deles com sessão de 4 repetições × 3 quadros): o filtro «À espera» → 2 cartões, «Já validei» → 1, «Tudo» → 3, com foco devolvido ao chip e aviso `role="status"` («A mostrar 2 sinais à espera.»); veredicto registado → contagens `1 Correcto · 1 Variante regional · 0 Errado`, medidor «2 de 3 sinais têm veredicto neste aparelho · 1 à espera», foco no botão carregado e `aria-pressed` só nesse; nota escrita → normalizada (`no Namibe fazem a palma virada para fora`) e lida de volta **depois de recarregar**; carregar no mesmo veredicto → retirado (contagens voltam a 1/0/0, foco no primeiro botão do cartão); «Apagar» → confirmação, `vs.validar` removido e mensagem «Apagado 1 veredicto».
 - **Pacote da equipa largado em `#/validar`** (3 linhas JSONL: 2 repetições de uma palavra nova + 1 linha `estado:'aprovado'`): entraram as 2 repetições como «manga · 2 repetições · 0 quadros · 8 segundos · origem: pacote da equipa», a linha já aprovada foi ignorada (a fila só julga `colhido`), o `input` volta a vazio e nada foi guardado no `localStorage`.
 - **Exportação real capturada** (blob interceptado antes do download): `pamosii-validacoes-2026-10-24.jsonl`, `application/x-ndjson;charset=utf-8`, 2 linhas com `schema:1`, assinatura, região, data e nota. O ficheiro foi escrito em disco e passado por `tools/ingerir-validacoes.cjs`: `colhido → confirmado` nos dois termos, `variantes: ["Huíla — Lubango: no Namibe fazem a palma virada para fora"]`, e uma segunda execução não mexeu em nada («já está em confirmado, estado não desce») nem duplicou a nota de proveniência.
 - **Bug apanhado por esta medição e corrigido:** as contagens do cabeçalho da fila liam `.veredicto` de um registo de sinal (que não tem esse campo) e mostravam sempre `0 Correcto / 0 Variante regional / 0 Errado`. Passaram a contar os veredictos, não os sinais.
+- **`#/cobertura` medida com e sem dados:** em repouso mostra `236` palavras (`203` ligadas às aulas + `33` de demonstração), todos os estados a zero excepto «A validar 202 / 85,6%» e «Demonstração 33 / 14%», e o bloco «O que a equipa publicou» diz que o ficheiro está vazio. Com um pacote local que traz `água` como `confirmado`, a palavra passa a «Confirmado» no **dicionário** (antes continuava «A validar») e a cobertura conta `1` confirmada, `202` a validar e `1` em «Comida e bebida» — o ficheiro de dados não foi tocado.
+- **Frescura do desenho:** a cobertura e o dicionário desenham-se antes de `assets/glossario-extra.json` chegar (o `fetch` é assíncrono). Quando os estados entram, `carregarGlossarioExtra()` redesenha só essas duas vistas — sem isso, a primeira visita mostrava sempre o glossário de origem e parecia que o ficheiro publicado estava a ser ignorado.
 
 - Consola sem erros nas 10 rotas (`#`, `/cursos`, `/cursos/mini-curso-lga`, `/aprender-lga`, `/dicionario`, `/pamosii`, `/professores`, `/biblioteca`, `/sobre`, `/contacto`) e na 404, depois de percorrer todas as rotas em três larguras e de encher cada ecrã de testes (glosa, soletração, cadeia LGA, voz, câmara).
 - **Zero scroll horizontal**: 320px, 360px, 390px e 1012px × escala 100/130/150 × 10 rotas = 90 medições, todas com `scrollWidth − clientWidth = 0`.

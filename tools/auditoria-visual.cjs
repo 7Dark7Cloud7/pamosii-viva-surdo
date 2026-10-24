@@ -36,7 +36,7 @@ const PORTA = Number(flag('porta', 9333));
 const ROTAS_PADRAO = [
   '/', '/cursos', '/aprender-lga', '/pamosii', '/dicionario', '/professores',
   '/biblioteca', '/biblia', '/biblia/genesis-1', '/evangelismo', '/colher', '/validar',
-  '/marcar', '/fora', '/sobre', '/contacto',
+  '/cobertura', '/marcar', '/fora', '/sobre', '/contacto',
 ];
 
 const CHROME = [
