@@ -4599,16 +4599,34 @@ function bindSessao() {
     const comeco = new Date().toISOString();
     comecar.disabled = true;
     sessMsg('A pedir a câmara sem áudio…');
+    /* o pedido de permissão pode ficar à espera indefinidamente (ecrã bloqueado,
+       prompt ignorado); sem vigia o botão ficava desactivado para sempre e a
+       pessoa não conseguia sair da página. Não cancela o pedido — apenas
+       devolve o controlo do formulário a quem espera. */
+    let espera = true;
+    const vigia = setTimeout(() => {
+      if (!espera || SESS) return;
+      espera = false;
+      comecar.disabled = false;
+      sessMsg('A câmara ainda não respondeu — o pedido de permissão ficou à espera. Tenta de novo '
+        + 'quando aceitares o pedido do navegador, ou usa o formulário «Registar um sinal» aqui em '
+        + 'cima: a descrição escrita também ajuda.');
+    }, 25000);
     let stream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false,
       });
     } catch (e) {
-      comecar.disabled = false;
-      sessMsg('A câmara não abriu (permissão negada ou indisponível). A descrição escrita continua a funcionar.');
+      clearTimeout(vigia);
+      if (!SESS) {
+        comecar.disabled = false;
+        sessMsg('A câmara não abriu (permissão negada ou indisponível). A descrição escrita continua a funcionar.');
+      }
       return;
     }
+    clearTimeout(vigia);
+    if (!espera) { stream.getTracks().forEach(t => t.stop()); return; }
     if (!document.getElementById('ch-sess-pista')) { stream.getTracks().forEach(t => t.stop()); return; }
     SESS = {
       id: 's' + Date.now().toString(36),
