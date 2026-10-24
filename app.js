@@ -190,6 +190,10 @@ const ESTADO_GLOSSARIO = {
   'confirmado': { rotulo: 'Confirmado', nota: 'Validado pela equipa / comunidade surda.' },
   'demonstracao': { rotulo: 'Demonstração', nota: 'Palavra de exemplo, para mostrar como o painel funciona. Não corresponde a sinal gravado nem a LGA validada — retirar ou substituir por sinal filmado.' },
   'colhido': { rotulo: 'Colhido', nota: 'Registado por alguém da comunidade via Colheita. Ninguém aqui validou: continua a precisar de confirmação de um sinalizador surdo antes de ser ensinado como LGA.' },
+  /* os dois estados abaixo só chegam aqui por importação da equipa (tools/ingerir-validacoes.cjs
+     a partir de veredictos assinados em #/validar). Nenhuma página deste site escreve um deles. */
+  'aprovado': { rotulo: 'Aprovado', nota: 'Dois sinalizadores surdos diferentes, sem relação entre eles, confirmaram este sinal. Serve para ensino e para reconhecimento automático.' },
+  'rejeitado': { rotulo: 'Rejeitado', nota: 'Um sinalizador surdo disse que este sinal não é LGA, ou que a descrição não corresponde. Não se ensina: fica cá para a equipa voltar a recolher.' },
 };
 
 const GLOSSARIO = [
@@ -1474,6 +1478,7 @@ const META = {
   '/sobre': { t: 'Sobre — Pamosii Viva Surdo', d: 'Pamosii é a plataforma da Viva Surdo, iniciativa angolana de inclusão das pessoas surdas através da educação, da formação e da Língua Gestual Angolana (LGA).' },
   '/colher': { t: 'Colheita participada de sinais LGA — Pamosii Viva Surdo', d: 'Registar sinais de Língua Gestual Angolana com método (configuração da mão, lugar, movimento, expressão) ou gravar uma sessão guiada: consentimento no início, 3 repetições e uma lenta, sem áudio. Tudo fica no aparelho de quem regista e é exportado para a equipa validar.' },
   '/marcar': { t: 'Marcação de tempos por sinal — Pamosii Viva Surdo', d: 'Ferramenta para marcar os segundos em que o sinal de cada palavra aparece nas 17 aulas de LGA. As marcações ficam no aparelho e exportam-se em JSON para a equipa cortar os clipes.' },
+  '/validar': { t: 'Fila de validação de sinais LGA — Pamosii Viva Surdo', d: 'Três veredictos para cada sinal recolhido — correcto, variante regional ou errado — assinados por um apelido, com região e data. Ficam neste browser e exportam-se em JSONL para a equipa promover o estado no dicionário.' },
   '/contacto': { t: 'Contacto — Pamosii Viva Surdo', d: 'Canais oficiais verificados da Viva Surdo: Facebook, Instagram e YouTube. Telefone e e-mail serão divulgados após confirmação.' },
 };
 
@@ -1535,6 +1540,7 @@ const NAV_ITENS = [
   { path: '/biblia', rotulo: 'Bíblia' },
   { path: '/evangelismo', rotulo: 'Evangelismo' },
   { path: '/colher', rotulo: 'Colheita', extra: true },
+  { path: '/validar', rotulo: 'Validação', extra: true },
   { path: '/marcar', rotulo: 'Marcação', extra: true },
   { path: '/fora', rotulo: 'Fora deste site', extra: true },
   { path: '/sobre', rotulo: 'Sobre' },
@@ -3731,7 +3737,9 @@ function registrarExtra(termos) {
     const palavra = t.palavra.trim();
     if (!palavra || palavra.length > 48) return;
     const chave = norm(palavra).replace(/[….:;?!]/g, '').trim();
-    const estado = t.estado === 'confirmado' ? 'confirmado' : 'colhido';
+    /* só os estados que a equipa publica passam assim para o browser; tudo o resto
+       entra como colhido, incluindo o que a própria pessoa acabou de registar */
+    const estado = ['confirmado', 'aprovado', 'rejeitado'].indexOf(t.estado) >= 0 ? t.estado : 'colhido';
     const tema = t.tema || 'Colheita';
     const g = grupoTema(tema);
     if (!g.termos.some(x => norm(x.palavra) === chave)) {
@@ -3832,8 +3840,9 @@ function colheitaHTML(palavra) {
     e só partem quando fores tu a descarregar o ficheiro e a enviá-lo. Não precisamos do teu nome,
     nem de telefone, nem de informação médica.</p>
     <p>${I.info} <strong>Ninguém aqui marca um sinal como validado.</strong> O estado máximo é “colhido”.
-    Um sinal só entra no dicionário como confirmado depois de uma pessoa surda sinalizadora o rever — é essa
-    a entrega da equipa (README, lista de materiais).</p>
+    Um sinal só entra no dicionário como confirmado depois de uma pessoa surda sinalizadora o rever: isso
+    acontece na <a href="#/validar">fila de validação</a> — que também não promove nada sozinha, só
+    assina o veredicto e exporta para a equipa importar (README, lista de materiais).</p>
   </div>
 
   <section class="ch-backlog" aria-labelledby="ch-backlog-h">
@@ -3924,7 +3933,9 @@ function colheitaHTML(palavra) {
     <ol class="ch-passo">
       <li><strong>Exportas</strong> o pacote aqui em cima → descarrega <code>pamosii-colheita-AAAA-MM-DD.json</code>.</li>
       <li><strong>Envias</strong> o ficheiro pela equipa, no <a href="#/contacto">Contacto</a> (o site não o envia por ti).</li>
-      <li><strong>A equipa valida</strong> com um sinalizador surdo: confirma, corrige ou junta variações.</li>
+      <li><strong>A equipa valida</strong> com um sinalizador surdo: confirma, corrige ou junta variações.
+        É a <a href="#/validar">fila de validação</a> a dar essa decisão, e
+        <code>tools/ingerir-validacoes.cjs</code> a escrevê-la no glossário.</li>
       <li><strong>Entramos no site</strong> com <code>tools/ingerir-colheita.cjs</code>, que escreve
         <code>assets/glossario-extra.json</code>. O Pamosii, o dicionário e o Signer passam a conhecer o sinal
         sem se tocar no código.</li>
@@ -4940,6 +4951,538 @@ function pintarFotos() {
 
 on('/colher', () => vistaColheita(null));
 on('/colher/:palavra', ({ args }) => vistaColheita(args));
+
+/* ============================================================================
+   13.5 FILA DE VALIDAÇÃO — `#/validar` (FASE 1B, ferramenta 4)
+   ----------------------------------------------------------------------------
+   O gargalo do dicionário deixou de ser a recolha: é existir uma pessoa surda
+   que usa LGA para olhar para cada sinal recolhido e dizer «isto é», «isto é
+   uma variante da minha região» ou «isto não é». Esta página É essa decisão —
+   três botões, um apelido para assinar, e nada mais.
+
+   O que esta página não faz, e o teste de integridade não deixa esquecer:
+     - não promove estado nenhum. O veredicto fica no aparelho de quem o deu e
+       sai num JSONL; é `tools/ingerir-validacoes.cjs`, fora do browser, que
+       escreve `confirmado` / `aprovado` / `rejeitado` em `glossario-extra.json`;
+     - não pede nome, telefone nem informação de saúde: só um apelido com que a
+       pessoa assina, e a região onde sinaliza;
+     - não envia nada: não há servidor, não há contas, não há rede.
+   ============================================================================ */
+
+const VA_CHAVE = 'vs.validar';
+const VA_QUEM = 'vs.validar-quem';
+const SCHEMA_VALIDACAO = 1;
+
+/* o vocabulário é partilhado com tools/ingerir-validacoes.cjs — integridade-test.cjs
+   compara as duas listas para nenhuma delas passar a aceitar um veredicto que a outra
+   ignora em silêncio */
+const VA_VEREDICTOS = [
+  { c: 'correcto', rotulo: 'Correcto', resumo: 'É este o sinal usado em Angola, e a descrição corresponde ao que se vê.' },
+  { c: 'variante', rotulo: 'Variante regional', resumo: 'Também é LGA, mas na minha região faz-se de outra maneira. A variação fica assinada com a palavra.' },
+  { c: 'errado', rotulo: 'Errado', resumo: 'Não é este o sinal, ou a descrição não bate com o que se vê. Assim não se pode ensinar.' },
+];
+const VA_ROTULO = c => (VA_VEREDICTOS.find(v => v.c === c) || {}).rotulo || String(c);
+
+/* sugestões para o campo da região — é um datalist, não uma gaiola: qualquer
+   região (bairro, cidade, país) pode ser escrita à mão */
+const VA_REGIOES = ['Bengo', 'Benguela', 'Bié', 'Cabinda', 'Cuando', 'Cubango', 'Cuanza Norte',
+  'Cuanza Sul', 'Cunene', 'Huambo', 'Huíla', 'Icolo e Bengo', 'Luanda', 'Lunda Norte', 'Lunda Sul',
+  'Malanje', 'Moxico', 'Namibe', 'Uíge', 'Zaire'];
+
+let vaPacote = [];      /* o que a equipa largou aqui: vive nesta visita, não é guardado */
+/* 'todas' por omissão, e não 'pendentes': ao dar um veredicto o cartão fica onde
+   estava, marcado — se sumisse da lista o teclado caía no fim da página e a pessoa
+   perdia o sítio onde estava a trabalhar */
+let vaFiltro = 'todas';
+
+const vaChave = p => norm(p).replace(/[….:;?!]/g, '').trim();
+
+function lerValidacoes() {
+  try { const d = JSON.parse(localStorage.getItem(VA_CHAVE) || '{}'); return d && typeof d === 'object' && !Array.isArray(d) ? d : {}; }
+  catch (e) { return {}; }
+}
+function guardarValidacoes(mapa) {
+  try { localStorage.setItem(VA_CHAVE, JSON.stringify(mapa)); return true; } catch (e) { return false; }
+}
+function lerQuemValida() {
+  try { const d = JSON.parse(localStorage.getItem(VA_QUEM) || 'null'); return d && typeof d === 'object' ? d : null; }
+  catch (e) { return null; }
+}
+
+/* uma linha de sessão (o JSONL é uma linha por repetição) e um registo completo
+   (o pacote JSON) chegam à mesma forma: `sessao.repeticoes[]` */
+function vaSessao(r) {
+  if (r.sessao && Array.isArray(r.sessao.repeticoes)) {
+    return {
+      id: r.sessao.id || '', repeticoes: r.sessao.repeticoes.slice(),
+      consentimento: r.sessao.consentimento || null, completa: !!r.sessao.completa,
+    };
+  }
+  if (r.sessao && typeof r.rep === 'number') {
+    return {
+      id: String(r.sessao), repeticoes: [{ rep: r.rep, ritmo: r.ritmo, dur_ms: r.dur_ms,
+        quadros: r.quadros || [], qualidade: r.qualidade || null }],
+      consentimento: r.consentimento || null, completa: !!r.completa,
+    };
+  }
+  return null;
+}
+function vaJuntaSessao(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  const reps = a.repeticoes.slice();
+  b.repeticoes.forEach(rr => { if (!reps.some(x => x.rep === rr.rep)) reps.push(rr); });
+  reps.sort((x, y) => Number(x.rep) - Number(y.rep));
+  return { id: a.id || b.id, repeticoes: reps, consentimento: a.consentimento || b.consentimento, completa: a.completa || b.completa };
+}
+
+/* a fila: tudo o que está «colhido» neste aparelho, mais o pacote que a equipa
+   trouxe. O que já tem estado de equipa (confirmado/aprovado/rejeitado) não é
+   trabalho daqui — já foi decidido. */
+function vaRegistos() {
+  const out = [];
+  const pos = new Map();
+  const extras = (function () {
+    try { const d = JSON.parse(localStorage.getItem(CH_EXTRA) || '[]'); return Array.isArray(d) ? d : []; }
+    catch (e) { return []; }
+  })();
+  const junta = (r, origem) => {
+    if (!r || typeof r.palavra !== 'string' || r.palavra.length > 48) return;
+    const chave = vaChave(r.palavra);
+    if (!chave) return;
+    if (r.estado && r.estado !== 'colhido') return;
+    const i = pos.get(chave);
+    if (i === undefined) { pos.set(chave, out.length); out.push({ ...r, chave, origem, sessao: vaSessao(r) }); return; }
+    const atual = out[i];
+    atual.sessao = vaJuntaSessao(atual.sessao, vaSessao(r));
+    /* o registo feito neste aparelho vale mais que a cópia do pacote: tem os quadros
+       e o consentimento registados na hora */
+    if (atual.origem === 'pacote' && origem !== 'pacote') {
+      out[i] = { ...r, chave, origem, sessao: atual.sessao };
+    }
+  };
+  lerColheita().forEach(r => junta(r, 'aparelho'));
+  extras.forEach(r => junta(r, 'importado'));
+  vaPacote.forEach(r => junta(r, 'pacote'));
+  return out;
+}
+
+function vaQuadrosParaVer(r) {
+  if (r.sessao) {
+    return r.sessao.repeticoes
+      .map(x => { const q = x.quadros || []; return q[1] || q[0]; })
+      .filter(Boolean).slice(0, 4);
+  }
+  return (Array.isArray(r.fotos) ? r.fotos : []).slice(0, 4);
+}
+
+/* --- 13.5.1 ler um pacote da equipa (JSON ou JSONL), sem escrever em lado nenhum --- */
+function vaLePacote(bruto, nome) {
+  const t = String(bruto || '').trim();
+  if (!t) return { erro: 'O ficheiro está vazio.' };
+  const eJsonl = /\.jsonl$/i.test(nome) || /\.ndjson$/i.test(nome);
+  if (!eJsonl) {
+    let d = null;
+    try { d = JSON.parse(t); } catch (e) { d = null; }
+    if (d) {
+      if (d.schema && d.schema > Math.max(SCHEMA_COLHEITA, SCHEMA_SESSAO)) {
+        return { erro: 'Este ficheiro é de um esquema mais novo do que este site conhece.' };
+      }
+      const arr = Array.isArray(d) ? d : Array.isArray(d.entrada) ? d.entrada
+        : Array.isArray(d.termos) ? d.termos : null;
+      if (!arr) return { erro: 'Não reconheço o formato: esperava entrada[], termos[] ou JSONL.' };
+      return { termos: arr.filter(x => x && typeof x.palavra === 'string') };
+    }
+  }
+  const linhas = [];
+  t.split(/\r?\n/).forEach(l => {
+    const s = l.trim();
+    if (!s) return;
+    try { const d = JSON.parse(s); if (d && typeof d.palavra === 'string') linhas.push(d); }
+    catch (e) { /* linha a meio, ou texto solto: ignora-se e diz-se o total no fim */ }
+  });
+  return linhas.length ? { termos: linhas } : { erro: 'Nenhuma linha aproveitável neste ficheiro.' };
+}
+
+/* --- 13.5.2 desenhar --- */
+function vaQuemHTML(quem) {
+  const ok = quem && quem.apelido && quem.surda;
+  return `
+  <section class="vq-quem${ok ? ' is-ok' : ''}" aria-labelledby="vq-quem-h">
+    <h2 id="vq-quem-h">${I.users} Quem está a validar</h2>
+    <p class="muted">Um sinal só passa de <em>colhido</em> a <em>confirmado</em> pelas mãos de alguém que usa
+    LGA. Para assinares um veredicto basta um <strong>apelido</strong> (não o teu nome completo) e dizer se
+    és <strong>pessoa surda que usa LGA</strong> ou <strong>cresceste a sinalizar</strong>. A região ajuda a
+    distinguir variantes. Não guardamos nada disto em servidor nenhum: fica neste aparelho e sai no ficheiro
+    que fores tu a exportar.</p>
+    <form id="vq-quem-form" class="vq-quem-f">
+      <p class="vq-campo"><label for="vq-apelido">Apelido com que assinas as validações</label>
+        <input id="vq-apelido" name="apelido" type="text" maxlength="40" autocomplete="off"
+          value="${esc(quem && quem.apelido || '')}" placeholder="ex.: marta-lubango"></p>
+      <p class="vq-campo"><label for="vq-regiao">Onde sinalizas (região, cidade ou país)</label>
+        <input id="vq-regiao" name="regiao" type="text" maxlength="40" autocomplete="off"
+          list="vq-regioes" value="${esc(quem && quem.regiao || '')}" placeholder="ex.: Huíla — Lubango">
+        <datalist id="vq-regioes">${VA_REGIOES.map(r => `<option value="${esc(r)}"></option>`).join('')}</datalist></p>
+      <p class="vq-campo vq-campo-caixa">
+        <label class="vq-caixa"><input type="checkbox" id="vq-surda" name="surda" value="sim"
+          ${quem && quem.surda ? 'checked' : ''}>
+          <span>Eu uso LGA: sou pessoa surda que sinaliza, ou cresci a sinalizar com pessoas surdas (CODA).
+          A equipa confirma quem assina antes de publicar — esta caixa é uma declaração, não uma verificação.</span></label></p>
+      <p class="vq-ac"><button class="btn btn-p btn-sm" type="submit">${I.check} Guardar neste aparelho</button>
+        <span class="muted" id="vq-quem-estado">${ok
+          ? `A assinar como <strong>${esc(quem.apelido)}</strong>${quem.regiao ? ' · ' + esc(quem.regiao) : ''}.`
+          : 'Ainda sem assinatura: não vais conseguir dar veredictos.'}</span></p>
+    </form>
+    <p class="muted vq-quem-fora">Se não te reconheces nisto, <strong>não valides</strong>: exporta a lista para
+    alguém que sinalize, ou usa a <a href="#/colher">Colheita</a> para descreveres o que vês — também ajuda.</p>
+  </section>`;
+}
+
+function vaCartaoHTML(r) {
+  const val = lerValidacoes()[r.chave];
+  const s = r.sessao;
+  const quadros = s ? s.repeticoes.reduce((a, x) => a + (x.quadros || []).length, 0) : (r.fotos || []).length;
+  const seg = s ? Math.round(s.repeticoes.reduce((a, x) => a + Number(x.dur_ms || 0), 0) / 1000) : 0;
+  const tremidas = s ? s.repeticoes.filter(x => x.qualidade && (x.qualidade.bandeiras || []).length) : [];
+  const fotos = vaQuadrosParaVer(r);
+  return `<li class="vq-item${val ? ' is-validado' : ''}" data-vq="${esc(r.chave)}">
+    <p class="vq-palavra"><strong>${esc(r.palavra)}</strong>
+      <span class="dic-badge is-${esc(r.estado || 'colhido')}">Colhido</span>
+      <span class="vq-tema">${esc(r.tema || 'Colheita')}</span>
+      ${val ? `<span class="vq-selo is-${esc(val.veredicto)}">${esc(VA_ROTULO(val.veredicto))} · ${esc(val.apelido || '—')}</span>` : ''}</p>
+    <p class="vq-meta">${s
+      ? `${s.repeticoes.length} ${pl(s.repeticoes.length, 'repetição', 'repetições')}${s.completa ? '' : ' (sessão incompleta)'} · ${quadros} ${pl(quadros, 'quadro', 'quadros')} · ${seg} ${pl(seg, 'segundo', 'segundos')}${s.consentimento && s.consentimento.em ? ' · consentimento registado' : ' · <strong>sem consentimento registado</strong>'}${s.consentimento && s.consentimento.quem === 'outra' ? ' · quem sinalizou é outra pessoa' : ''}`
+      : (r.data ? 'registado em ' + esc(r.data) + ' · ' : '') + 'só descrição, sem vídeo'}
+      · origem: ${r.origem === 'aparelho' ? 'este aparelho' : r.origem === 'importado' ? 'pacote importado' : 'pacote da equipa'}</p>
+    ${r.configuracao || r.lugar || r.movimento || r.mnm ? `<ul class="vq-desc">
+      ${r.configuracao ? `<li><span>Configuração da mão</span>${esc(r.configuracao)}</li>` : ''}
+      ${r.lugar ? `<li><span>Lugar</span>${esc(r.lugar)}</li>` : ''}
+      ${r.movimento ? `<li><span>Movimento</span>${esc(r.movimento)}</li>` : ''}
+      ${r.mnm ? `<li><span>Expressão</span>${esc(r.mnm)}</li>` : ''}</ul>` : ''}
+    ${r.fonte ? `<p class="vq-fonte">Onde se aprendeu: ${esc(r.fonte)}${r.video ? ' · <a href="' + esc(r.video) + '" target="_blank" rel="noopener">vídeo<span class="sr-only"> (abre em nova janela)</span></a>' : ''}</p>` : ''}
+    ${r.nota ? `<p class="vq-nota-original">${esc(r.nota)}</p>` : ''}
+    ${fotos.length ? `<div class="vq-quadros">${fotos.map((f, n) => `<img src="${esc(f)}" alt="Quadro ${n + 1} do sinal de ${esc(r.palavra)}, guardado neste browser" loading="lazy" decoding="async">`).join('')}
+      <p class="vq-quadros-n">${fotos.length} ${pl(fotos.length, 'imagem vista', 'imagens vistas')} — só as que estão neste aparelho. O clipe inteiro fica no aparelho de quem gravou.</p></div>` : ''}
+    ${tremidas.length ? `<p class="vq-bandeiras">${I.info} O verificador marcou ${tremidas.length} de ${s.repeticoes.length} ${pl(s.repeticoes.length, 'repetição', 'repetições')}: ${esc(tremidas.map(x => x.rep + 'ª ' + x.qualidade.bandeiras.join('/')).join(' · '))}. São queixas do <em>quadro</em> (luz, contraste, nitidez, movimento), não do sinal.</p>` : ''}
+    <p class="vq-verdicts" role="group" aria-label="Veredicto para ${esc(r.palavra)}">
+      ${VA_VEREDICTOS.map(v => `<button class="btn btn-o btn-sm vq-v vq-v-${v.c}" type="button"
+        data-va="${esc(r.chave)}" data-va-v="${v.c}" aria-pressed="${val && val.veredicto === v.c ? 'true' : 'false'}">${v.rotulo}</button>`).join('')}
+    </p>
+    ${val ? `<p class="vq-escolhi">${I.check} <strong>${esc(VA_ROTULO(val.veredicto))}.</strong> ${esc((VA_VEREDICTOS.find(v => v.c === val.veredicto) || {}).resumo || '')}</p>
+      <p class="vq-campo"><label for="vq-nota-${esc(r.chave)}">Nota do validador (opcional — o que mudaria, onde se faz, com quem aprendeste)</label>
+        <input id="vq-nota-${esc(r.chave)}" class="vq-nota" type="text" maxlength="400" autocomplete="off"
+          value="${esc(val.nota || '')}" data-va-nota="${esc(r.chave)}" placeholder="ex.: no Namibe fazem a palma virada para fora"></p>
+      <p class="vq-ac"><button class="btn btn-o btn-sm" type="button" data-va-apaga="${esc(r.chave)}">Retirar o meu veredicto</button>
+        <span class="muted">Assinado por ${esc(val.apelido || '—')}${val.regiao ? ' · ' + esc(val.regiao) : ''} em ${esc((val.em || '').slice(0, 10) || '—')}.</span></p>`
+      : `<p class="muted vq-semdado">Ainda sem veredicto neste aparelho.</p>`}
+  </li>`;
+}
+
+function vaFilaHTML() {
+  const val = lerValidacoes();
+  const todos = vaRegistos();
+  const feitas = todos.filter(r => val[r.chave]);
+  const pendentes = todos.filter(r => !val[r.chave]);
+  const lista = vaFiltro === 'validadas' ? feitas : vaFiltro === 'todas' ? todos : pendentes;
+  return `
+  <section class="vq-fila" aria-labelledby="vq-fila-h">
+    <h2 id="vq-fila-h">${I.check} A fila <span class="ch-n">${todos.length}</span></h2>
+    <p class="vq-meter" role="status">${todos.length
+      ? `<strong>${feitas.length}</strong> de ${todos.length} ${pl(todos.length, 'sinal tem', 'sinais têm')} veredicto neste aparelho · ${pendentes.length} à espera.`
+      : 'Nada para validar ainda.'}</p>
+    <ul class="vq-contagens">
+      ${VA_VEREDICTOS.map(v => {
+        const n = feitas.filter(r => val[r.chave].veredicto === v.c).length;
+        return `<li class="vq-c vq-c-${v.c}"><strong>${n}</strong> ${esc(v.rotulo)}</li>`;
+      }).join('')}
+    </ul>
+    ${todos.length ? `<p class="vq-filtros" role="group" aria-label="Filtrar a fila">
+      ${[['pendentes', 'À espera'], ['validadas', 'Já validei'], ['todas', 'Tudo']].map(([c, l]) =>
+        `<button class="btn btn-o btn-sm${vaFiltro === c ? ' is-on' : ''}" type="button" data-vq-f="${c}"
+          aria-pressed="${vaFiltro === c ? 'true' : 'false'}">${l}</button>`).join('')}</p>` : ''}
+    ${lista.length ? `<ul class="vq-lista" id="vq-lista">${lista.map(vaCartaoHTML).join('')}</ul>`
+      : `<p class="ch-vazio">${vaFiltro === 'validadas'
+        ? 'Ainda não deste nenhum veredicto. Escolhe um sinal na fila «À espera».'
+        : 'A fila está vazia: não há sinais <em>colhidos</em> neste aparelho. Regista um na <a href="#/colher">Colheita</a> ou larga aqui em baixo o pacote que a equipa te enviou.'}</p>`}
+  </section>`;
+}
+
+function validarlheiraHTML() {
+  const quem = lerQuemValida();
+  return `
+<div class="wrap page-head">
+  <p class="eyebrow">${I.access} Validação</p>
+  <h1 class="ch-h">A fila de validação</h1>
+  <p class="lead">Cada sinal que a Colheita regista chega como <strong>colhido</strong>: alguém descreveu-o ou
+  filmou-o, mas ninguém confirmou ainda que é assim que se sinaliza em Angola. Esta página existe para essa
+  confirmação — três palavras (<strong>correcto</strong>, <strong>variante regional</strong>, <strong>errado</strong>),
+  uma assinatura, e um ficheiro que volta para a equipa.</p>
+</div>
+<div class="wrap">
+  <div class="note-band">
+    <p>${I.shield} <strong>Nada sai deste browser.</strong> Não há servidor nem contas: os teus veredictos
+    ficam guardados neste aparelho (<code>${VA_CHAVE}</code>) e só partem quando fores tu a descarregar o
+    JSONL e a enviá-lo. Não pedimos o teu nome, telefone, nem qualquer dado de saúde.</p>
+    <p>${I.info} <strong>Esta página não promove estados.</strong> Enquanto a equipa não correr
+    <code>tools/ingerir-validacoes.cjs</code> sobre o ficheiro que exportares, o sinal continua «colhido» no
+    site. Um veredicto assinado chega para <em>confirmado</em>; dois assinadores diferentes chegam para
+    <em>aprovado</em>; «errado» passa a <em>rejeitado</em> e sai da lista de ensino.</p>
+  </div>
+  <p class="vq-aviso" id="vq-aviso" role="status"></p>
+  ${vaQuemHTML(quem)}
+  <p class="sr-only" id="vq-f-live" role="status"></p>
+  <div id="vq-fila">${vaFilaHTML()}</div>
+  <section class="vq-pacote" aria-labelledby="vq-pacote-h">
+    <h2 id="vq-pacote-h">${I.search} Trazer um pacote da equipa para validar</h2>
+    <p class="muted">Larga aqui o <code>pamosii-colheita-*.json</code> ou o <code>pamosii-sessoes-*.jsonl</code>
+    que recebeste. Os registos entram na fila e os quadros que vieram no ficheiro ficam visíveis para
+    julgares — <strong>mas não se guardam</strong>: ao mudares de página ou fechares o browser o pacote
+    desaparece. É de propósito: as imagens são de quem gravou, e não há razão para as fixar no teu aparelho.
+    O que fica é o teu veredicto, assinado pela palavra.</p>
+    <p class="vq-ac"><label class="ch-import" for="vq-file">${I.doc} Escolher o ficheiro</label>
+      <input id="vq-file" type="file" accept="application/json,.json,.jsonl,.ndjson,.txt"></p>
+  </section>
+  <section class="vq-export" aria-labelledby="vq-export-h">
+    <h2 id="vq-export-h">${I.doc} Devolver o trabalho feito</h2>
+    <p class="muted">Uma linha por veredicto, com a assinatura, a região e a hora. A junta com o que a
+    Colheita exportou para a equipa, e é esta que muda estados no dicionário.</p>
+    <p class="vq-ac">
+      <button class="btn btn-a btn-sm" type="button" id="vq-export">${I.doc} Exportar validações (JSONL)</button>
+      <button class="btn btn-o btn-sm" type="button" id="vq-export-json">Exportar (JSON)</button>
+      <button class="btn btn-o btn-sm" type="button" id="vq-copiar">Copiar resumo</button>
+    </p>
+    <p class="vq-ac"><button class="btn btn-o btn-sm" type="button" id="vq-apagar">Apagar os meus veredictos deste aparelho</button></p>
+  </section>
+  <section class="bib-vlibras" aria-labelledby="vq-honesto-h">
+    <h3 id="vq-honesto-h">${I.users} O que três botões não resolvem</h3>
+    <p class="muted" style="max-width:66ch">A fila julga o que está escrito e os quadros que existem. Não pode
+    julgar um clipe que nunca saiu do aparelho de quem o gravou — por isso a mesma palavra pode precisar de
+    duas visões. E um «variante regional» não é um erro: é a prova de que a LGA varia de região para região,
+    e é exactamente essa informação que um dicionário a sério tem de guardar. O pagamento a quem sinaliza e a
+    quem valida é trabalho da equipa, combinado antes (<code>docs/colheita-sinais-lga.md</code>, §1 e §6).</p>
+  </section>
+</div>`;
+}
+
+/* --- 13.5.3 pintar, validar, exportar --- */
+function pintaFilaValidacao() {
+  const raiz = $('#vq-fila');
+  if (!raiz) return;
+  raiz.innerHTML = vaFilaHTML();
+}
+
+/* a fila é redesenhada inteira: sem devolver o foco ao botão da mesma palavra,
+   um teclado ficava caído no fim da página a cada veredicto */
+function vaDevolveFoco(chave, veredicto) {
+  const botoes = [...document.querySelectorAll('[data-va]')].filter(b => b.dataset.va === chave);
+  const alvo = botoes.find(b => b.dataset.vaV === veredicto) || botoes[0];
+  if (alvo) alvo.focus({ preventScroll: true });
+}
+
+function vaAviso(t) {
+  const m = $('#vq-aviso');
+  if (!m) return;
+  m.innerHTML = t;
+  m.classList.add('is-on');
+  /* só persegue a faixa quando ela está fora do ecrã: quem está no meio da fila a
+     carregar em «Correcto» não pode perder o sítio onde estava */
+  const caix = m.getBoundingClientRect();
+  if (caix.top < 0 || caix.bottom > innerHeight) {
+    m.scrollIntoView({ block: 'nearest', behavior: movReduzido() ? 'auto' : 'smooth' });
+  }
+}
+
+function vaRegistaVeredicto(chave, veredicto) {
+  const quem = lerQuemValida();
+  if (!(quem && quem.apelido && quem.surda)) {
+    vaAviso('Primeiro diz quem está a validar: preenche o <strong>Apelido</strong> e marca a caixa de quem usa LGA, aqui em cima.');
+    const a = $('#vq-apelido');
+    if (a) { a.focus(); a.scrollIntoView({ block: 'center', behavior: movReduzido() ? 'auto' : 'smooth' }); }
+    return;
+  }
+  const r = vaRegistos().find(x => x.chave === chave);
+  if (!r) { vaAviso('Esse registo já não está na fila — provavelmente o pacote foi fechado e não voltou a ser largado aqui.'); return; }
+  const mapa = lerValidacoes();
+  const antigo = mapa[chave];
+  /* no botão já carregado, carregar de novo desfaz: é o que `aria-pressed` promete */
+  if (antigo && antigo.veredicto === veredicto) { vaRetirar(chave); return; }
+  const s = r.sessao;
+  mapa[chave] = {
+    palavra: r.palavra, tema: r.tema || 'Colheita', veredicto,
+    nota: (antigo && antigo.nota) || '',
+    apelido: String(quem.apelido || '').slice(0, 40),
+    regiao: String(quem.regiao || '').slice(0, 40),
+    surda: !!quem.surda, em: new Date().toISOString(),
+    origem: r.origem, estado_antes: 'colhido',
+    sessao: s ? s.id || undefined : undefined,
+    reps: s ? s.repeticoes.length : undefined,
+    quadros: s ? s.repeticoes.reduce((a, x) => a + (x.quadros || []).length, 0) : (r.fotos || []).length,
+    segundos: s ? Math.round(s.repeticoes.reduce((a, x) => a + Number(x.dur_ms || 0), 0) / 1000) : undefined,
+    consentido_em: s && s.consentimento ? s.consentimento.em : undefined,
+  };
+  if (!guardarValidacoes(mapa)) { delete mapa[chave]; vaAviso('Este aparelho já não tem espaço para guardar mais veredictos: exporta o que já tens e apaga os antigos.'); return; }
+  pintaFilaValidacao();
+  vaDevolveFoco(chave, veredicto);
+  vaAviso(`Registado: «${esc(r.palavra)}» — <strong>${esc(VA_ROTULO(veredicto))}</strong>, assinado por ${esc(mapa[chave].apelido)}. `
+    + 'O site continua a mostrá-lo como colhido até a equipa importar o ficheiro.');
+}
+
+/* tirar não exige assinatura: quem já validou pode sempre desfazer o que fez */
+function vaRetirar(chave) {
+  const mapa = lerValidacoes();
+  const nome = (mapa[chave] || {}).palavra || chave;
+  if (!mapa[chave]) return;
+  delete mapa[chave];
+  guardarValidacoes(mapa);
+  pintaFilaValidacao();
+  vaDevolveFoco(chave);
+  vaAviso(`Retirado o veredicto de «${esc(nome)}». Volta a estar à espera.`);
+}
+
+function vaLinhaExport(r, quem) {
+  return {
+    schema: SCHEMA_VALIDACAO, tipo: 'pamosii-validacao',
+    palavra: r.palavra, chave: r.chave || vaChave(r.palavra), tema: r.tema || 'Colheita',
+    veredicto: r.veredicto, rotulo_veredicto: VA_ROTULO(r.veredicto),
+    nota_validador: r.nota || undefined,
+    validado_por: r.apelido, validadora_surda: !!r.surda,
+    regiao: r.regiao || undefined, validado_em: r.em,
+    origem: r.origem, estado_antes: 'colhido',
+    sessao: r.sessao || undefined, reps: r.reps, quadros: r.quadros, segundos: r.segundos,
+    consentido_em: r.consentido_em || undefined,
+    aparelho: 'local', gerado_em: quem || new Date().toISOString(),
+  };
+}
+
+function vaExportar(jsonl) {
+  const val = lerValidacoes();
+  const chaves = Object.keys(val);
+  if (!chaves.length) { vaAviso('Ainda não há veredicto para exportar — dá primeiro um dos três botões num sinal da fila.'); return; }
+  const gerado = new Date().toISOString();
+  const dia = gerado.slice(0, 10);
+  const linhas = chaves.map(k => vaLinhaExport(val[k], gerado));
+  if (jsonl) {
+    descarregarFicheiro(`pamosii-validacoes-${dia}.jsonl`,
+      linhas.map(l => JSON.stringify(l)).join('\n') + '\n', 'application/x-ndjson;charset=utf-8');
+  } else {
+    descarregarFicheiro(`pamosii-validacoes-${dia}.json`, JSON.stringify({
+      schema: SCHEMA_VALIDACAO, tipo: 'pamosii-validacoes', gerado_em: gerado,
+      total: linhas.length, validacoes: linhas,
+    }, null, 2));
+  }
+  vaAviso(`${linhas.length} ${pl(linhas.length, 'veredicto exportado', 'veredictos exportados')} para este aparelho. `
+    + 'O site não enviou nada por ti: o ficheiro está na tua pasta de downloads.');
+}
+
+function vaResumo() {
+  const val = lerValidacoes();
+  const linhas = Object.values(val);
+  if (!linhas.length) { vaAviso('Nada para copiar: ainda não deste veredictos.'); return; }
+  const texto = ['PAMOSII — VALIDAÇÃO DE SINAIS LGA', 'Gerado em ' + new Date().toISOString(), '',
+    ...VA_VEREDICTOS.map(v => v.rotulo.toUpperCase() + ': ' + linhas.filter(l => l.veredicto === v.c).length), '',
+    ...linhas.map(l => `- ${l.palavra} [${l.tema}] → ${VA_ROTULO(l.veredicto)} · assinado por ${l.apelido}${l.regiao ? ' (' + l.regiao + ')' : ''} em ${(l.em || '').slice(0, 10)}${l.nota ? '\n  nota: ' + l.nota : ''}`),
+    '', 'Nada disto mudou o site: é a lista que a equipa vai importar.'].join('\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texto).then(() => vaAviso('Resumo copiado.'), () => vaAviso('O browser não deixou copiar. Usa «Exportar (JSONL)' + '.'));
+  } else vaAviso('Este browser não dá acesso à área de transferência. Usa «Exportar (JSONL)».');
+}
+
+function bindValidar() {
+  const form = $('#vq-quem-form');
+  if (form) form.addEventListener('submit', e => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const apelido = String(fd.get('apelido') || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+    const regiao = String(fd.get('regiao') || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+    const surda = fd.get('surda') === 'sim';
+    if (!apelido) { vaAviso('Falta o apelido com que assinas — não precisa de ser o teu nome.'); $('#vq-apelido').focus(); return; }
+    if (!surda) { vaAviso('Só quem usa LGA pode validar. Se não é o teu caso, exporta a lista para alguém que sinalize — ou descreve o sinal na Colheita.'); $('#vq-surda').focus(); return; }
+    try { localStorage.setItem(VA_QUEM, JSON.stringify({ apelido, regiao, surda, desde: (lerQuemValida() || {}).desde || new Date().toISOString() })); }
+    catch (e2) { vaAviso('Este aparelho não tem espaço para guardar a assinatura.'); return; }
+    const est = $('#vq-quem-estado');
+    if (est) est.innerHTML = `A assinar como <strong>${esc(apelido)}</strong>${regiao ? ' · ' + esc(regiao) : ''}.`;
+    const sec = document.querySelector('.vq-quem');
+    if (sec) sec.classList.add('is-ok');
+    pintaFilaValidacao();
+    vaAviso(`Assinatura guardada neste aparelho: ${esc(apelido)}. Já podes dar veredictos na fila.`);
+  });
+
+  const imp = $('#vq-file');
+  if (imp) imp.addEventListener('change', () => {
+    const f = imp.files && imp.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onerror = () => { vaAviso('Não consegui ler esse ficheiro.'); imp.value = ''; };
+    r.onload = () => {
+      const lido = vaLePacote(String(r.result || ''), f.name || '');
+      if (lido.erro) { vaAviso(esc(lido.erro)); imp.value = ''; return; }
+      vaPacote = lido.termos;
+      pintaFilaValidacao();
+      vaAviso(`${esc(f.name || 'o ficheiro')}: ${lido.termos.length} ${pl(lido.termos.length, 'linha lida', 'linhas lidas')} — a fila já as mostra, só nesta visita.`);
+      imp.value = '';
+    };
+    r.readAsText(f);
+  });
+
+  const ex = $('#vq-export'); if (ex) ex.addEventListener('click', () => vaExportar(true));
+  const exj = $('#vq-export-json'); if (exj) exj.addEventListener('click', () => vaExportar(false));
+  const cp = $('#vq-copiar'); if (cp) cp.addEventListener('click', vaResumo);
+  const ap = $('#vq-apagar');
+  if (ap) ap.addEventListener('click', () => {
+    const n = Object.keys(lerValidacoes()).length;
+    if (!n) { vaAviso('Não há veredictos para apagar.'); return; }
+    if (!window.confirm(`Apagar ${n === 1 ? 'o' : 'os'} ${n} ${pl(n, 'veredicto guardado', 'veredictos guardados')} neste aparelho? Não há cópia em lado nenhum.`)) return;
+    try { localStorage.removeItem(VA_CHAVE); } catch (e) { /* nada guardado */ }
+    pintaFilaValidacao();
+    vaAviso(`${n === 1 ? 'Apagado' : 'Apagados'} ${n} ${pl(n, 'veredicto', 'veredictos')}. Se não exportaste antes, perderam-se — não há servidor onde os ir buscar.`);
+  });
+}
+
+/* um listener delegado, ligado uma vez: serve todas as repintagens da fila */
+document.addEventListener('click', e => {
+  const f = e.target.closest('[data-vq-f]');
+  if (f) {
+    vaFiltro = f.dataset.vqF;
+    pintaFilaValidacao();
+    /* os filtros são redesenhados com a fila: sem isto o teclado cai no <body> */
+    const novo = document.querySelector('[data-vq-f="' + vaFiltro + '"]');
+    if (novo) novo.focus({ preventScroll: true });
+    const live = $('#vq-f-live');
+    if (live) {
+      const val = lerValidacoes();
+      const todos = vaRegistos();
+      const n = vaFiltro === 'validadas' ? todos.filter(r => val[r.chave]).length
+        : vaFiltro === 'pendentes' ? todos.filter(r => !val[r.chave]).length
+        : todos.length;
+      live.textContent = `A mostrar ${n} ${pl(n, 'sinal', 'sinais')} ${vaFiltro === 'validadas' ? 'com o teu veredicto' : vaFiltro === 'pendentes' ? 'à espera' : 'no total'}.`;
+    }
+    return;
+  }
+  const b = e.target.closest('[data-va]');
+  if (b) { vaRegistaVeredicto(b.dataset.va, b.dataset.vaV); return; }
+  const d = e.target.closest('[data-va-apaga]');
+  if (d) { vaRetirar(d.dataset.vaApaga); return; }
+});
+document.addEventListener('change', e => {
+  const i = e.target.closest('[data-va-nota]');
+  if (!i) return;
+  const mapa = lerValidacoes();
+  const k = i.dataset.vaNota;
+  if (!mapa[k]) return;
+  mapa[k].nota = String(i.value || '').replace(/\s+/g, ' ').trim().slice(0, 400);
+  guardarValidacoes(mapa);
+  vaAviso('Nota guardada neste aparelho para «' + esc(mapa[k].palavra) + '».');
+});
+
+on('/validar', () => ({
+  active: '/validar',
+  h: shell(validarlheiraHTML(), '/validar'),
+  bind: bindValidar,
+  meta: {
+    t: 'Fila de validação de sinais LGA — Pamosii Viva Surdo',
+    d: 'Três veredictos por sinal recolhido — correcto, variante regional ou errado — assinados por um apelido, com região e data. Fica neste browser e exporta-se em JSONL para a equipa promover o estado no dicionário. O site nunca se auto-valida.',
+  },
+}));
 
 /* ============================================================================
    14. MARCAÇÃO DE TEMPOS POR SINAL — `#/marcar`
