@@ -234,6 +234,38 @@ por_gravar → gravado → por_rever → aprovado (2 pessoas) → publicado
 Um sinal pode ficar `aprovado` para estudo (aparecer no dicionário) e mesmo assim
 `por_rever` para reconhecimento automático: a exigência de variação entre pessoas é maior.
 
+### 6.1 O que o site já faz hoje (`#/validar`)
+
+A fila de validação é a versão mínima e honesta do §6, com o vocabulário que uma pessoa
+surda angolana usa para julgar um sinal, e não com o vocabulário de um formulário:
+
+| Veredicto | O que significa | Peso |
+| --- | --- | --- |
+| `correcto` | é este o sinal usado em Angola e a descrição corresponde ao que se vê | aprova |
+| `variante` | também é LGA, mas na minha região faz-se de outra maneira | aprova (a variação fica registada) |
+| `errado` | não é este o sinal, ou a descrição não bate com o que se vê | rejeita |
+
+Regras de contagem, aplicadas **fora do browser**, por `tools/ingerir-validacoes.cjs`:
+
+1. um assinador que usa LGA com `correcto` ou `variante` → `confirmado`;
+2. **dois assinadores diferentes** a aprovar → `aprovado`;
+3. `errado` em maioria contra as aprovações → `rejeitado` (sai da lista de ensino, mas o
+   registo fica para nova recolha);
+4. empate (1 contra 1, 2 contra 2) → **nada se move**: falta uma terceira opinião, que é
+   exactamente o que o §6 pede;
+5. o mesmo apelido a mudar de ideias conta como o veredicto mais recente — não são dois
+   votos.
+
+Quem assina tem de declarar que usa LGA (pessoa surda que sinaliza, ou CODA) e assina com um
+**apelido**, não com o nome completo; a região é opcional e é o que transforma um
+`variante regional` em informação útil em vez de ruído. A caixa «uso LGA» é uma declaração,
+não uma verificação: cabe à equipa confirmar quem assina antes de publicar.
+
+O que a página **não** faz, e é testado para não fazer: nenhuma página do site escreve
+`confirmado`, `aprovado` ou `rejeitado`; os veredictos vivem em `localStorage` (`vs.validar`)
+e só saem num JSONL que a pessoa descarrega e envia. Sem servidor, sem contas, sem pedir
+telefone, nome completo ou dados de saúde.
+
 ---
 
 ## 7. Como isto entra no site (sem reescrever nada)
@@ -253,6 +285,18 @@ Um sinal pode ficar `aprovado` para estudo (aparecer no dicionário) e mesmo ass
   `quadros`/`fotos` a contagem (`tem_fotos`) para nenhuma imagem acabar num repositório por
   acidente, e **recusa** sessão sem consentimento. Só promove a `confirmado` quando a linha
   traz `validado_por` — que é o §6 a acontecer, não o código a decidir por ele.
+- **A segunda ponte** (veredictos): `#/validar` exporta `pamosii-validacoes-<data>.jsonl`,
+  uma linha por veredicto, com `schema: 1`, `tipo: "pamosii-validacao"`, `validado_por`,
+  `validadora_surda`, `regiao`, `validado_em` e `estado_antes: "colhido"`. Corre-se
+  `node tools/ingerir-validacoes.cjs <veredictos>.jsonl --dry-run` para ver a decisão, e sem
+  `--dry-run` para a aplicar. O script recusa linhas sem assinatura, sem
+  `validadora_surda: true`, com esquema desconhecido ou com veredicto fora do vocabulário; a
+  nota que escreve no ficheiro é reconstruída a cada execução, por isso correr duas vezes não
+  duplica texto. `tools/exemplos/validacoes-exemplo.jsonl` mostra todos os casos (aprovação,
+  variante, empate, auto-correcção, linha anónima e linha de quem não é sinalizador).
+- A cadeia completa, num sítio só: `/colher` → `ingerir-colheita.cjs` → `#/validar` →
+  `ingerir-validacoes.cjs` → `app/assets/glossario-extra.json`. Ambos os scripts aceitam
+  `--destino=` para ensaiar a corrente inteira sobre uma cópia.
 - As marcações de tempo (`#/marcar`) têm a sua própria ponte:
   `node tools/ingerir-marcacoes.cjs marcacoes.json --dry-run` produz os segmentos a cortar
   por palavra — o que falta para o Signer encadear clipes reais em vez de glifos.

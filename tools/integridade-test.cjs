@@ -299,6 +299,77 @@ const appSemCom = app.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, ''
 if (/navigator\.sendBeacon/.test(appSemCom)) falhas.push('O site usa sendBeacon — dados a sair do aparelho.');
 if (/method:\s*['"]POST['"]/.test(appSemCom)) falhas.push('O site faz um POST — a recolha tinha de ser 100% local.');
 
+/* ------------------------------------------------- 12. fila de validação (#/validar) */
+/* FASE 1B (4). A regra de fundo: o browser RECOLHE veredictos assinados, e só um
+   script fora do browser move estados. Se alguém escrever `estado: 'confirmado'`
+   em app/app.js, uma página passou a auto-validar — e é exactamente isso que o
+   brief proíbe. */
+const FilaValidos = ['confirmado', 'aprovado', 'rejeitado'];
+for (const e of FilaValidos) {
+  if (new RegExp("estado:\\s*'" + e + "'").test(app)) {
+    falhas.push('app.js escreve estado «' + e + '»: nenhuma página deste site pode promover ou rejeitar um sinal.');
+  }
+}
+const ingVal = path.join(__dirname, 'ingerir-validacoes.cjs');
+if (!fs.existsSync(ingVal)) {
+  falhas.push('tools/ingerir-validacoes.cjs desapareceu: os veredictos de #/validar não têm quem os aplique.');
+} else {
+  const iv = fs.readFileSync(ingVal, 'utf8');
+  /* 12.1 o vocabulário dos dois lados tem de ser o mesmo, letra por letra */
+  const blocoVA = app.slice(app.indexOf('const VA_VEREDICTOS'), app.indexOf('const VA_REGIOES'));
+  const doSite = [...blocoVA.matchAll(/c:\s*'([a-z]+)'/g)].map(m => m[1]);
+  const doScript = [...iv.matchAll(/PESO\s*=\s*\{([^}]*)\}/g)].flatMap(m => [...m[1].matchAll(/([a-z]+)\s*:/g)].map(x => x[1]));
+  if (doSite.length !== 3) falhas.push('VA_VEREDICTOS já não tem três veredictos (correcto / variante / errado).');
+  if (doScript.length !== 3) falhas.push('tools/ingerir-validacoes.cjs já não declara três veredictos em PESO.');
+  const soSite = doSite.filter(x => !doScript.includes(x));
+  const soScript = doScript.filter(x => !doSite.includes(x));
+  if (soSite.length || soScript.length) {
+    falhas.push('O vocabulário dos veredictos divergiu — site: ' + (soSite.join(',') || 'ok')
+      + ' | script: ' + (soScript.join(',') || 'ok')
+      + '. Um veredicto que o outro lado não conhece é apagado em silêncio.');
+  }
+  /* 12.2 o script não pode aceitar um veredicto sem assinatura, nem assinatura sem
+     declaração de quem usa LGA — é o §6 do protocolo */
+  if (!/validado_por/.test(iv)) falhas.push('tools/ingerir-validacoes.cjs deixou de exigir `validado_por`.');
+  if (!/sem `validado_por`/.test(iv)) falhas.push('tools/ingerir-validacoes.cjs já recusa veredictos anónimos, mas deixou de o dizer.');
+  if (!/validadora_surda\s*!==\s*true/.test(iv)) falhas.push('tools/ingerir-validacoes.cjs passou a aceitar assinaturas de quem não declarou usar LGA.');
+  if (!/rejeitado/.test(iv) || !/aprovado/.test(iv)) falhas.push('tools/ingerir-validacoes.cjs deixou de saber escrever os estados que a página promete.');
+  if (!/empate/.test(iv)) falhas.push('tools/ingerir-validacoes.cjs deixou de tratar o empate (1 contra 1) como «falta uma terceira opinião» em vez de escolher por nós.');
+  /* 12.3 o dicionário lê ESTADO_GLOSSARIO[estado].nota sem rede: um estado escrito
+     pelo script e ausente da tabela daria um erro em cadeia em /dicionario e /pamosii */
+  for (const e of ['colhido', 'confirmado', 'aprovado', 'rejeitado']) {
+    if (!new RegExp("'" + e + "':\\s*\\{\\s*rotulo:").test(app)) {
+      falhas.push('ESTADO_GLOSSARIO não conhece «' + e + '»: o dicionário rebentaria ao mostrar um termo importado.');
+    }
+  }
+  if (!/\[\s*'confirmado',\s*'aprovado',\s*'rejeitado'\s*\]/.test(app)) {
+    falhas.push('app.js deixou de deixar passar os estados publicados pela equipa — um termo «aprovado» voltaria a aparecer como «colhido».');
+  }
+}
+/* 12.4 a página tem de continuar honesta sobre o que faz com o veredicto */
+const blocoValidar = (function () {
+  const a = app.indexOf('13.5 FILA DE VALIDAÇÃO');
+  const b = app.indexOf("on('/validar'");
+  return a >= 0 && b > a ? app.slice(a, b + 1600) : '';
+})();
+if (!blocoValidar) falhas.push('A fila de validação desapareceu do código de #/validar.');
+if (blocoValidar) {
+  if (!/Nada sai deste browser/.test(blocoValidar)) falhas.push('#/validar deixou de dizer que nada sai do browser.');
+  if (!/não promove estados/.test(blocoValidar)) falhas.push('#/validar deixou de dizer que não promove estados sozinha.');
+  if (!/tipo:\s*'pamosii-validacao'/.test(blocoValidar)) falhas.push('A exportação de #/validar perdeu o tipo `pamosii-validacao`: o ingestor deixaria de a reconhecer.');
+  if (!/SCHEMA_VALIDACAO/.test(blocoValidar)) falhas.push('A exportação de #/validar deixou de declarar esquema — a equipa não saberia o que está a ler.');
+  if (!/validado_por:\s*r\.apelido/.test(blocoValidar)) falhas.push('A exportação deixou de levar a assinatura de quem validou.');
+  if (!/role="status"/.test(blocoValidar)) falhas.push('#/validar deixou de anunciar os resultados a leitores de ecrã.');
+  if (!/localStorage/.test(blocoValidar)) falhas.push('#/validar deixou de guardar os veredictos no aparelho (iriam perder-se ao mudar de página).');
+  const semComVA = blocoValidar.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  if (/navigator\.sendBeacon|XMLHttpRequest|method:\s*['"]POST|fetch\(/.test(semComVA)) {
+    falhas.push('O código da fila de validação faz rede: os veredictos têm de ficar no aparelho.');
+  }
+  if (/navigator\.geolocation|input.*type=.password/i.test(semComVA)) falhas.push('#/validar passou a pedir dados que não precisa.');
+}
+if (!/\{ path: '\/validar', rotulo: 'Validação'/.test(app)) falhas.push('#/validar saiu do menu: ninguém encontra a fila.');
+if (!/const VA_CHAVE = 'vs\.validar'/.test(app)) falhas.push('A chave de armazenamento da fila mudou sem actualizar a promessa escrita na página.');
+
 /* ----------------------------------------------------------------- relatorio */
 const saida = [];
 saida.push('Integridade do Pamosii — ' + falhas.length + ' falha(s), ' + avisos.length + ' aviso(s).');

@@ -131,11 +131,14 @@ tools/
 ├── engine-test.cjs      # corre o motor de glosa do Pamosii em Node (node tools/engine-test.cjs)
 ├── integridade-test.cjs # lê o código-fonte e falha se alguma interface prometer o que não existe
 ├── ingerir-colheita.cjs # pacote JSON ou JSONL da Colheita → glossario-extra.json (--dry-run, --mostra)
+├── ingerir-validacoes.cjs # veredictos de #/validar → estados do glossario-extra.json (--dry-run, --mostra)
 ├── ingerir-marcacoes.cjs # marcações de tempos exportadas → segmentos para cortar os clipes
+├── auditoria-visual.cjs # Chrome headless por CDP: overflow, alvos de toque e contraste nas rotas
 ├── teste-embed.html     # página mínima para provar o postMessage do Signer incorporado
 ├── serve.cjs            # servidor estático de teste (porta 8123)
 └── exemplos/
-    └── sessoes-exemplo.jsonl # sessões exportadas pelo browser (quadros substituídos por marcador)
+    ├── sessoes-exemplo.jsonl    # sessões exportadas pelo browser (quadros substituídos por marcador)
+    └── validacoes-exemplo.jsonl # todos os casos da fila de validação, incluindo os que devem ser recusados
 docs/
 └── colheita-sinais-lga.md   # protocolo de gravação/validação necessário para alguma vez
                              # haver reconhecimento de sinais (não é código; ver abaixo)
@@ -159,12 +162,13 @@ Fora do repositório de trabalho: `.deploy-gh/` é o clone ligado ao repo public
 | `#/evangelismo`   | Evangelismo                   | Roteiros de partilha com frases prontas, cada uma com a sequência de sinais e o modo de teste em Libras |
 | `#/colher`        | Colheita participada          | Qualquer pessoa regista sinais que conhece — por escrito ou numa sessão de gravação guiada (consentimento + 3 repetições + 1 lenta, sem áudio); lista das palavras sem sinal encontradas no site; exportação local em JSON/TXT/JSONL |
 | `#/colher/:palavra` | Registar uma palavra        | Abre o formulário já preenchido com essa palavra (venha do dicionário, do Pamosii, da Bíblia ou do Signer) |
+| `#/validar`       | Fila de validação              | Três veredictos por sinal colhido — **correcto / variante regional / errado** — assinados por um apelido, com região; fica no aparelho e exporta-se em JSONL para a equipa. A página nunca promove estados |
 | `#/marcar`        | Marcação de tempos            | Ferramenta de revisão: marca os segundos em que o sinal de cada palavra aparece nas 17 aulas; exporta JSON/TXT e come-se em `tools/ingerir-marcacoes.cjs` |
 | `#/fora`          | Fora deste site               | As três formas de usar o Signer fora desta página: partilhar no Android, extensão Chrome, e incorporar por iframe |
 | `#/sobre`         | Sobre                         | Missão, modelo (fontes públicas), reconhecimento com atribuição de fonte, valores |
 | `#/contacto`      | Contacto                      | Apenas canais verificados: Facebook, Instagram, YouTube + playlist |
 
-A rota antiga `#/catalogo` redirecciona para `#/cursos`. Além destas 17 vistas registadas, há dois widgets que não são rotas: o **Pamosii Signer** (botão flutuante presente em todas as páginas) e o **painel de acessibilidade**.
+A rota antiga `#/catalogo` redirecciona para `#/cursos`. Além destas 18 vistas registadas, há dois widgets que não são rotas: o **Pamosii Signer** (botão flutuante presente em todas as páginas) e o **painel de acessibilidade**.
 
 ---
 
@@ -329,7 +333,23 @@ O gargalo real do projecto não é o código: é não haver dicionário de LGA s
 7. **Exportar.** `Exportar sessões (JSONL)` escreve **uma linha por repetição** (`pamosii-sessoes-AAAA-MM-DD.jsonl`, `application/x-ndjson`), exactamente o formato do §4 do protocolo (`schema: 2`). O pacote JSON e o TXT também levam o bloco `sessao`.
 8. **Ingerir.** `node tools/ingerir-colheita.cjs <ficheiro>.jsonl [--dry-run] [--mostra]` aceita JSONL, agrupa as linhas por palavra, soma os segundos, e **recusa** qualquer sessão sem consentimento registado. Lê os esquemas 1 e 2 do `SCHEMA_SESSAO` e recusa um mais recente do que ele; de cada repetição com `qualidade` marcada saem `sessao.regravar` (ex. `"4ª:brilho/movimento"`) e `sessao.leitura` com os números, para a fila de «há que filmar outra vez» não depender de abrir clipes um a um. Com `--mostra` imprime só os termos limpos, para rever antes de escrever `glossario-extra.json`. `tools/exemplos/sessoes-exemplo.jsonl` é o exemplo de teste (dry-run apenas).
 
-**Porque é que isto não é "validação":** o site usa três estados separados e visíveis — `a-validar` (inferido do programa público), `colhido` (registo da comunidade, sem revisão) e `confirmado` (revisto por pessoa surda utilizadora de LGA). A ingestão automática **nunca** escreve `confirmado` sem `validado_por`, e as entradas `colhido` não ganham vídeo nem honram a autoridade de uma aula. Uma gravação guardada também não vale por si: fica `colhido` até haver revisão humana.
+**Porque é que isto não é "validação":** o site usa estados separados e visíveis — `a-validar` (inferido do programa público), `colhido` (registo da comunidade, sem revisão), `confirmado` (revisto por uma pessoa surda utilizadora de LGA), `aprovado` (dois sinalizadores diferentes) e `rejeitado` (um sinalizador surdo disse que não é LGA). Só a Colheita escreve `colhido`; `confirmado`, `aprovado` e `rejeitado` **só** saem de `tools/ingerir-colheita.cjs` e `tools/ingerir-validacoes.cjs`, nunca do browser. A ingestão automática **nunca** escreve `confirmado` sem `validado_por`, e as entradas `colhido` não ganham vídeo nem honram a autoridade de uma aula. Uma gravação guardada também não vale por si: fica `colhido` até haver revisão humana.
+
+---
+
+## Fila de validação (`#/validar`) — o §6 do protocolo, no browser
+
+A Colheita junta sinais; esta página é onde uma pessoa surda angolana diz o que valem. É deliberadamente pequena, porque um veredicto sem gente por trás não vale nada:
+
+1. **Quem valida assina.** Um **apelido** (não o nome completo), a região onde sinaliza e a declaração «uso LGA» (pessoa surda que sinaliza ou CODA). Sem as duas primeiras, os botões explicam o que falta e põem o foco no campo — não falham em silêncio. A caixa é uma declaração, não uma verificação: a equipa confirma quem assina antes de publicar.
+2. **Três veredictos, com o sentido escrito por baixo.** `Correcto` (é este o sinal em Angola e a descrição corresponde), `Variante regional` (também é LGA, mas na minha região faz-se assim — a variação fica assinada com a palavra) e `Errado` (não é este o sinal; assim não se ensina). Cada botão é `aria-pressed`, tem 44px, e o foco volta ao botão que a pessoa carregou depois da repintura da fila.
+3. **A fila vem de onde já há dados.** Junta os registos deste aparelho (`vs.colheita`), os pacotes importados antes (`vs.extra`) e um pacote largado na própria página — só nesta visita, porque os quadros são de quem gravou e não há razão para os fixar aqui. Cada cartão mostra o que existe para julgar: descrição (configuração, lugar, movimento, expressão), consentimento, repetições/quadros/segundos, as bandeiras do verificador de qualidade e até 4 quadros (um por repetição).
+4. **Nota opcional e desfazer.** A nota (`maxlength 400`, normalizada) fica gravada por veredicto. Carregar no mesmo veredicto outra vez retira-o, e «Retirar o meu veredicto» faz o mesmo — não é preciso assinatura para desfazer o que se fez.
+5. **Filtros «À espera / Já validei / Tudo»** com `aria-pressed`, uma região `role="status"` que anuncia «A mostrar 2 sinais à espera.» e foco devolvido ao filtro (a fila é redesenhada, e sem isso o teclado caía no `<body>`).
+6. **Exportar.** `Exportar validações (JSONL)` escreve `pamosii-validacoes-AAAA-MM-DD.jsonl` (`application/x-ndjson`), **uma linha por veredicto**, com `schema: 1`, `tipo: "pamosii-validacao"`, `validado_por`, `validadora_surda`, `regiao`, `validado_em`, `estado_antes: "colhido"` e a nota. Há também JSON e «Copiar resumo». `Apagar os meus veredictos` pede confirmação e avisa que não há cópia em lado nenhum.
+7. **Ingerir (equipa).** `node tools/ingerir-validacoes.cjs <veredictos>.jsonl [--dry-run] [--mostra] [--destino=…]` aplica as regras do §6.1 do protocolo e escreve os estados em `app/assets/glossario-extra.json`. Recusa linha anónima, linha de quem não declarou usar LGA, veredicto fora do vocabulário, esquema mais novo e data em falta; um empate não move nada; o mesmo apelido a corrigir-se conta uma vez; correr duas vezes não duplica a nota de proveniência. `tools/exemplos/validacoes-exemplo.jsonl` cobre todos esses casos.
+
+O que a página **não** faz, e `tools/integridade-test.cjs` vigia: nenhuma interface escreve `confirmado`/`aprovado`/`rejeitado`, não há pedidos de rede, e o texto continua a dizer que o sinal só muda de estado quando a equipa importar o ficheiro.
 
 ---
 
@@ -467,6 +487,11 @@ node tools/integridade-test.cjs      # lê app.js/index.html/sw.js/extension e f
                               # interface prometer o que o código não faz (claims, links mortos,
                               # chaves, versão do casulo, invariante das marcações e das sessões)
 node tools/ingerir-colheita.cjs tools/exemplos/sessoes-exemplo.jsonl --dry-run
+node tools/ingerir-validacoes.cjs tools/exemplos/validacoes-exemplo.jsonl --dry-run
+node tools/auditoria-visual.cjs      # abre o Chrome instalado em headless (CDP, sem dependências)
+                              # e mede as 16 rotas: scroll horizontal, alvos <24px e contraste
+                              # (<4,5:1, ou 3:1 em texto grande). Flags: --rotas=/validar,/colher,
+                              # --largura=, --altura=, --escala=150, --tema=claro|escuro|alto
 node tools/make-icons.cjs   # regenera os PNG do manifest a partir da marca (sem dependências)
 node tools/serve.cjs        # http://127.0.0.1:8123 — URL estável usado nestes testes
 ```
@@ -476,6 +501,12 @@ Depois de mexer em `app.js`, `styles.css` ou `sw.js`: **mexer na versão do casu
 Teste manual recomendado: navegar por todas as rotas, abrir pelo menos um vídeo em cada página, pesquisar no catálogo/biblioteca/dicionário, escrever uma frase no Pamosii (e outra com "Soletrar letras"), gravar um clipe de 5s e rever a 0,5×, e percorrer o site apenas com o teclado (Tab/Enter/Escape no menu móvel, na barra inferior — incluir o "Mais" — e no painel de acessibilidade). Para o offline: abrir o site uma vez com rede, depois desligar a internet (ou desligar o servidor de teste) e recarregar — as páginas, o dicionário e o Pamosii devem responder, e um vídeo deve mostrar o aviso de "precisa de rede" em vez de um leitor em branco. Para a instalação: no Chrome de telemóvel, menu → "Adicionar ao ecrã principal"; o ícone e o nome vêm do `manifest.webmanifest`.
 
 Verificado nesta entrega (medição no browser em `http://127.0.0.1:8123`; telemóvel 320px / 360px / 390px, tablet 1012px, e escala de texto do painel de acessibilidade a 100% / 130% / 150%):
+
+- **As 16 rotas de `tools/auditoria-visual.cjs`** medidas a 320×640 com texto a 150% (claro) e a 390×844 (escuro): `scrollWidth − clientWidth = 0`, 0 alvos abaixo de 24×24 e 0 falhas de contraste em todas. A ferramenta é nova nesta entrega porque o Chrome de depuração deste ambiente deixou de responder a meio da sessão: passou a falar CDP directo com o Chrome instalado (Node 24 traz `WebSocket` global), sem `puppeteer` nem dependências.
+- **`#/validar` com dados reais na fila** (três registos, um deles com sessão de 4 repetições × 3 quadros): o filtro «À espera» → 2 cartões, «Já validei» → 1, «Tudo» → 3, com foco devolvido ao chip e aviso `role="status"` («A mostrar 2 sinais à espera.»); veredicto registado → contagens `1 Correcto · 1 Variante regional · 0 Errado`, medidor «2 de 3 sinais têm veredicto neste aparelho · 1 à espera», foco no botão carregado e `aria-pressed` só nesse; nota escrita → normalizada (`no Namibe fazem a palma virada para fora`) e lida de volta **depois de recarregar**; carregar no mesmo veredicto → retirado (contagens voltam a 1/0/0, foco no primeiro botão do cartão); «Apagar» → confirmação, `vs.validar` removido e mensagem «Apagado 1 veredicto».
+- **Pacote da equipa largado em `#/validar`** (3 linhas JSONL: 2 repetições de uma palavra nova + 1 linha `estado:'aprovado'`): entraram as 2 repetições como «manga · 2 repetições · 0 quadros · 8 segundos · origem: pacote da equipa», a linha já aprovada foi ignorada (a fila só julga `colhido`), o `input` volta a vazio e nada foi guardado no `localStorage`.
+- **Exportação real capturada** (blob interceptado antes do download): `pamosii-validacoes-2026-10-24.jsonl`, `application/x-ndjson;charset=utf-8`, 2 linhas com `schema:1`, assinatura, região, data e nota. O ficheiro foi escrito em disco e passado por `tools/ingerir-validacoes.cjs`: `colhido → confirmado` nos dois termos, `variantes: ["Huíla — Lubango: no Namibe fazem a palma virada para fora"]`, e uma segunda execução não mexeu em nada («já está em confirmado, estado não desce») nem duplicou a nota de proveniência.
+- **Bug apanhado por esta medição e corrigido:** as contagens do cabeçalho da fila liam `.veredicto` de um registo de sinal (que não tem esse campo) e mostravam sempre `0 Correcto / 0 Variante regional / 0 Errado`. Passaram a contar os veredictos, não os sinais.
 
 - Consola sem erros nas 10 rotas (`#`, `/cursos`, `/cursos/mini-curso-lga`, `/aprender-lga`, `/dicionario`, `/pamosii`, `/professores`, `/biblioteca`, `/sobre`, `/contacto`) e na 404, depois de percorrer todas as rotas em três larguras e de encher cada ecrã de testes (glosa, soletração, cadeia LGA, voz, câmara).
 - **Zero scroll horizontal**: 320px, 360px, 390px e 1012px × escala 100/130/150 × 10 rotas = 90 medições, todas com `scrollWidth − clientWidth = 0`.
@@ -557,8 +588,9 @@ O site **já está publicado** em <https://7dark7cloud7.github.io/pamosii-viva-s
 22. **Consentimento específico para as fotografias** — a Colheita permite 3–4 quadros do próprio sinal, tirados e guardados no browser da pessoa. Para a equipa receber esses quadros é preciso: (a) um destino combinado (e-mail/nuvem) e um consentimento escrito por pessoa, com a autorização de uso público; (b) regra explícita para **menores** (o formulário aceita registos de qualquer idade, mas não pede idade — a equipa deve decidir se aceita registos de menores sem tutor). Menores e terceiros não podem ser publicados sem §5 do protocolo cumprido.
 23. **Uso do modo de teste em Libras na comunicação pública** — o avatar VLibras é brasileiro e está claramente rotulado como "não é LGA". A equipa deve decidir se o mantém visível ao público (ajuda quem está a aprender, mas pode confundir quem não conhece a diferença), e se avisa que ligá-lo gera tráfego para serviços do Brasil.
 24. **Legenda/atribuição das passagens bíblicas** — o texto é Almeida, domínio público, com `traducao`/`licenca`/`obtidoEm` registados em `app/assets/biblia.json`. Confirmar se a equipa quer outra versão (por exemplo uma revisão portuguesa actualizada) ou se mantém, e se o nome da versão aparece no rodapé da página.
+25. **Quem assina na fila de validação, e como é pago** — `#/validar` pede um apelido e uma declaração de que a pessoa usa LGA, mas não verifica identidade nenhuma; essa verificação é da equipa. Falta decidir: a lista de sinalizadores autorizados a assinar, a ligação entre apelido e consentimento assinado (§5), o valor pago por sinal revisto (§6), e quem reúne os JSONL exportados e corre `tools/ingerir-validacoes.cjs`. Até essa decisão, os veredictos só entram em `glossario-extra.json` quando alguém da equipa corre o script à mão — é de propósito.
 
-Sem 13, 14 e 15 **não há** reconhecimento de gestos a prometer: o site continuaria a dizer "glosa de estudo" e "a tua escolha de sinais", que é o que faz hoje. Sem 21 e 22 **não há** como receber os registos da Colheita de forma responsável: o ciclo está construído e testado no aparelho de quem escreve, mas falta o destino e o consentimento.
+Sem 13, 14 e 15 **não há** reconhecimento de gestos a prometer: o site continuaria a dizer "glosa de estudo" e "a tua escolha de sinais", que é o que faz hoje. Sem 21, 22 e 25 **não há** como receber os registos da Colheita ou os veredictos de forma responsável: o ciclo está construído e testado no aparelho de quem escreve, mas falta o destino, o consentimento e o pagamento.
 
 ---
 

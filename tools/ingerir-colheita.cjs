@@ -4,6 +4,7 @@
      node tools/ingerir-colheita.cjs caminho/do/pamosii-colheita-2026-10-22.json [outro.json ...]
      node tools/ingerir-colheita.cjs caminho/do/pamosii-sessoes-2026-10-22.jsonl   (uma linha por repetição)
      node tools/ingerir-colheita.cjs --dry-run   …   (mostra o que faria, não escreve)
+     node tools/ingerir-colheita.cjs --destino=copia.json  …  (escreve noutra cópia — para testes)
 
    O que faz:
      1. lê um ou mais pacotes exportados pela página /colher (schema 1) — JSON ou JSONL;
@@ -25,7 +26,7 @@ const path = require('node:path');
 
 const RAIZ = path.join(__dirname, '..');
 const FICHEIRO_APP = path.join(RAIZ, 'app', 'app.js');
-const DESTINO = path.join(RAIZ, 'app', 'assets', 'glossario-extra.json');
+const DESTINO_PADRAO = path.join(RAIZ, 'app', 'assets', 'glossario-extra.json');
 const SCHEMA_ESPERADO = 1;
 /* O JSONL de sessões tem esquema próprio (SCHEMA_SESSAO em app/app.js):
    1 = sem `qualidade`; 2 = cada repetição traz os números do verificador de gravação. */
@@ -169,6 +170,10 @@ function limpa(t) {
 const argv = process.argv.slice(2);
 const dry = argv.includes('--dry-run');
 const mostra = argv.includes('--mostra');
+/* --destino= serve para pôr a decorrer a corrente inteira (colheita → validação)
+   contra uma cópia, sem mexer no glossário publicado */
+const destinoArg = argv.find(a => a.startsWith('--destino='));
+const DESTINO = destinoArg ? path.resolve(RAIZ, destinoArg.slice('--destino='.length)) : DESTINO_PADRAO;
 const ficheiros = argv.filter(a => !a.startsWith('--'));
 
 if (!ficheiros.length) {
@@ -229,7 +234,9 @@ const saida = {
   termos,
 };
 
-console.log('\n' + (dry ? '[dry-run] nada escrito.' : '→ ' + path.relative(RAIZ, DESTINO)));
+const alvoRel = path.relative(RAIZ, DESTINO);
+const alvoTxt = alvoRel.startsWith('..') ? DESTINO : alvoRel;
+console.log('\n' + (dry ? '[dry-run] nada escrito em ' + alvoTxt + '.' : '→ ' + alvoTxt));
 if (mostra) console.log(JSON.stringify(termos, null, 1));
 console.log('  ' + novos + ' novo(s), ' + repetidos + ' juntado(s), ' + jaCentrais + ' já no glossário central, ' + recusados + ' recusado(s).');
 if (Object.keys(lacunasTotais).length) {
