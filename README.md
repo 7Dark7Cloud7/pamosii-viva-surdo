@@ -43,23 +43,27 @@ Na mesma rede Wi-Fi o servidor fica acessível no telemóvel em `http://192.168.
 
 O que serve o site é a **branch `gh-pages`**, com os ficheiros na raiz (é o conteúdo de `app/`, copiado sem qualquer transformação). A branch `main` guarda o código com o `README` e não é publicada.
 
-Verificado no URL ao vivo (2026-10-22, publicação `vs56` — mesma verificação feita a 2026-10-20 na versão anterior):
+Verificado no URL ao vivo (2026-10-24, publicação `vs65`; as medidas de layout e de toque são da mesma visita ao host):
 
 | Verificação | Resultado |
 | --- | --- |
 | 14 ficheiros publicados vs. `app/` | **byte a byte iguais** (SHA-256 de cada um), PNGs e o ZIP da extensão incluídos |
-| `sw.js` e `index.html` ao vivo | `const VERSAO = 'vs56'` e `app.js?v=vs56` — o par de versões bate certo no host |
-| `extensao/pamosii-signer.zip` | `200`, 16.367 B, `application/x-zip-compressed` (antes faltava na `gh-pages` e a ligação de download dava 404) |
+| `sw.js` e `index.html` ao vivo | `const VERSAO = 'vs65'` e `app.js?v=vs65` — o par de versões bate certo no host |
+| `extensao/pamosii-signer.zip` | `200`, 16.367 B, `application/x-zip-compressed` |
 | `Content-Type` de `sw.js` | `application/javascript; charset=utf-8` |
 | `Content-Type` de `manifest.webmanifest` | `application/manifest+json; charset=utf-8` |
-| Service worker | activo e a controlar no host publicado; scope `…/pamosii-viva-surdo/`; cache `casulo-vs56` com **13 entradas**, incluindo o pedido de navegação da raiz (2026-10-22) |
-| `#/colher` no host publicado | a pista da sessão existe (`sess-palavra`, `sess-comecar`, `sess-msg`, `ch-sess-pista`); com a câmara negada aparece **«A câmara não abriu (permissão negada ou indisponível). A descrição escrita continua a funcionar.»** e o botão volta a ficar activo (2026-10-22) |
-| Consola no host publicado | nenhuma mensagem (2026-10-22) |
-| 10 rotas a 390×844 (mobile, DPR 2) | texto 1.575–5.325 caracteres, `overflow-x = 0`, barra inferior 65px, menor alvo de toque 64px **(2026-10-20, versão anterior — ainda não repetido em `vs56`)** |
+| Service worker | activo e a controlar no host publicado; scope `…/pamosii-viva-surdo/`; cache `casulo-vs65` com **13 entradas / 463.465 B** e `externo-vs65` com 3 (fontes); a cache da publicação anterior (`casulo-vs58`) desaparece ao activar o novo service worker (2026-10-24) |
+| Consola no host publicado | nenhuma mensagem (2026-10-24) |
+| `#/colher` no host publicado | a pista da sessão existe (`sess-palavra`, `sess-comecar`, `sess-msg`, `ch-sess-pista`). Neste ambiente o `getUserMedia` **fica pendurado** (o pedido de permissão não chega a ser respondido): em `vs64` o botão ficava desactivado para sempre; em `vs65`, aos 25 s, **o formulário volta a ficar utilizável**, a palavra escrita mantém-se e não é criada nenhuma sessão fantasma — medido no host publicado, não em local (2026-10-24) |
+| 21 route-slugs a 320×640 (mobile, DPR 2), texto a **150%** | `overflow-x = 0` em **todas**: `/`, `/cursos`, `/cursos/mini-curso-lga`, `/aprender-lga`, `/dicionario`, `/pamosii`, `/professores`, `/biblioteca`, `/biblia`, `/biblia/genesis-1`, `/biblia/joao-3-16`, `/biblia/salmos-23`, `/biblia/marcos-7-31`, `/evangelismo`, `/sobre`, `/contacto`, `/colher`, `/colher/ola`, `/marcar`, `/fora`, `/nao-existe` (2026-10-24, local; os mesmos valores a 130% nas 7 primeiras rotas) |
+| Alvos de toque a 320×640 | em todas as rotas o menor alvo não-inline é **≥ 44 px** excepto: ligações **no meio do texto** (`d=inline`, excepção explícita do WCAG 2.5.8), os `input` de checkbox/rádio (19–22 px) **dentro** de `<label>` de 46–48 px, e os dois elos do caminho-de-navegação em `/cursos/mini-curso-lga` (47×26 e 59×26, acima do mínimo de 24 px). As ligações dentro de bandas flex (`/biblia`, `/evangelismo`) foram corrigidas em `vs64` para 24 px de altura; «Repor opções» do painel de acessibilidade passou de 87×33 para **87×44** |
+| Painel de acessibilidade a 320 px com texto a 150% | botões 44×44 (A−/A+) e 244×46–72 (temas, leitura em voz alta); «Repor opções» 87×44; painel entre `x=24` e `x=308` (não sai do ecrã) e sem scroll horizontal |
+| Contraste dos quatro modos | medido composstando cada fundo sobre branco (o método anterior dava rácios impossíveis): claro **5.4–13.3**, escuro **7.4–12.5**, contraste alto e escuro+alto **15.3–21** — o pior caso (5,4:1) passa o mínimo AA de 4,5:1 (2026-10-24) |
 | Quatro direcções de tradução | texto→sinais (4 blocos, 17 glifos, "3 frases analisadas · 4 de 7 elementos com sinal"), sinais→texto ("Olá bom dia boa tarde."), sinais→voz (`speechSynthesis` activo), voz→sinais (API de reconhecimento disponível; ditado exige microfone real) **(2026-10-20; o motor não mudou desde então)** |
-| Casulo sem rede (medida antiga) | 10 entradas, 183.705 B em `vs47` — o total em bytes não é legível neste ambiente para `vs56`, por isso só contamos as entradas |
+| Sessão de gravação completa | corrida em `127.0.0.1:8123` com uma máquina de filmar sintética (`canvas.captureStream`) a servir de câmara: **4 repetições, 12 quadros, 20 s de sinal, 4 clipes, `dur_ms` 4000/4000/4000/8000**, estado `colhido`, verificador a marcar 4/4 repetições com as queixas por repetição, e o JSONL exportado com `schema: 2`, `consentimento.em`, `audio: false`, 3 quadros por repetição (2026-10-24) |
+| Casulo sem rede | 13 entradas, 463.465 B em `vs65` (medido no host publicado; `vs47` tinha 10 entradas / 183.705 B) |
 
-Limites honestos: a emulação "Offline" do DevTools **não bloqueia pedidos neste ambiente** (`navigator.onLine` fica `true` e os JPEGs do YouTube continuam a carregar), portanto a queda para o cache sem rede foi comprovada (a) matando o servidor local com o mesmo `sw.js` e (b) lendo as entradas do cache no host ao vivo — não por emulação. A sessão de gravação **não foi corrida até ao fim no host publicado**: neste ambiente a câmara está negada, pelo que só o caminho de falha é verificável ao vivo; a corrida completa (4 repetições, 12 quadros, 4 clipes, `dur_ms` 4000/4000/4000/8000 e o JSONL aceite pelo `tools/ingerir-colheita.cjs`) foi verificada em `127.0.0.1:8123`. O reconhecimento de gestos continua inexistente: depende do corpus descrito em `docs/colheita-sinais-lga.md`.
+Limites honestos: a emulação "Offline" do DevTools **não bloqueia pedidos neste ambiente** (`navigator.onLine` fica `true` e os JPEGs do YouTube continuam a carregar), portanto a queda para o cache sem rede foi comprovada (a) matando o servidor local com o mesmo `sw.js` e (b) lendo as entradas do cache no host ao vivo — não por emulação. A sessão de gravação **nunca foi corrida com uma pessoa real nem com uma câmara real neste ambiente**: o que está medido acima é o cano completo com uma fonte de imagem sintética, mais o caminho de falha (câmara pendurada) no host publicado. O reconhecimento de gestos continua inexistente: depende do corpus descrito em `docs/colheita-sinais-lga.md`.
 
 ### Actualizar o site publicado
 
@@ -75,6 +79,11 @@ git push origin gh-pages
 ```
 
 A identidade é dada **no comando**, com `-c user.name=`/`-c user.email=`: não se corre `git config` neste projecto, para não alterar a configuração global da máquina.
+
+Duas armadilhas já pagadas com factos, e como se vêem:
+
+- **`git checkout` com a árvore suja imprime `Aborting` e fica onde estava.** Se depois disso se correr o `cp` e o `commit`, o commit aterrar na branch errada. Confirmar sempre `git branch --show-current` antes do `git add`.
+- **As duas branches têm árvores diferentes.** Na `gh-pages` os ficheiros estão na **raiz** (`cp -r ../app/. .`); na `main` estão dentro de **`app/`** (`cp -r ../app/. app/`). Usar a forma da `gh-pages` estando na `main` cria cópias órfãs na raiz (`app.js`, `index.html`, `styles.css`, `sw.js`, `manifest.webmanifest`, `assets/`, `extensao/`) que entram no commit. Verificar com `git ls-tree --name-only HEAD` antes de cometer, e `git reset --mixed HEAD~1` + apagar os ficheiros órfãos para recuperar (nada é empurrado enquanto o `push` não correr).
 
 Depois publica-se o código-fonte na branch `main` (que não é servida), para que o repo e o site não divirjam:
 
