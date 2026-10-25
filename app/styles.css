@@ -1921,6 +1921,22 @@ html.emb #sg-pagina,html.emb #sg-aponta,html.emb #sg-aponta-aviso{display:none}
 .alf-contador{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:800;font-size:14px;color:var(--teal-deep)}
 .alf-live{margin:10px 0 0;min-height:22px;font-size:13.5px;font-weight:700;color:var(--ink-soft)}
 .alf-signer-ac{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:12px 0 0;font-size:13px}
+/* folha A–Z: no ecrã é o que vai sair no papel — o site não esconde o que imprime */
+.alf-folha{margin:18px 0 0;padding:16px;border:1.5px dashed var(--line);border-radius:14px;background:var(--cream)}
+.alf-folha h2{margin:0 0 6px;font-family:var(--font-h);font-size:19px;line-height:1.25}
+.alf-folha h2 .ic{width:21px;height:21px;color:var(--teal-deep);vertical-align:-3px}
+.alf-folha-nota{margin:0 0 12px;font-size:13.5px;line-height:1.5;color:var(--ink-soft)}
+.alf-folha-grelha{list-style:none;margin:0;padding:0;display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.alf-folha-l{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 10px;align-items:center;
+  padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper)}
+.alf-folha-letra{grid-row:1 / span 2;display:grid;place-items:center;width:44px;height:44px;border-radius:9px;
+  border:1.5px solid var(--teal-deep);font-family:var(--font-h);font-weight:800;font-size:24px;line-height:1;color:var(--teal-deep)}
+.alf-folha-est{font-size:11.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;color:var(--muted)}
+.alf-folha-pauta{display:block;min-width:0}
+.alf-folha-pauta i{display:block;height:14px;border-bottom:1px solid var(--line-soft)}
+.alf-folha-rod{margin:12px 0 0;font-size:12.5px;line-height:1.6;color:var(--ink-soft);overflow-wrap:anywhere}
+.alf-folha-rod .vlink{min-height:24px;padding:2px 0}
 @media(max-width:900px){
   .alf-painel,.alf-aula{grid-template-columns:minmax(0,1fr)}
 }
@@ -1932,6 +1948,9 @@ html.emb #sg-pagina,html.emb #sg-aponta,html.emb #sg-aponta-aviso{display:none}
   .alf-form{grid-template-columns:minmax(0,1fr)}
   .alf-form .btn{justify-content:center}
   .alf-contador{margin-left:0}
+  .alf-folha{padding:13px 12px}
+  .alf-folha-grelha{grid-template-columns:minmax(0,1fr)}
+  .alf-folha-letra{width:38px;height:38px;font-size:21px}
 }
 [data-contraste-alto] .alf-bloco,[data-contraste-alto] .alf-detalhe,
 [data-contraste-alto] .alf-palco{background:#fff;border-color:#000;color:#000}
@@ -2117,6 +2136,24 @@ html.emb #sg-pagina,html.emb #sg-aponta,html.emb #sg-aponta-aviso{display:none}
   .prof-bloco,.res-card,.prof-avisos li,.prof-glosa li{box-shadow:none!important;background:#fff!important;
     border-color:#8A8A8A!important}
   .prof-num,.prof-min{background:#fff!important;color:#000!important;border:1.5px solid #000}
+  /* #/alfabeto: no papel sai só a folha A–Z, não a página inteira.
+     O resto da página é ecrã: controlos, vídeo e treino não fazem sentido impressos. */
+  main:has(.alf-folha) .page-head,
+  main:has(.alf-folha) .note-band,
+  main:has(.alf-folha) .alf-bloco:not(:has(.alf-folha)){display:none!important}
+  .alf-bloco:has(.alf-folha)>:not(.alf-folha){display:none!important}
+  .alf-folha{margin:0;padding:0;border:none;border-radius:0;background:#fff}
+  .alf-folha h2{font-size:13pt}
+  /* em papel a grelha volta a ter duas colunas (no telemóvel passa a uma) e a folha
+     encolhe o texto e as caixas: as 26 letras têm de caber numa só folha A4, porque é
+     uma folha que o professor pede, não um folheto. */
+  .alf-folha-grelha{grid-template-columns:repeat(2,minmax(0,1fr));gap:1.5mm 6mm}
+  .alf-folha-l{padding:0;border:none;gap:1mm 4mm;break-inside:avoid;page-break-inside:avoid}
+  .alf-folha-letra{width:10mm;height:10mm;border-radius:0;border:1px solid #000;color:#000;font-size:14pt}
+  .alf-folha-est{font-size:8pt;color:#000}
+  .alf-folha-pauta i{height:5mm;border-bottom:1px solid #8A8A8A}
+  .alf-folha-nota{font-size:9pt;line-height:1.35;margin:0 0 6px}
+  .alf-folha-rod{font-size:8.5pt;line-height:1.4;margin:8px 0 0}
   h1{font-size:20pt}h2{font-size:15pt}h3{font-size:12.5pt}
   p,li,td{font-size:11pt;line-height:1.5}
 }

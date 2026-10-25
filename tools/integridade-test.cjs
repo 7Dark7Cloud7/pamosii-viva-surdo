@@ -541,6 +541,53 @@ if (!/bind: bindProfessor/.test(app)) {
   falhas.push('#/professores perdeu o bind: o planeador mostrar-se-ia e não reagiria a nada.');
 }
 
+/* ------------------------------------------ 16. folha A–Z imprimível (#/alfabeto) */
+/* FASE 1B (11). A folha é a única coisa deste site que se imprimiu sempre para a sala
+   de aula ser olhada por 30 pares de olhos. O que a torna honesta é o que está escrito
+   nela: o estado de cada letra no dia em que foi lida, a linha pautada vazia à espera
+   de alguém que saiba, e a frase «este site não desenha formas de mão». Se a frase
+   desaparecer, a folha passa a parecer um quadro de datilologia oficial que ninguém
+   validou — e é exactamente isso que faz ensinar LGA errada em voz alta. */
+const blocoAlf = (function () {
+  const a = app.indexOf('13.7 ALFABETO MANUAL');
+  const b = app.indexOf('13.8 ');
+  return a >= 0 && b > a ? app.slice(a, b) : '';
+})();
+if (!blocoAlf) falhas.push('A secção do alfabeto manual desapareceu de app.js.');
+if (blocoAlf) {
+  const temFolha = /id="alf-folha"/.test(blocoAlf);
+  if (temFolha) {
+    if (!/não\s+desenha formas de mão/.test(blocoAlf)) {
+      falhas.push('A folha A–Z deixou de dizer que este site não desenha formas de mão.');
+    }
+    if (!/fmtData\(new Date\(\)/.test(blocoAlf)) {
+      falhas.push('A folha A–Z deixou de datar a leitura do dicionário: «0 de 26» sem data é um estado que ninguém pode verificar.');
+    }
+    if (!/ALF_ESTADO_F\[x\.estado\]/.test(blocoAlf) || !/alf-folha-pauta/.test(blocoAlf)) {
+      falhas.push('A folha A–Z deixou de levar o estado de cada letra ou o espaço pautado para anotar a forma — sem isso é só um quadro de letras.');
+    }
+    if (!/Fonte das formas:/.test(blocoAlf)) {
+      falhas.push('A folha A–Z deixou de dizer de onde vêm as formas; impressa, perde a única fonte que o site admite.');
+    }
+    if (!/data-alf-print/.test(blocoAlf) || !/window\.print\(\)/.test(blocoAlf)) {
+      falhas.push('O botão «Imprimir folha A–Z» existe mas já não chama window.print(): é um botão que não faz nada.');
+    }
+    const print = (css.match(/@media print\{([\s\S]*?)\n\}/) || [])[1] || '';
+    if (!/main:has\(\.alf-folha\)[\s\S]{0,400}?\.page-head/.test(print) || !/\.alf-bloco:has\(\.alf-folha\)>:not\(\.alf-folha\)/.test(print)) {
+      falhas.push('A folha de impressão deixou de esconder o resto do #/alfabeto: sairia no papel o vídeo, a grelha clicável e o treino, em vez da folha.');
+    }
+    if (!/\.alf-folha-grelha\{[^}]*repeat\(2/.test(print) || !/\.alf-folha-l\{[^}]*break-inside:avoid/.test(print)) {
+      falhas.push('A folha de impressão deixou de assentar as 26 letras em duas colunas partidas limpiamente — volta a ser um folheto de duas páginas.');
+    }
+    if (new RegExp('#alf-folha[^{}]*\\{[^}]*display:none').test(print)) {
+      falhas.push('A folha de impressão esconde a própria folha A–Z: o botão imprimiria tudo excepto aquilo que prometeu.');
+    }
+  }
+}
+if (!/\{ path: '\/alfabeto', rotulo: 'Alfabeto'/.test(app)) {
+  falhas.push('#/alfabeto saiu do menu: ninguém chega à folha de datilologia.');
+}
+
 /* ----------------------------------------------------------------- relatorio */
 const saida = [];
 saida.push('Integridade do Pamosii — ' + falhas.length + ' falha(s), ' + avisos.length + ' aviso(s).');
