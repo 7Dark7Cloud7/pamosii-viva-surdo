@@ -6355,6 +6355,27 @@ function alfDetalheHTML(letra, dados) {
   </article>`;
 }
 
+function alfFolhaHTML(d, aula) {
+  return `
+  <section class="alf-folha" id="alf-folha" aria-labelledby="alf-folha-h">
+    <h2 id="alf-folha-h">Folha de datilologia — as 26 letras, para imprimir</h2>
+    <p class="alf-folha-nota">Estado de cada letra no dicionário a ${fmtData(new Date().toISOString().slice(0, 10))}:
+      <strong>${d.confirmadas} de 26</strong> confirmadas e ${d.descritas} com descrição registada. Só se ensina
+      como LGA o que estiver confirmado ou aprovado; o resto ensina-se como proposta, dizendo que é proposta.
+      O espaço pautado é para escreveres a configuração da mão <em>depois de veres a aula</em> — este site não
+      desenha formas de mão.</p>
+    <ol class="alf-folha-grelha">
+      ${d.letras.map(x => `<li class="alf-folha-l"><span class="alf-folha-letra" aria-hidden="true">${x.letra}</span>`
+        + `<span class="alf-folha-est">${esc(ALF_ESTADO_F[x.estado] || 'a validar')}</span>`
+        + `<span class="alf-folha-pauta" aria-hidden="true"><i></i><i></i></span></li>`).join('')}
+    </ol>
+    <p class="alf-folha-rod">Fonte das formas:${aula
+      ? ` a aula «${esc(aula.titulo)}» — <a class="vlink" href="https://www.youtube.com/watch?v=${aula.id}" target="_blank" rel="noopener">abrir no YouTube</a>.`
+      : ' ainda não há aula ligada a este tema.'}
+      <a href="#/alfabeto">Alfabeto no site</a>, com o estado sempre actualizado.</p>
+  </section>`;
+}
+
 function alfabetoHTML() {
   const d = alfDados();
   const aula = alfAula();
@@ -6422,6 +6443,11 @@ function alfabetoHTML() {
       <span class="alf-l-ponto is-confirmado" aria-hidden="true"></span> confirmado,
       <span class="alf-l-ponto is-colhido" aria-hidden="true"></span> descrição registada,
       <span class="alf-l-ponto is-a-validar" aria-hidden="true"></span> a validar.</p>
+    <p class="alf-ac"><button class="btn btn-o btn-sm" type="button" data-alf-print>${I.print} Imprimir folha A–Z</button>
+      <span class="muted">A folha é esta que está aqui em baixo: as 26 letras, o estado de cada uma e linhas
+        para apontares a forma. Ao imprimir sai ela sozinha — o vídeo, as letras clicáveis e o treino ficam
+        de fora do papel.</span></p>
+    ${alfFolhaHTML(d, aula)}
   </section>
 
   <section class="alf-bloco" id="alf-treino" aria-labelledby="alf-treino-h">
@@ -6560,6 +6586,15 @@ function alfCarregar(texto) {
 function bindAlfabeto() {
   const grade = $('#alf-grade');
   const wrap = $('#alf-detalhe-wrap');
+
+  const botaoFolha = document.querySelector('[data-alf-print]');
+  if (botaoFolha) {
+    botaoFolha.addEventListener('click', () => {
+      const live = $('#alf-live');
+      if (live) live.textContent = 'A abrir a caixa de impressão do browser — a folha são as 26 letras com o estado de cada uma. Se não aparecer nada, usa o menu do browser → Imprimir.';
+      window.print();
+    });
+  }
 
   if (grade) {
     grade.addEventListener('click', e => {
