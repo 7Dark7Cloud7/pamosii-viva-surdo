@@ -105,6 +105,23 @@ Limite desta medição: o tamanho do casulo é a **soma dos ficheiros servidos**
 
 Limite desta medição: como em `vs78`, o tamanho do casulo é a **soma dos ficheiros servidos**, não a leitura dos corpos dentro da `Cache API` (que neste Chrome `headless` devolvem 0 bytes). As 13 **chaves** e os dois `?v=vs79` foram lidos da cache no browser. Nesta corrida o `externo-vs79` nem chegou a ser criado pelo site — o perfil de teste era novo e a página não pediu os tipos externos; a cache vazia que aparece na listagem foi criada pelo próprio verificador, que a abre para a ler.
 
+**Publicação `vs80` (2026-10-25)** — a folha A–Z de datilologia sai para o papel:
+
+| Verificação | Resultado no host publicado |
+| --- | --- |
+| 14 ficheiros publicados vs. `app/` | **byte a byte iguais** (SHA-256 de cada um, PNGs e o ZIP da extensão incluídos) — 14/14 |
+| `sw.js` e `index.html` ao vivo | `const VERSAO = 'vs80'` no `sw.js` servido e os dois `?v=vs80` no `index.html` servido |
+| Folha A–Z no host | lida por `fetch` ao URL publicado: em `styles.css`, `.alf-folha{` no ecrã **e** `@media print{ … .alf-folha-grelha{…repeat(2…` mais `main:has(.alf-folha)`; em `app.js`, `id="alf-folha"`, `data-alf-print`, o `window.print()` do alfabeto e a frase «não desenha formas de mão» dentro da folha |
+| `#/alfabeto` no host | `node tools/sonda-alfabeto.cjs --base=https://…` corrido **contra o site publicado**: 22 casos, **0 falhas, 0 erros de consola** — estado de cada letra igual ao da grelha, 52 linhas pautadas, zero `<img>`, `window.print()` 1 vez, e no papel 978 px de folha para 1017 px de página |
+| `#/professores` no host (regressão) | `node tools/sonda-professores.cjs --base=https://…`: **45 casos, 0 falhas, 0 erros de consola** — a entrega anterior continua intacta, com o plano a caber no papel a 150% (`939/985`) |
+| `localStorage` no host | **vazio** à entrada e à saída (a sonda escreve `vs.a11y` para medir a escala e apaga-o no fim) |
+| Service worker | 1 registação com o `scriptURL` do host, `ativo=true` e `controlado=true` à segunda carga; **só** `casulo-vs80` — as caches de `vs79` já não existem |
+| Casulo sem rede no host | **13 entradas** em `casulo-vs80`, com as chaves exactas `app.js?v=vs80` e `styles.css?v=vs80` = **633.310 B** (`vs79` tinha 628.232 B; os **+5.078 B** são a folha em `app.js` e as regras `.alf-folha` em `styles.css`) |
+| Impressão medida no host, sob SW | com o service worker a controlar a página, `#/alfabeto` em media `print` a 688×1017: folha **641×978**, 26 letras, `.site-head`, `#alf-grade` e `#alf-treino` escondidos; `[data-alf-print]` clicado chamou `window.print()` **1 vez** |
+| Consola no host publicado | **zero** mensagens (nem avisos) em três cargas — `#/professores` duas vezes e `#/alfabeto` |
+
+Correcção de medição, e vale para as tabelas de `vs78` e `vs79` acima: os corpos dentro da `Cache API` **leem-se**, o que ali dava 0 bytes era erro do verificador — `cache.keys()` devolve **`Request`** objects, cujos corpos são efectivamente vazios. Com `cache.matchAll()` (as `Response`) o `casulo-vs80` deu **633.310 B**, o mesmo número da soma dos 13 ficheiros servidos por `fetch`, medido por dois caminhos independentes. Continua por provar o que não se pode provar daqui: o PDF de cada browser e as impressoras reais.
+
 Limites honestos: a emulação "Offline" do DevTools **não bloqueia pedidos neste ambiente** (`navigator.onLine` fica `true` e os JPEGs do YouTube continuam a carregar), portanto a queda para o cache sem rede foi comprovada (a) matando o servidor local com o mesmo `sw.js` e (b) lendo as entradas do cache no host ao vivo — não por emulação. A sessão de gravação **nunca foi corrida com uma pessoa real nem com uma câmara real neste ambiente**: o que está medido acima é o cano completo com uma fonte de imagem sintética, mais o caminho de falha (câmara pendurada) no host publicado. O reconhecimento de gestos continua inexistente: depende do corpus descrito em `docs/colheita-sinais-lga.md`.
 
 ### Actualizar o site publicado
