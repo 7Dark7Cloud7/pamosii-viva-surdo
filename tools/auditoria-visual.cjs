@@ -33,6 +33,10 @@ const ESCALA = Number(flag('escala', 100));
 const TEMA = flag('tema', 'claro'); /* claro | escuro | alto */
 const PORTA = Number(flag('porta', 9333));
 const PRE = flag('pre', '');
+/* --media=print mede a folha de impressão: o Chrome usa as regras @media print,
+   por isso o que se mede é o papel (816×1056 = A4 a 96dpi), não o ecrã */
+const MEDIA = flag('media', '');
+const PAPEL = MEDIA === 'print';
 
 const ROTAS_PADRAO = [
   '/', '/cursos', '/aprender-lga', '/pamosii', '/ouvir', '/dicionario', '/professores',
@@ -108,6 +112,9 @@ const SONDA = `function (cfg) {
   const escondido = el => {
     const s = getComputedStyle(el);
     if (s.display === 'none' || s.visibility === 'hidden') return true;
+    /* um filho de subtree escondida herda o "não é pintado" sem ter display:none:
+       sem este teste, media=print dava contraste falhado em texto que não sai no papel */
+    if (!el.getClientRects().length) return true;
     if (el.closest('.sr-only')) return true;
     if (parseFloat(s.opacity) === 0) return true;
     if (el.closest('[aria-hidden="true"]')) return true;
@@ -200,7 +207,7 @@ const SONDA = `function (cfg) {
   });
 
   return JSON.stringify({
-    vw, docW: document.documentElement.scrollWidth, zoom: (document.querySelector('#app') || { style: {} }).style.zoom || '1',
+    vw, docW: document.documentElement.scrollWidth, zoom: (function () { var a = document.querySelector('#app'); return a ? getComputedStyle(a).zoom : '1'; })(),
     titulo: document.title, overflow: overflow.slice(0, 6), nOverflow: overflow.length,
     pequenos: pequenos.slice(0, 8), nPequenos: pequenos.length,
     fracos: fracos.slice(0, 8), nFracos: fracos.length,
@@ -229,7 +236,7 @@ async function main() {
     await p('Emulation.setDeviceMetricsOverride', {
       width: LARGURA, height: ALTURA, deviceScaleFactor: 1, mobile: LARGURA < 800,
     });
-    await p('Emulation.setEmulatedMedia', { features: [] });
+    await p('Emulation.setEmulatedMedia', Object.assign({ features: [] }, MEDIA ? { media: MEDIA } : {}));
 
     const avaliar = async expr => {
       const r = await p('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true });
@@ -262,12 +269,13 @@ async function main() {
       }
       const bruto = await avaliar('(' + SONDA + ')(' + JSON.stringify({}) + ')');
       const d = JSON.parse(bruto);
-      const problemas = d.nOverflow + d.nPequenos + d.nFracos;
+      const problemas = d.nOverflow + (PAPEL ? 0 : d.nPequenos) + d.nFracos;
       if (problemas) falhas++;
       linhas.push({ rota, d, problemas });
     }
 
-    console.log(`Pamosii — auditoria ${LARGURA}×${ALTURA} · texto ${ESCALA}% · tema ${TEMA}` + (TEMA === 'alto' ? ' (contraste alto)' : ''));
+    console.log(`Pamosii — auditoria ${LARGURA}×${ALTURA} · texto ${ESCALA}% · tema ${TEMA}` + (TEMA === 'alto' ? ' (contraste alto)' : '')
+      + (MEDIA ? ` · media ${MEDIA}` + (MEDIA === 'print' ? ' (alvos de toque não se aplicam ao papel)' : '') : ''));
     linhas.forEach(({ rota, d, problemas }) => {
       const estado = problemas ? 'FALHA' : 'OK   ';
       console.log(`${estado} ${rota.padEnd(16)} ${d.titulo.slice(0, 52)}`);
@@ -276,7 +284,7 @@ async function main() {
         console.log('      aviso: título é o da página inicial — rota inexistente ou sem metadados');
       }
       d.overflow.forEach(o => console.log(`      overflow +${o.dir}px  ${o.el}`));
-      d.pequenos.forEach(o => console.log(`      alvo ${o.w}×${o.h}  ${o.el} «${o.txt}»`));
+      if (!PAPEL) d.pequenos.forEach(o => console.log(`      alvo ${o.w}×${o.h}  ${o.el} «${o.txt}»`));
       d.fracos.forEach(o => console.log(`      contraste ${o.razao}:1 (min ${o.minimo})  ${o.el} ${o.px}px «${o.txt}»`));
     });
     console.log(`\n${linhas.length} rota(s), ${falhas} com problemas.`);

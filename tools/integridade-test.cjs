@@ -504,6 +504,27 @@ if (blocoProf) {
   if (!/dicionario/.test(blocoProf) || !/colher/.test(blocoProf)) {
     falhas.push('O planeador deixou de ligar ao dicionário e à Colheita - é por aí que o que falta passa a existir.');
   }
+  /* a página promete que a checklist se leva impressa; se a folha de impressão
+     desaparecer, sai papel com barra de navegação, boneco do Signer e tema cinzento */
+  if (/data-prof-print/.test(blocoProf)) {
+    if (!/window\.print\(\)/.test(blocoProf)) {
+      falhas.push('O botão "Imprimir plano" existe mas não chama window.print() - é um botão que não faz nada.');
+    }
+    const print = (css.match(/@media print\{([\s\S]*?)\n\}/) || [])[1] || '';
+    if (!print) falhas.push('styles.css deixou de ter um bloco @media print.');
+    for (const alvo of ['.tabbar', '.sg-fab', '.sg-painel', '.site-head', '.site-foot', '#a11y-root']) {
+      if (!print.includes(alvo)) {
+        falhas.push('A folha de impressão não esconde ' + alvo + ': ia sair no papel interface a mais.');
+      }
+    }
+    if (!/#app\{[^}]*zoom:1/.test(print)) {
+      falhas.push('A folha de impressão não anula a escala de texto no #app: quem imprime com 150% leva um plano cortado (o zoom do painel vive em estilo inline nesse elemento).');
+    }
+    if (/display:none[^;}]*\s*\.prof-avisos|\.prof-avisos[^{}]*\{[^}]*display:none/.test(print)
+        || !/\.prof-bloco/.test(print)) {
+      falhas.push('A folha de impressão esconde os avisos ou deixa de partir os blocos limpiamente.');
+    }
+  }
 }
 if (!/\{ path: '\/professores', rotulo: 'Professores'/.test(app)) {
   falhas.push('#/professores saiu do menu: ninguém chega ao planeador.');

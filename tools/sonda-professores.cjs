@@ -1,8 +1,9 @@
 /* Sonda funcional do planeador de aulas (#/professores) — CDP, sem dependências.
    Verifica o que a interface afirma: os minutos batem certo com a duração escolhida,
    nada é guardado no aparelho, o tema de demonstração fica de fora, a quantidade pedida
-   limita-se ao que existe, a glosa aparece marcada como «a validar», e o botão do Pamosii
-   leva a frase escrevida para o painel.
+   limita-se ao que existe, a glosa aparece marcada como «a validar», o botão do Pamosii
+   leva a frase escrevida para o painel, e a folha de impressão esconde a interface e
+   deixa o plano (medido com a media «print» emulada).
    Precisa do servidor local a correr. Uso: node tools/sonda-professores.cjs --porta=5291
    (porta de 4 dígitos nova a cada execução). Sai 0 com tudo ok, 1 com falha ou erro de consola. */
 'use strict';
@@ -145,7 +146,7 @@ const tem = (nome, ok, detalhe) => casos.push({ nome, ok: !!ok, detalhe });
     tem('o texto diz que não foi revisto', /não foi revisto por uma pessoa surda/.test(txt));
     tem('o texto traz a checklist marcada', /\[x\] Vi a aula inteira/.test(txt) && /\[ \] A luz bate/.test(txt));
     tem('o texto não leva etiquetas HTML', !/<(strong|a href|em|p)>/.test(txt), (txt.match(/<[^>\n]{1,30}>/) || [''])[0]);
-    tem('o cabeçalho escrevido aparece no ficheiro', !/Escola, turma/.test(txt));
+    tem('sem cabeçalho escrito o ficheiro não inventa um', !/Escola, turma/.test(txt));
 
     /* nada ficou guardado depois de tudo isto */
     const chaveDepois = await avaliar(`Object.keys(localStorage).sort().join(',')`);
@@ -213,6 +214,87 @@ const tem = (nome, ok, detalhe) => casos.push({ nome, ok: !!ok, detalhe });
     await dormir(300);
     tem('copiar e descarregar correm sem erro na consola', erros.filter(x => !/favicon|net::ERR_FILE_NOT_FOUND.*manifest|SpeechSynthesis|speech|Clipboard|Documents\.Permission|not allowed/i.test(x)).length === 0,
       erros.slice(-2).join(' | '));
+
+    /* impressão: o botão tem de chamar a caixa de impressão do browser uma vez, sem
+       navegar. window.print() é substituído por uma contadora — o Chrome headless não
+       tem caixa de impressão, e o chamamento é a única coisa que o nosso código controla. */
+    await avaliar(`window.__nPrint = 0; window.print = function () { window.__nPrint++; }; 1`);
+    tem('o plano tem botão «Imprimir plano»', await avaliar(`!!document.querySelector('[data-prof-print]')`));
+    await avaliar(`document.querySelector('[data-prof-print]').click()`);
+    await dormir(200);
+    const nPrint = await avaliar(`window.__nPrint`);
+    tem('«Imprimir plano» chama window.print() exactamente uma vez', nPrint === 1, 'chamadas: ' + nPrint);
+    tem('imprimir deixa a pessoa na mesma rota', (await avaliar(`location.hash`)) === '#/professores');
+
+    /* o cabeçalho escrito vai para o topo do plano, no ecrã e no papel: é o que
+       prende na parede da sala e o que viaja no .txt */
+    const CAB = 'Escola Primária 45 · Luanda · 3ª classe';
+    await avaliar(`var c=document.querySelector('#prof-cab');c.value=${JSON.stringify(CAB)};c.dispatchEvent(new Event('input'));1`);
+    await dormir(520);
+    const cabTxt = await avaliar(`(document.querySelector('.prof-cab')||{}).textContent||''`);
+    tem('o cabeçalho escrito aparece no topo do plano', cabTxt === CAB, cabTxt.slice(0, 60));
+    tem('o cabeçalho é o primeiro elemento do plano',
+      await avaliar(`document.querySelector('#prof-plano').firstElementChild === document.querySelector('.prof-cab')`));
+    const cabLinha = await avaliar(`(function(){var s=profEstado;s.cab=${JSON.stringify(CAB)};
+      return profTextoPlano(s,null).split('\\n')[1];})()`);
+    tem('o cabeçalho vai na segunda linha do texto copiado e do .txt', cabLinha === CAB, cabLinha);
+
+    /* cada aula listada tem de trazer um link real — no ecrã e no papel */
+    const aulasOk = await avaliar(`(function(){var li=[].slice.call(document.querySelectorAll('.prof-aulas li'));
+      if(!li.length) return '0 aulas';
+      var maus=li.filter(function(x){var a=x.querySelector('a.vlink');
+        return !a||!/^https:\\/\\/www\\.youtube\\.com\\/watch\\?v=/.test(a.getAttribute('href'));}).length;
+      return li.length+' aulas, '+maus+' sem link';})()`);
+    tem('cada aula do plano tem link para o vídeo', /, 0 sem link$/.test(aulasOk), aulasOk);
+    tem('o link da aula diz em voz alta que abre outra janela',
+      await avaliar(`!!document.querySelector('.prof-aulas .sr-only')`));
+
+    /* o papel em si: com a media «print» emulada, a interface tem de desaparecer e o
+       plano tem de ficar — medido no DOM, não afirmado. Só conta o que estava visível
+       no ecrã: a barra inferior, por exemplo, já não aparece em janela larga. */
+    const SELECTORES = ['.tabbar', '.site-head', '.site-foot', '.sg-fab', '.prof-ac', '#prof-tema'];
+    const ver = async sel => await avaliar(`(function(){var e=document.querySelector(${JSON.stringify(sel)});
+      if(!e) return 'ausente'; var c=getComputedStyle(e);var r=e.getBoundingClientRect();
+      return (c.display==='none'||r.width<1||r.height<1)?'escondido':'visivel';})()`);
+    const noEcra = {};
+    for (const sel of SELECTORES) noEcra[sel] = await ver(sel);
+    await p('Emulation.setEmulatedMedia', { media: 'print', features: [] });
+    await dormir(200);
+    const noPapel = {};
+    for (const sel of SELECTORES) noPapel[sel] = await ver(sel);
+    const ficaram = SELECTORES.filter(s => noEcra[s] === 'visivel' && noPapel[s] !== 'escondido');
+    tem('no papel não sai barra inferior, cabeçalho, rodapé, Signer, botões nem formulário',
+      ficaram.length === 0, ficaram.map(s => s + '=' + noPapel[s]).join(', ')
+        + ' | no ecrã: ' + SELECTORES.map(s => s + '=' + noEcra[s]).join(', '));
+    const planoPapel = await avaliar(`Math.round(document.querySelector('#prof-plano').getBoundingClientRect().height)`);
+    const blocosPapel = await avaliar(`document.querySelectorAll('#prof-plano .prof-bloco').length`);
+    tem('o plano todo sai no papel', blocosPapel >= 5 && planoPapel > 400, blocosPapel + ' blocos, ' + planoPapel + ' px de altura');
+    const linkAulaPapel = await ver('.prof-aulas .vlink');
+    tem('o link da aula continua no papel', linkAulaPapel === 'visivel', linkAulaPapel);
+    await p('Emulation.setEmulatedMedia', { media: '', features: [] });
+    await dormir(150);
+    tem('voltamos ao ecrã: o cabeçalho do site reaparece', (await ver('.site-head')) === 'visivel');
+
+    /* o caso que o CSS sozinho não prova: a escala de texto é um zoom em estilo inline
+       no #app, aplicado pelo painel de acessibilidade. Carregamos com 150%, medimos no
+       ecrã, medimos no papel. */
+    await avaliar(`localStorage.setItem('vs.a11y', JSON.stringify({escala:150,contraste:false,temaEscuro:false,movimento:false,simples:false}))`);
+    await carregar(BASE + '?cb=probe150#/professores');
+    const zoomEcra = await avaliar(`Number(getComputedStyle(document.querySelector('#app')).zoom)`);
+    tem('a escala de 150% chega efectivamente ao conteúdo', zoomEcra === 1.5, 'zoom no ecrã: ' + zoomEcra);
+    await p('Emulation.setEmulatedMedia', { media: 'print', features: [] });
+    await dormir(200);
+    const zoomPapel = await avaliar(`Number(getComputedStyle(document.querySelector('#app')).zoom)`);
+    const varPapel = await avaliar(`Number(getComputedStyle(document.querySelector('#app')).getPropertyValue('--escala'))`);
+    const larguraPapel = await avaliar(`Math.round(document.querySelector('#prof-plano').getBoundingClientRect().width) + '/' + document.documentElement.clientWidth`);
+    tem('no papel o plano volta ao tamanho normal', zoomPapel === 1 && varPapel === 1,
+      'zoom ' + zoomPapel + ', --escala ' + varPapel);
+    tem('com 150% de texto o plano cabe na largura do papel',
+      await avaliar(`document.querySelector('#prof-plano').getBoundingClientRect().width <= document.documentElement.clientWidth + 1`),
+      'plano/papel: ' + larguraPapel);
+    await p('Emulation.setEmulatedMedia', { media: '', features: [] });
+    await avaliar(`localStorage.removeItem('vs.a11y')`);
+    tem('e o aparelho volta a ficar como estava', (await avaliar(`Object.keys(localStorage).length`)) === 0);
   } catch (e) {
     casos.push({ nome: 'a sonda correu até ao fim', ok: false, detalhe: e.message });
   } finally {
