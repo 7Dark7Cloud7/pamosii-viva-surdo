@@ -520,6 +520,14 @@ if (blocoProf) {
     if (!/#app\{[^}]*zoom:1/.test(print)) {
       falhas.push('A folha de impressão não anula a escala de texto no #app: quem imprime com 150% leva um plano cortado (o zoom do painel vive em estilo inline nesse elemento).');
     }
+    /* o Chrome não pinta fundos em papel: o que no ecrã é texto claro sobre cor
+       preenchida imprimir-se-ia branco sobre branco. */
+    if (!/\.btn[^{}]*\{[^}]*background:#fff!important/.test(print)) {
+      falhas.push('A folha de impressão deixou de converter botões e etiquetas de cor preenchida em preto sobre branco — no papel isso é texto invisível.');
+    }
+    if (!/attr\(href\)/.test(print)) {
+      falhas.push('A folha de impressão deixou de escrever o endereço dos links: «Abrir no YouTube» num papel sem URL não leva a lado nenhum.');
+    }
     if (/display:none[^;}]*\s*\.prof-avisos|\.prof-avisos[^{}]*\{[^}]*display:none/.test(print)
         || !/\.prof-bloco/.test(print)) {
       falhas.push('A folha de impressão esconde os avisos ou deixa de partir os blocos limpiamente.');
