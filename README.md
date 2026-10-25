@@ -76,6 +76,20 @@ Verificado no URL ao vivo (2026-10-24, publicação `vs65`; as medidas de layout
 | Consola no host publicado | nenhuma mensagem |
 | Barra de navegação (local, `vs76`) | 12 itens numa linha de 68px com 22px de folga a 1281/1366/1440px; `Alfabeto` e `Ouvir` entram nos 12, `Evangelismo` passou para o painel «Mais» e continua acessível abaixo de 1281px |
 
+**Publicação `vs78` (2026-10-25)** — o planeador de aula de `#/professores` ao vivo:
+
+| Verificação | Resultado no host publicado |
+| --- | --- |
+| 14 ficheiros publicados vs. `app/` | **byte a byte iguais** (SHA-256 de cada um, PNGs e o ZIP da extensão incluídos) — 14/14 |
+| `sw.js` e `index.html` ao vivo | `const VERSAO = 'vs78'` e os dois `?v=vs78` — o par bate certo no host |
+| `#/professores` no host | `node tools/sonda-professores.cjs --base=https://…` corrido **contra o site publicado**: 29 casos, **0 falhas, 0 erros de consola** — planos de 30/45/90 min com a soma dos blocos a bater certo, `Demonstração` fora do `select`, «Diálogos» com 12 pedidas e 4 dadas, glosa marcada «a validar», «Treino em pares» no Alfabeto, os quatro contextos com a sua nota, e copiar/descarregar sem erro |
+| `localStorage` no host | **vazio** à entrada e à saída da sonda — nem fixtures de teste, nem nada que o planeador escreva |
+| Service worker | 1 registação com o `scriptURL` do host; passa a **controlar** a página a partir da segunda carga; caches **só** `casulo-vs78` + `externo-vs78` (as da publicação anterior já não existem) |
+| Casulo sem rede no host | **13 entradas** em `casulo-vs78`, com as chaves exactas `app.js?v=vs78` e `styles.css?v=vs78`, o documento, o `index.html`, o manifest e os 8 ficheiros de `assets/` = **624.459 B**; `externo-vs78` com 3 entradas de tipos (`vs76` tinha 589.529 B — os +34,9 KiB são o planeador em `app.js` e a secção 24 em `styles.css`) |
+| Consola no host publicado | nenhuma mensagem em três cargas seguidas de `#/professores` |
+
+Limite desta medição: o tamanho do casulo é a **soma dos ficheiros servidos**, não a leitura dos corpos dentro da `Cache API` — neste Chrome `headless` os corpos devolvem 0 bytes (e os tipos da Google são respostas opacas, que nem sequer se podem ler). As 13 **chaves** e os dois `?v=vs78` foram lidos da cache no browser; os bytes vêm dos ficheiros byte a byte iguais acima.
+
 Limites honestos: a emulação "Offline" do DevTools **não bloqueia pedidos neste ambiente** (`navigator.onLine` fica `true` e os JPEGs do YouTube continuam a carregar), portanto a queda para o cache sem rede foi comprovada (a) matando o servidor local com o mesmo `sw.js` e (b) lendo as entradas do cache no host ao vivo — não por emulação. A sessão de gravação **nunca foi corrida com uma pessoa real nem com uma câmara real neste ambiente**: o que está medido acima é o cano completo com uma fonte de imagem sintética, mais o caminho de falha (câmara pendurada) no host publicado. O reconhecimento de gestos continua inexistente: depende do corpus descrito em `docs/colheita-sinais-lga.md`.
 
 ### Actualizar o site publicado
