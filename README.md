@@ -63,6 +63,18 @@ Verificado no URL ao vivo (2026-10-24, publicação `vs65`; as medidas de layout
 | Sessão de gravação completa | corrida em `127.0.0.1:8123` com uma máquina de filmar sintética (`canvas.captureStream`) a servir de câmara: **4 repetições, 12 quadros, 20 s de sinal, 4 clipes, `dur_ms` 4000/4000/4000/8000**, estado `colhido`, verificador a marcar 4/4 repetições com as queixas por repetição, e o JSONL exportado com `schema: 2`, `consentimento.em`, `audio: false`, 3 quadros por repetição (2026-10-24) |
 | Casulo sem rede | 13 entradas, 463.465 B em `vs65` (medido no host publicado; `vs47` tinha 10 entradas / 183.705 B) |
 
+**Publicação `vs76` (2026-10-25)** — as duas páginas novas do FASE 1B ao vivo:
+
+| Verificação | Resultado no host publicado |
+| --- | --- |
+| 14 ficheiros publicados vs. `app/` | **byte a byte iguais** (SHA-256 de cada um, incluindo os PNGs e o ZIP da extensão) |
+| `sw.js` e `index.html` ao vivo | `const VERSAO = 'vs76'` e os dois `?v=vs76` — o par bate certo no host |
+| `#/ouvir` no host | título «Ouvir e ver → sinais LGA — Pamosii Viva Surdo», `<h1>` «Ouvir, ver um filme e chegar aos sinais», as três secções («Ditar e ver», «Vídeo ou filme com legendas», «O que ainda não há, e porque é que se diz isso») e os 28 ids do painel (`ov-mic`, `ov-texto`, `ov-video`, `ov-legenda`, `ov-agora-g`, …) todos presentes; 12 botões |
+| `#/alfabeto` no host | «0 de 26 letras com forma confirmada · 0 com descrição registada» — a página lê o glossário de origem, sem números de teste |
+| Service worker | `activo`, caches **só** `casulo-vs76` + `externo-vs76`; as caches da publicação anterior (`casulo-vs56`, `externo-vs56`) desaparecem no recarregamento seguinte (verificado: presentes à primeira visita, ausentes à segunda) |
+| Consola no host publicado | nenhuma mensagem |
+| Barra de navegação (local, `vs76`) | 12 itens numa linha de 68px com 22px de folga a 1281/1366/1440px; `Alfabeto` e `Ouvir` entram nos 12, `Evangelismo` passou para o painel «Mais» e continua acessível abaixo de 1281px |
+
 Limites honestos: a emulação "Offline" do DevTools **não bloqueia pedidos neste ambiente** (`navigator.onLine` fica `true` e os JPEGs do YouTube continuam a carregar), portanto a queda para o cache sem rede foi comprovada (a) matando o servidor local com o mesmo `sw.js` e (b) lendo as entradas do cache no host ao vivo — não por emulação. A sessão de gravação **nunca foi corrida com uma pessoa real nem com uma câmara real neste ambiente**: o que está medido acima é o cano completo com uma fonte de imagem sintética, mais o caminho de falha (câmara pendurada) no host publicado. O reconhecimento de gestos continua inexistente: depende do corpus descrito em `docs/colheita-sinais-lga.md`.
 
 ### Actualizar o site publicado
@@ -84,6 +96,7 @@ Duas armadilhas já pagadas com factos, e como se vêem:
 
 - **`git checkout` com a árvore suja imprime `Aborting` e fica onde estava.** Se depois disso se correr o `cp` e o `commit`, o commit aterrar na branch errada. Confirmar sempre `git branch --show-current` antes do `git add`.
 - **As duas branches têm árvores diferentes.** Na `gh-pages` os ficheiros estão na **raiz** (`cp -r ../app/. .`); na `main` estão dentro de **`app/`** (`cp -r ../app/. app/`). Usar a forma da `gh-pages` estando na `main` cria cópias órfãs na raiz (`app.js`, `index.html`, `styles.css`, `sw.js`, `manifest.webmanifest`, `assets/`, `extensao/`) que entram no commit. Verificar com `git ls-tree --name-only HEAD` antes de cometer, e `git reset --mixed HEAD~1` + apagar os ficheiros órfãos para recuperar (nada é empurrado enquanto o `push` não correr).
+- **O `cp` de ficheiros idênticos suja a árvore só por fins-de-linha** (o git deste ambiente tem `autocrlf` ligado: os `M` aparecem em `assets/*.json`, `logo-mark.svg`, `pattern-angola.svg`, `manifest.webmanifest` com `git diff --numstat` a dar `0 0`). Isso trava o `git checkout main` a seguir ao commit na `gh-pages`. Verificar que é só EOL (`git diff --ignore-cr-at-eol --stat` vazio) e **empurrar sem mudar de branch**: `git push origin refs/heads/main:refs/heads/main`. Não se usa `checkout -f` nem `stash` para «limpar» isto — apagaria trabalho alheio por um problema que não existe.
 
 Depois publica-se o código-fonte na branch `main` (que não é servida), para que o repo e o site não divirjam:
 
