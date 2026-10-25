@@ -5613,8 +5613,60 @@ function covDados() {
 
 const covPct = (n, total) => total ? String(Math.round(n * 1000 / total) / 10).replace('.', ',') : '0';
 
+/* ----------------------------------------------------------------------------
+   Quanto falta para alguém poder treinar (docs/colheita-sinais-lga.md §2 e §9)
+
+   Não é uma meta deste site: é o mínimo que o protocolo pede para se poder
+   DECIDIR se vale a pena treinar reconhecimento de LGA. Este bloco conta o que
+   existe no aparelho de quem vê a página e compara com esse número. Não há
+   modelo nenhum a correr aqui, e chegar aos 702 clipes não faria o site
+   reconhecer sinal algum por si — faria existir matéria-prima para uma pessoa
+   decidir com números angolanos em vez de um conjunto de dados estrangeiro.
+   -------------------------------------------------------------------------- */
+const AMOSTRAS_LETRAS = 26, AMOSTRAS_PESSOAS = 3, AMOSTRAS_ANGULOS = 3, AMOSTRAS_REPS = 3;
+const AMOSTRAS_CLIPES = AMOSTRAS_LETRAS * AMOSTRAS_PESSOAS * AMOSTRAS_ANGULOS * AMOSTRAS_REPS;
+const AMOSTRAS_IMAGENS_POR_LETRA = [300, 500];
+
+function covAmostras(d) {
+  const porLetra = {};
+  let clipes = 0, bons = 0, imagens = 0, sessoesComConsentimento = 0, lentas = 0;
+  d.colheita.forEach(r => {
+    const s = r && r.sessao && Array.isArray(r.sessao.repeticoes) ? r.sessao : null;
+    if (!s) return;
+    if (s.consentimento) sessoesComConsentimento++;
+    const k = norm(String(r.palavra || ''));
+    const letra = k.length === 1 ? k.toUpperCase() : '';
+    if (letra >= 'A' && letra <= 'Z') {
+      if (!porLetra[letra]) porLetra[letra] = { clipes: 0, imagens: 0 };
+    }
+    s.repeticoes.forEach(rp => {
+      clipes++;
+      const n = Array.isArray(rp.quadros) ? rp.quadros.length : 0;
+      imagens += n;
+      if (rp.ritmo === 'lento') lentas++;
+      const q = rp.qualidade;
+      if (q && Array.isArray(q.bandeiras) && !q.bandeiras.length) bons++;
+      if (letra >= 'A' && letra <= 'Z') {
+        porLetra[letra].clipes++;
+        porLetra[letra].imagens += n;
+      }
+    });
+  });
+  const letras = Object.keys(porLetra).sort();
+  const porCadaUma = letras.length ? Math.round(imagens / letras.length) : 0;
+  return {
+    clipes, bons, imagens, lentas, sessoesComConsentimento, porLetra, letras,
+    letrasComMaterial: letras.length,
+    meta: AMOSTRAS_CLIPES,
+    falta: Math.max(0, AMOSTRAS_CLIPES - clipes),
+    pct: Math.min(100, Math.round(clipes * 100 / AMOSTRAS_CLIPES)),
+    porCadaUma, alvoImagens: AMOSTRAS_IMAGENS_POR_LETRA,
+  };
+}
+
 function coberturaHTML() {
   const d = covDados();
+  const am = covAmostras(d);
   const publicadasNaEquipa = d.por.confirmado + d.por.aprovado;
   const resumoBarra = COV_ESTADOS.filter(e => d.por[e])
     .map(e => `${d.por[e]} ${ESTADO_GLOSSARIO[e].rotulo.toLowerCase()}`).join(', ');
@@ -5724,6 +5776,63 @@ function coberturaHTML() {
       <a class="btn btn-p btn-sm" href="#/colher">Registar ou exportar sinais ${I.arrow}</a>
       <a class="btn btn-o btn-sm" href="#/validar">Validar sinais recolhidos</a>
       <a class="btn btn-o btn-sm" href="#/marcar">Marcar tempos nas aulas</a>
+    </p>
+  </section>
+
+  <section class="cov-bloco" aria-labelledby="cov-amostras-h">
+    <h2 id="cov-amostras-h">${I.target} Quanto falta para alguém poder treinar uma mão</h2>
+    <p class="muted">Reconhecer sinais não é coisa que este site faça, nem passe a fazer porque alguém
+    escreve código: precisa de vídeo de pessoas surdas angolanas, anotado. O protocolo
+    (<code>docs/colheita-sinais-lga.md</code>, §9) diz o mínimo para se poder <strong>decidir</strong>:
+    ${AMOSTRAS_LETRAS} letras <strong>×</strong> ${AMOSTRAS_PESSOAS} pessoas diferentes
+    <strong>×</strong> ${AMOSTRAS_ANGULOS} ângulos <strong>×</strong> ${AMOSTRAS_REPS} repetições
+    = <strong>${AMOSTRAS_CLIPES} clipes de datilologia</strong>. Este bloco conta o que existe
+    <strong>neste aparelho</strong> contra essa meta. Chegar aos ${AMOSTRAS_CLIPES} não faria o site
+    reconhecer sinal nenhum; sem eles ninguém pode dizer a uma equipa que vale a pena tentar.</p>
+
+    <div class="amo-medidor" role="img"
+      aria-label="Meta do protocolo: ${AMOSTRAS_CLIPES} clipes. Neste aparelho: ${am.clipes} clipes, ${am.pct} por cento.">
+      <span class="amo-cheio" style="width:${am.pct}%"></span>
+    </div>
+    <p class="amo-legenda"><strong>${am.clipes}</strong> de ${AMOSTRAS_CLIPES} clipes neste aparelho
+      (${am.pct}%)${am.falta ? ` — faltam ${am.falta}.` : ' — a meta do §9 está atingida neste aparelho.'}</p>
+
+    <ul class="cov-cards cov-cards-4">
+      <li><strong>${am.clipes}</strong><span>clipes gravados</span><small>${am.sessoesComConsentimento} ${pl(am.sessoesComConsentimento, 'sessão com consentimento', 'sessões com consentimento')}</small></li>
+      <li><strong>${am.bons}</strong><span>passaram no verificador</span><small>sem queixa de luz, contraste, nitidez ou movimento</small></li>
+      <li><strong>${am.imagens}</strong><span>imagens paradas</span><small>a Fase A nasce de imagens, não de vídeo corrido</small></li>
+      <li><strong>${am.letrasComMaterial}</strong><span>letras com material</span><small>de ${AMOSTRAS_LETRAS} letras, e ${am.lentas} ${pl(am.lentas, 'clipes lento', 'clipes lentos')} para anotar a trajectória</small></li>
+    </ul>
+
+    ${am.imagens ? `<p class="muted">${am.porCadaUma} imagens paradas por letra, em média,
+      ${am.letrasComMaterial === 1 ? 'na única letra com material neste aparelho' : 'nas ' + am.letrasComMaterial + ' letras com material'}. O §2 pede
+      ${AMOSTRAS_IMAGENS_POR_LETRA[0]} a ${AMOSTRAS_IMAGENS_POR_LETRA[1]} imagens <strong>por letra</strong>,
+      ${am.porCadaUma >= AMOSTRAS_IMAGENS_POR_LETRA[0] ? 'e este aparelho já entrou nesse intervalo em quantidade — falta saber se servem, e isso só uma pessoa surda o decide.' : 'e ainda não se chegou lá: faltam pelo menos ' + Math.max(0, AMOSTRAS_IMAGENS_POR_LETRA[0] - am.porCadaUma) + ' imagens por letra.'}</p>` : ''}
+
+    ${am.letrasComMaterial < AMOSTRAS_LETRAS ? `<p class="muted">${am.letrasComMaterial
+      ? 'Material deste aparelho ' + (am.letras.length === 1 ? 'para a letra <strong>' : 'para as letras <strong>') + esc(am.letras.join(', ')) + '</strong>. Faltam ' + esc(ALF_LETRAS.filter(l => !am.porLetra[l]).join(', ')) + '.'
+      : 'Nenhuma letra tem material gravado neste aparelho ainda — o <a href="#/alfabeto">alfabeto manual</a> é o sítio por onde o protocolo manda começar (§2).'}</p>` : ''}
+
+    <h3 class="amo-h3">O que este contador não pode contar</h3>
+    <ul class="amo-falta">
+      <li><strong>As ${AMOSTRAS_PESSOAS} pessoas diferentes.</strong> Não há contas nem nomes neste site,
+        por isso um aparelho nunca pode provar que gravaram três pessoas. É exactamente para isso que
+        existe o consentimento assinado (§5) e a guarda da equipa: a contagem de <em>pessoas</em> vive lá,
+        não aqui.</li>
+      <li><strong>As duas condições de luz.</strong> O verificador mede brilho e contraste por repetição,
+        mas ninguém etiqueta «janela» ou «luz artificial». O §9 pede uma sessão com janela e uma com luz
+        artificial: isso decide-se na sala, não no browser.</li>
+      <li><strong>Os ${AMOSTRAS_ANGULOS} ângulos.</strong> A sessão guiada grava do lugar onde o telemóvel
+        está. Ângulo é escolha de quem filma, e só a revisão dá pela falta dele.</li>
+      <li><strong>A revisão.</strong> Uma pessoa surda utilizadora de LGA leva cerca de um dia por cada 150
+        registos (§9). Sem revisor, clipes a mais são só ficheiros maiores.</li>
+      <li><strong>A entrega.</strong> Não há upload: nada chega à equipa enquanto alguém não carregar em
+        «Exportar» e enviar ela própria o ficheiro. Este número é local por construção, não por esquecimento.</li>
+    </ul>
+    <p class="cov-ac">
+      <a class="btn btn-p btn-sm" href="#/colher">Gravar material novo ${I.arrow}</a>
+      <a class="btn btn-o btn-sm" href="#/alfabeto">Ver as letras e o que falta de cada uma</a>
+      <a class="btn btn-o btn-sm" href="#/validar">Assinar validações</a>
     </p>
   </section>
 

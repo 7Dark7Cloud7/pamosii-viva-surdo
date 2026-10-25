@@ -383,6 +383,7 @@ O que a página faz, em concreto:
 - **Barra + tabela do mesmo número.** Os seis estados (`a-validar`, `colhido`, `confirmado`, `aprovado`, `demonstracao`, `rejeitado`) com contagem, percentagem e a explicação de cada um. A barra é decorativa e tem um padrão próprio por segmento, para não depender da cor; os números estão na tabela ao lado.
 - **Cobertura por tema**: palavras, com sinal da equipa, colhidas, a validar, demonstração e quantas aulas cobrem o tema. Temas sem aula (Demonstração, Colheita) mostram `—`.
 - **Lacunas**: as palavras que o Pamosii procurou e não encontrou, ordenadas por vezes pedidas, cada uma com um atalho «Registar este sinal» para `#/colher/:palavra`. Nenhum nome ou dado pessoal entra nesta lista.
+- **Quanto falta para se poder treinar uma mão** (`vs77`): um medidor com os clipes gravados **neste aparelho** contra a meta do protocolo (§9: 26 letras × 3 pessoas × 3 ângulos × 3 repetições = **702 clipes** de datilologia) e a meta de imagens por letra (§2: 300–500). Vem sempre acompanhado de uma lista do que o contador **não pode contar** — as três pessoas diferentes (não há contas nem nomes), as duas condições de luz, os três ângulos, a revisão (≈1 dia por 150 registos) e a entrega (não há upload). É o único sítio do site que fala de treino, e diz que nenhum modelo corre aqui.
 - **Como um número sobe**: gravar → validar → importar (`tools/ingerir-validacoes.cjs`) → o site relê o ficheiro. O último passo é o único que muda o que a página conta.
 
 Duas regras de integridade que esta vista obrigou a tornar explícitas no código:

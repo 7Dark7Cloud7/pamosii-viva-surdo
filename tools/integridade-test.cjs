@@ -427,6 +427,39 @@ if (blocoOuvir) {
 if (!/\{ path: '\/ouvir', rotulo: 'Ouvir'/.test(app)) falhas.push('#/ouvir saiu do menu: ninguém chega ao ditado.');
 if (!/ovSair\(\);/.test(app)) falhas.push('#/ouvir deixou de desligar o microfone ao mudar de rota.');
 
+/* ------------------------------------ 14. amostras treináveis (#/cobertura) */
+/* FASE 1B (8). É o único sítio do site que fala de treinar seja o que for. A
+   fronteira é esta: contar o material que existe num aparelho e dizer em voz alta
+   o que um aparelho não pode contar (pessoas, luzes, ângulos, revisão). Se alguém
+   transformar o bloco em promessa — «já quase há dados para a IA reconhecer» — a
+   página volta a vender uma coisa que não existe, e o brief não autoriza isso. */
+const blocoAmostras = (function () {
+  const a = app.indexOf('const AMOSTRAS_LETRAS');
+  const b = app.indexOf("on('/cobertura'");
+  return a >= 0 && b > a ? app.slice(a, b) : '';
+})();
+if (!blocoAmostras) falhas.push('O contador de amostras treináveis desapareceu do #/cobertura.');
+if (blocoAmostras) {
+  if (/fetch\(|localStorage\.setItem|sendBeacon|XMLHttpRequest/.test(blocoAmostras)) {
+    falhas.push('O bloco de amostras passou a fazer rede ou a escrever no aparelho: conta registos que já existem neste browser.');
+  }
+  if (!/docs\/colheita-sinais-lga\.md/.test(blocoAmostras)) {
+    falhas.push('O contador deixou de citar o protocolo de onde vem a meta — o número passa a ser inventado.');
+  }
+  if (!/não pode contar/.test(blocoAmostras)) {
+    falhas.push('O contador deixou de dizer o que um aparelho não pode contar; sem isso a percentagem lê-se como «quase prontos para a IA».');
+  }
+  if (!/pessoas diferentes/.test(blocoAmostras)) {
+    falhas.push('O contador deixou de explicar que as três pessoas do protocolo não se podem contar sem contas nem nomes.');
+  }
+  if (!/[Nn]ão h[áa] upload/.test(blocoAmostras)) {
+    falhas.push('O contador deixou de dizer que nada chega à equipa sem alguém exportar; os clipes não sobem sozinhos.');
+  }
+  if (!/aria-label/.test(blocoAmostras)) {
+    falhas.push('O medidor de amostras perdeu o aria-label: um leitor de ecrã não ouve uma barra de percentagem.');
+  }
+}
+
 /* ----------------------------------------------------------------- relatorio */
 const saida = [];
 saida.push('Integridade do Pamosii — ' + falhas.length + ' falha(s), ' + avisos.length + ' aviso(s).');
