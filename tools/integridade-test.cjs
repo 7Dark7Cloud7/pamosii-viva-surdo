@@ -460,6 +460,58 @@ if (blocoAmostras) {
   }
 }
 
+/* --------------------------------------- 15. planeador de aula (#/professores) */
+/* FASE 1B (9). A página é a única que se apresenta como «material para professores».
+   O que a torna honesta é isto: monta a aula com conteúdo que existe (aulas reais,
+   glossário com estado, marcações locais) e diz em voz alta o que não existe - que
+   nada ali foi revisto por uma pessoa surda e que nada fica guardado no site.
+   Se o bloco passar a prometer currículo aprovado, cartões imprimíveis ou um
+   intérprete automático, a página volta a vender trabalho que a equipa não fez. */
+const blocoProf = (function () {
+  const a = app.indexOf('const PROF_DURACOES');
+  const b = app.indexOf('/* ---------------- vista: biblioteca ---------------- */');
+  return a >= 0 && b > a ? app.slice(a, b) : '';
+})();
+if (!blocoProf) falhas.push('O planeador de aula desapareceu de #/professores - a página voltou a ser só "Em breve".');
+if (blocoProf) {
+  if (/fetch\(|localStorage\.setItem|sendBeacon|XMLHttpRequest|indexedDB/i.test(blocoProf)) {
+    falhas.push('O planeador passou a fazer rede ou a escrever no aparelho: o plano copia-se e descarrega-se, não se guarda.');
+  }
+  if (!/não foi revisto por uma pessoa surda/.test(blocoProf)) {
+    falhas.push('O planeador deixou de dizer que o plano não foi revisto por uma pessoa surda.');
+  }
+  if (!/confirmado ou aprovado/.test(blocoProf)) {
+    falhas.push('O planeador deixou de contar quantas palavras têm sinal confirmado ou aprovado - sem isso o plano lê-se como currículo pronto.');
+  }
+  if (!/não substitui um intérprete/.test(blocoProf)) {
+    falhas.push('O planeador deixou de dizer que não substitui um intérprete de LGA na turma inclusiva.');
+  }
+  if (!/data-prof-copy/.test(blocoProf) || !/data-prof-dl/.test(blocoProf)) {
+    falhas.push('O planeador perdeu o copiar ou o descarregar: sem saída, o plano é só mais texto na página.');
+  }
+  if (!/este site não guarda/.test(blocoProf)) {
+    falhas.push('O planeador deixou de dizer que não guarda o que se escreve (cabeçalho, checklist).');
+  }
+  if (!/role="status"/.test(blocoProf)) {
+    falhas.push('O plano deixou de anunciar o resumo a leitores de ecrã.');
+  }
+  if (!/<label for="prof-tema"|for="prof-tema"/.test(blocoProf)) {
+    falhas.push('As escolhas do planeador ficaram sem rótulo: um leitor de ecrã não sabe o que é cada select.');
+  }
+  if (!/soonBadge\(\)/.test(blocoProf)) {
+    falhas.push('#/professores deixou de marcar como "Em breve" o material que ainda não existe.');
+  }
+  if (!/dicionario/.test(blocoProf) || !/colher/.test(blocoProf)) {
+    falhas.push('O planeador deixou de ligar ao dicionário e à Colheita - é por aí que o que falta passa a existir.');
+  }
+}
+if (!/\{ path: '\/professores', rotulo: 'Professores'/.test(app)) {
+  falhas.push('#/professores saiu do menu: ninguém chega ao planeador.');
+}
+if (!/bind: bindProfessor/.test(app)) {
+  falhas.push('#/professores perdeu o bind: o planeador mostrar-se-ia e não reagiria a nada.');
+}
+
 /* ----------------------------------------------------------------- relatorio */
 const saida = [];
 saida.push('Integridade do Pamosii — ' + falhas.length + ' falha(s), ' + avisos.length + ' aviso(s).');
