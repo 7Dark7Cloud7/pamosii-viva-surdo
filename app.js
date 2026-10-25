@@ -150,7 +150,7 @@ const CURSOS = [
 const CATEGORIAS = [
   { id: 'lga', nome: 'Língua Gestual Angolana', estado: 'com-conteudo' },
   { id: 'formacao', nome: 'Formação profissional acessível', estado: 'em-breve', nota: 'A Viva Surdo trabalha para oferecer formação técnica interpretada em LGA. Novidades serão anunciadas nos canais oficiais.' },
-  { id: 'professores', nome: 'Recursos para professores', estado: 'em-breve', nota: 'Materiais de ensino para profissionais que trabalham com alunos surdos estão em preparação. Consulta a página de professores.' },
+  { id: 'professores', nome: 'Recursos para professores', estado: 'em-breve', nota: 'A página de professores já tem um planeador de aulas montado com as aulas reais e o dicionário. Cursos de formação para professores continuam em preparação com a equipa.' },
 ];
 
 /* ============================================================================
@@ -1480,7 +1480,7 @@ const META = {
   '/aprender-lga': { t: 'Aprender LGA — Pamosii Viva Surdo', d: 'Aprende Língua Gestual Angolana com as 17 aulas gratuitas do mini-curso oficial da Viva Surdo, organizadas por tema: saudações, alfabeto, números, cores, verbos e mais.' },
   '/pamosii': { t: 'Glosa português ↔ Língua Gestual Angolana — Pamosii Viva Surdo', d: 'Escreve ou dita uma frase em português e vê a sequência de sinais com o vídeo da aula; ou escolhe os sinais e ouve a frase em português. Glosa de estudo, não tradução automática.' },
   '/dicionario': { t: 'Dicionário português ↔ LGA — Pamosii Viva Surdo', d: 'Procura palavras em português e descobre em que aula de Língua Gestual Angolana o sinal é ensinado. Glossário por tema, com estado de validação visível em cada entrada.' },
-  '/professores': { t: 'Recursos para professores — Pamosii Viva Surdo', d: 'Materiais de ensino para professores e profissionais que trabalham com alunos surdos: aulas de referência em LGA e recursos em preparação.' },
+  '/professores': { t: 'Recursos para professores — Pamosii Viva Surdo', d: 'Planeador de aula em Língua Gestual Angolana: monta uma aula a partir das 17 aulas reais, do dicionário com o estado de validação de cada sinal e de uma frase com glosa. Copia-se ou descarrega-se; nada fica guardado. Materiais ainda por aprovar estão marcados como Em breve.' },
   '/biblioteca': { t: 'Biblioteca — Pamosii Viva Surdo', d: 'Biblioteca pesquisável de conteúdos gratuitos da Viva Surdo: aulas de LGA em vídeo e materiais em preparação.' },
   '/biblia': { t: 'Bíblia em português, áudio e sinais — Pamosii Viva Surdo', d: 'Texto bíblico real (João Ferreira de Almeida, domínio público), leitura em voz alta para pessoas cegas e glosa de sinais por versículo. Não existe Bíblia publicada em Língua Gestual Angolana; há testes em Libras.' },
   '/evangelismo': { t: 'Evangelismo acessível — Pamosii Viva Surdo', d: 'Roteiros curtos de partilha da Bíblia para usar com pessoas surdas: frases em português com glosa de sinais, áudio e copiar. Conteúdo de estudo, sem promessas de tradução automática.' },
@@ -1702,7 +1702,7 @@ on('/', () => {
   const c = CURSOS[0];
   const audiencias = [
     { ic: I.users, cls: 't', titulo: 'Sou surdo/a', texto: 'Encontra formação e recursos em Língua Gestual Angolana, com a comunidade surda como público principal.', cta: 'Ver cursos', href: '#/cursos' },
-    { ic: I.grad, cls: 't', titulo: 'Sou professor/a', texto: 'Acede a materiais de ensino para trabalhar com alunos surdos — aulas de referência em LGA e recursos em preparação.', cta: 'Ver recursos', href: '#/professores' },
+    { ic: I.grad, cls: 't', titulo: 'Sou professor/a', texto: 'Monta uma aula a partir das 17 aulas reais e do dicionário, com o estado de cada sinal à vista — e copia ou descarrega o plano.', cta: 'Abrir o planeador', href: '#/professores' },
     { ic: I.chat, cls: 'a', titulo: 'Quero aprender LGA', texto: 'Começa hoje: as 17 aulas gratuitas do mini-curso oficial de Língua Gestual Angolana estão abertas a todas as pessoas.', cta: 'Começar a aprender', href: '#/aprender-lga' },
   ];
   const passos = [
@@ -2639,44 +2639,432 @@ on('/pamosii', () => ({
   state: pmEstado,
 }));
 
-/* ---------------- vista: recursos para professores ---------------- */
-on('/professores', () => {
-  const recursos = [
-    { ic: I.video, cls: 't', titulo: 'Aulas de LGA para referência', estado: 'disponivel', texto: 'As 17 aulas do mini-curso oficial podem servir de referência e apoio em sala, tanto para ensinar LGA como para comunicação básica com alunos surdos.', cta: 'Ver as aulas', href: '#/aprender-lga' },
-    { ic: I.doc, cls: 'a', titulo: 'Planos de aula', estado: 'em-breve', texto: 'Planos de aula estruturados para trabalhar com alunos surdos, em preparação pela equipa da Viva Surdo.', cta: null },
-    { ic: I.book, cls: 'a', titulo: 'Vocabulário e materiais visuais', estado: 'em-breve', texto: 'Cartões de vocabulário, fichas e materiais visuais descarregáveis para sala de aula.', cta: null },
-    { ic: I.access, cls: 'a', titulo: 'Orientações de acessibilidade', estado: 'em-breve', texto: 'Orientações práticas para tornar aulas e escolas mais acessíveis a alunos surdos, a validar com professores e com a comunidade surda.', cta: null },
+/* ---------------- vista: professores — planeador de aula ---------------- */
+
+/* Regras de integridade desta página (ler antes de editar):
+   - O planeador monta uma aula com o que o site JÁ tem: as 17 aulas reais do
+     mini-curso, o glossário com o estado de cada palavra e as marcações de tempo
+     feitas neste aparelho. Não existe um currículo oficial de LGA publicado por
+     ninguém — por isso um plano daqui é uma estrutura de trabalho, e a página diz
+     que não foi revisto por uma pessoa surda.
+   - Cada palavra leva o badge do seu estado. Só o que está «confirmado» ou
+     «aprovado» pode ser ensinado como LGA; o plano conta quantas ainda não estão.
+   - Esta página não escreve em localStorage: um plano copia-se ou descarrega-se.
+     As marcas da checklist vivem só na visita e a página diz isso.
+   - Escola, turma e data são texto livre de quem escreve, só para o cabeçalho do
+     ficheiro. Nada é enviado por este site. */
+
+const PROF_DURACOES = [30, 45, 60, 90];
+const PROF_QTD = [5, 8, 12];
+
+const PROF_CONTEXTOS = [
+  { id: 'turma', rotulo: 'Turma inteira a aprender LGA',
+    nota: 'Todos sinalizam ao mesmo tempo; a voz serve só para quem acompanha com leitura labial.' },
+  { id: 'inclusiva', rotulo: 'Aluno surdo numa turma de ouvintes',
+    nota: 'O sinal serve ao aluno surdo e os colegas vêem o mesmo vídeo com som. Isto não substitui um intérprete de LGA.' },
+  { id: 'professor', rotulo: 'Professor/a a aprender LGA',
+    nota: 'Sem alunos à frente: o plano é para ti, e o que vacilar repetes antes de entrar na sala.' },
+  { id: 'familia', rotulo: 'Família ou grupo pequeno',
+    nota: 'Cinco a oito sinais por sessão chegam; o resto fica para a próxima vez.' },
+];
+
+const PROF_CHECK = [
+  'Vi a aula inteira antes de a mostrar à turma.',
+  'A luz bate na cara de quem sinaliza, nunca por detrás.',
+  'Quem sinaliza fica de frente, da cintura para cima, sem nada à frente do corpo.',
+  'O vídeo não arranca sozinho e tem legendas para quem não sinaliza.',
+  'Todos vêem a cara de quem fala, não a nuca de um colega.',
+  'Há pausas: ninguém sinaliza quarenta minutos seguidos.',
+  'Se um sinal não está no dicionário, registo na Colheita em vez de inventar.',
+];
+
+const profEstado = { tema: 'Saudações', dur: 45, ctx: 'turma', n: 8, frase: '', cab: '' };
+
+/* temas que podem ser ensinados: o tema de demonstração fica de fora de propósito,
+   porque aquelas palavras não correspondem a sinal nenhum */
+const profTemas = () => GLOSSARIO
+  .filter(g => g.termos.some(t => t.estado !== 'demonstracao'))
+  .map(g => g.tema);
+
+/* partir N minutos por blocos, com o maior resto, para a soma bater certo */
+function profMinutos(pesos, total) {
+  const s = pesos.reduce((a, b) => a + b, 0);
+  if (!s || total <= 0) return pesos.map(() => 0);
+  const exactos = pesos.map(p => p * total / s);
+  const out = exactos.map(Math.floor);
+  let falta = total - out.reduce((a, b) => a + b, 0);
+  const ordem = exactos.map((v, i) => ({ r: v - out[i], i })).sort((a, b) => b.r - a.r);
+  for (let k = 0; falta > 0 && ordem.length; k++, falta--) out[ordem[k % ordem.length].i]++;
+  return out;
+}
+
+const profDur = (m) => m >= 60 ? Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + (m % 60) + ' min' : '') : m + ' min';
+
+function profPlano(s) {
+  const temas = profTemas();
+  if (!temas.includes(s.tema)) return null;
+  const grupo = GLOSSARIO.find(g => g.tema === s.tema);
+  const ctx = PROF_CONTEXTOS.find(c => c.id === s.ctx) || PROF_CONTEXTOS[0];
+  const aulas = aulasDeTema(s.tema);
+  const termos = grupo ? grupo.termos.filter(t => t.estado !== 'demonstracao') : [];
+  const qtd = Math.min(s.n, termos.length);
+  const palavras = termos.slice(0, qtd);
+  const validas = palavras.filter(t => t.estado === 'confirmado' || t.estado === 'aprovado').length;
+  const colhidas = palavras.filter(t => t.estado === 'colhido').length;
+  const datilo = s.tema === 'Alfabeto';
+  const saude = (GLOSSARIO.find(g => g.tema === 'Saudações') || { termos: [] }).termos
+    .slice(0, 4).map(t => t.palavra);
+
+  /* tempo: 5 de acolhimento + 4 de fecho + 3 de datilologia/treino, sempre fixos;
+     o que sobra da aula divide-se entre o vídeo, as palavras e a prática */
+  const sobra = Math.max(9, s.dur - 12);
+  const [mVideo, mPalavras, mPratica] = profMinutos([aulas.length ? 3 : 1, 3, 2], sobra);
+
+  const comMarca = palavras
+    .map(t => ({ t, mo: aulas.length ? momentoDe(t.palavra, aulas[0].id) : null }))
+    .filter(x => x.mo);
+
+  const blocos = [];
+  const add = (min, titulo, linhas, ac, html) => blocos.push({ min, titulo, linhas, ac: ac || [], html: html || '' });
+
+  add(5, 'Acolhimento só em sinais', [
+    'Dois ou três sinais de entrada, sempre os mesmos, para a turma saber que a aula começou.',
+    ctx.nota,
+  ], [`<button class="btn btn-o btn-sm" type="button" data-signer data-texto="${esc(saude.join(', '))}">${I.video} Ver esses sinais no Signer</button>`]);
+
+  if (aulas.length) {
+    add(mVideo, 'Ver a aula: ' + aulas.map(a => '«' + a.titulo + '»').join(' e '), [
+      'Primeiro vê tu a aula inteira, antes de a mostrar. Depois mostra só o pedaço dos sinais de hoje e repete com a turma.',
+      comMarca.length
+        ? 'As horas abaixo vêm das marcações feitas <strong>neste aparelho</strong> (tool de Marcação). Se uma palavra não tem hora, é porque ainda ninguém marcou onde o sinal aparece.'
+        : 'Nenhuma destas palavras tem tempo marcado neste aparelho: a turma vê a aula toda, ou marca primeiro em <a href="#/marcar">Marcação</a> e o plano passa a dizer quando cada sinal aparece.',
+    ], aulas.slice(0, 2).map(a => `<button class="btn btn-p btn-sm" type="button" data-play="${a.id}" data-titulo="${esc(a.titulo)}" aria-label="Ver a aula: ${esc(a.titulo)}">${I.play} ${esc(a.titulo)}</button>`),
+      `<ul class="prof-aulas">${aulas.map(a => {
+        return `<li><strong>${esc(a.titulo)}</strong><span>${esc(a.tema)} · publicada a ${fmtData(a.data)}</span></li>`;
+      }).join('')}</ul>`);
+  } else {
+    add(mVideo, 'Sem aula ligada a este tema', [
+      'Este tema ainda não tem aula no mini-curso. Não há vídeo para mostrar: usa o dicionário e o Signer para os sinais que existem, e registra a falta.',
+    ], ['<a class="btn btn-o btn-sm" href="#/dicionario">Procurar no dicionário</a>',
+         '<a class="btn btn-o btn-sm" href="#/colher">Registar o sinal que falta</a>']);
+  }
+
+  add(mPalavras, qtd + ' ' + pl(qtd, 'palavra nova', 'palavras novas') + ' de ' + s.tema, [
+    `Mostra o sinal, pede a cada pessoa para fazer, e diz em voz alta o estado de cada palavra: <strong>${validas}</strong> de ${qtd} ${pl(validas, 'está confirmada ou aprovada', 'estão confirmadas ou aprovadas')}${colhidas ? `, ${colhidas} ${pl(colhidas, 'chegaram', 'chegaram')} da Colheita sem confirmação de ninguém` : ''}.`,
+    'O que não estiver confirmado não se ensina como LGA — ensina-se como proposta, e diz-se que é proposta.',
+  ], ['<a class="btn btn-o btn-sm" href="#/dicionario">Ver o tema no dicionário</a>'],
+    `<ul class="prof-palavras">${palavras.map(t => {
+      const est = ESTADO_GLOSSARIO[t.estado];
+      const mo = aulas.length ? momentoDe(t.palavra, aulas[0].id) : null;
+      return `<li>
+        <span class="prof-w">${esc(t.palavra)}</span>
+        <span class="dic-badge is-${t.estado}" title="${esc(est.nota)}">${esc(est.rotulo)}</span>
+        ${mo ? `<span class="mk-chip" title="${esc(chipMomento(mo))}">${I.clock} ${esc(fmtT(mo.inicio))} → ${esc(fmtT(mo.fim))}</span>` : ''}
+        <button class="dic-ico" type="button" data-signer data-texto="${esc(t.palavra)}" aria-label="Mostrar ${esc(t.palavra)} no Signer">${I.video}</button>
+      </li>`;
+    }).join('')}</ul>`);
+
+  const frases = s.frase.trim() ? analisarTexto(s.frase) : [];
+  add(mPratica, frases.length ? 'Prática: a tua frase em sequência de sinais' : 'Prática com o Pamosii', frases.length
+    ? ['A glosa abaixo é gerada pelo dicionário deste site. É material de estudo, palavra a palavra, e <strong>não é uma tradução aprovada</strong> — nem por esta equipa nem por ninguém surdo.']
+    : ['Escolhe uma frase da aula e escreve-a no <a href="#/pamosii">Pamosii</a>: o painel mostra a sequência de sinais com o vídeo de cada um, e a frase em português quando ela não tem sinal.',
+       'Se escreveres a frase aqui em cima, o plano passa a trazê-la já com a glosa.'],
+    frases.length
+      ? [`<button class="btn btn-p btn-sm" type="button" data-prof-pamosii>Abrir esta frase no Pamosii ${I.arrow}</button>`,
+         `<button class="btn btn-o btn-sm" type="button" data-signer data-texto="${esc(s.frase.trim().slice(0, 240))}">${I.video} Sinais animados</button>`]
+      : ['<a class="btn btn-o btn-sm" href="#/pamosii">Abrir o Pamosii</a>'],
+    frases.length ? `<ul class="prof-glosa">${frases.slice(0, 3).map((r, i) => `<li><p class="prof-glosa-f">${i + 1}. ${esc(r.frase)}</p><p class="prof-glosa-g"><strong>Glosa (a validar):</strong> ${esc(glosaTexto(r) || '—')}</p></li>`).join('')}</ul>` : '');
+
+  if (!datilo) {
+    add(3, 'Datilologia: o que não tem sinal', [
+      'Nomes próprios, nomes de lugares e palavras sem sinal soletram-se no alfabeto manual. Treina duas ou três palavras em pares antes de fechar a aula.',
+    ], ['<a class="btn btn-o btn-sm" href="#/alfabeto">Ver o alfabeto manual</a>']);
+  } else {
+    add(3, 'Treino em pares', [
+      'Soletra o nome de cada pessoa da sala e troca. O treino do <a href="#/alfabeto">alfabeto manual</a> serve exactamente para isto: a ordem das letras até a mão chegar sozinha.',
+    ], ['<button class="btn btn-o btn-sm" type="button" data-signer data-texto="a b c">Ver no Signer</button>']);
+  }
+
+  add(4, 'Fecho e lacunas', [
+    'Últimos minutos: cada pessoa mostra um sinal que aprendeu hoje. O que a turma pedir e não estiver aqui não se inventa — registra-se.',
+    'No fim diz o número do tema e deixa o telemóvel passar: <a href="#/colher">Colheita</a> grava o sinal com método, e <a href="#/validar">Validação</a> é para quem sinaliza, não para ti.',
+  ], ['<a class="btn btn-p btn-sm" href="#/colher">Registar o que faltou</a>',
+       '<a class="btn btn-o btn-sm" href="#/cobertura">Ver o que já está validado</a>']);
+
+  const totalMin = blocos.reduce((a, b) => a + b.min, 0);
+  const avisos = [
+    `Este plano não foi revisto por uma pessoa surda: das ${qtd} ${pl(qtd, 'palavra', 'palavras')} do plano, ${validas} ${pl(validas, 'tem', 'têm')} o sinal confirmado ou aprovado no dicionário e ${qtd - validas} ${pl(qtd - validas, 'ainda não', 'ainda não')}.`,
+    'As horas de cada sinal vêm de marcações feitas neste aparelho; ninguém confirmou que o sinal é aquele que aparece nesses segundos.',
   ];
-  return {
-    active: '/professores',
-    h: shell(`
+  if (ctx.id === 'inclusiva') avisos.push('Um aluno surdo numa turma de ouvintes precisa de alguém que sinalize com ele: o Pamosii mostra uma sequência de sinais de estudo, não interpreta a aula.');
+  if (termos.length !== qtd) avisos.push(`O tema ${s.tema} tem ${termos.length} ${pl(termos.length, 'palavra', 'palavras')} no dicionário — o plano trabalha ${qtd}.`);
+
+  return { s, ctx, aulas, palavras, qtd, validas, colhidas, blocos, totalMin, avisos, frases, datilo, saude };
+}
+
+function profPlanoHTML(p) {
+  let t = 0;
+  return `
+<div class="prof-ac">
+  <button class="btn btn-p btn-sm" type="button" data-prof-copy>${I.doc} Copiar plano</button>
+  <button class="btn btn-o btn-sm" type="button" data-prof-dl>${I.arrow} Descarregar .txt</button>
+</div>
+<ol class="prof-blocos">
+  ${p.blocos.map((b, i) => {
+    const inicio = t; t += b.min;
+    return `<li class="prof-bloco">
+      <div class="prof-bloco-cabe">
+        <span class="prof-num">${i + 1}</span>
+        <h3 class="prof-bloco-t">${esc(b.titulo)}</h3>
+        <span class="prof-min">${b.min} min</span>
+        <span class="prof-quando">${inicio === 0 ? 'logo no início' : 'aos ' + inicio + ' min'}</span>
+      </div>
+      ${b.linhas.map(l => `<p>${l}</p>`).join('')}
+      ${b.html}
+      ${b.ac.length ? `<p class="prof-bloco-ac">${b.ac.join('')}</p>` : ''}
+    </li>`;
+  }).join('')}
+</ol>
+<p class="prof-total">${I.clock} Total: <strong>${profDur(p.totalMin)}</strong> · ${p.blocos.length} blocos · tema ${esc(p.s.tema)} · ${esc(p.ctx.rotulo.toLowerCase())}</p>
+<ul class="prof-avisos">
+  ${p.avisos.map(a => `<li>${I.info}<span>${a}</span></li>`).join('')}
+</ul>`;
+}
+
+/* o texto que sai para a área de transferência e para o ficheiro: é o plano todo,
+   com a checklist do que estava marcado nesta visita */
+function profTextoPlano(s, check) {
+  const p = profPlano(s);
+  if (!p) return '';
+  const L = [];
+  L.push('PAMOSII — PLANO DE AULA');
+  if (s.cab.trim()) L.push(s.cab.trim());
+  L.push('Tema: ' + s.tema + ' | Duração: ' + profDur(p.totalMin) + ' | Contexto: ' + p.ctx.rotulo);
+  L.push('Gerado em ' + new Date().toISOString().slice(0, 16).replace('T', ' ') + ' a partir do conteúdo publicado em pamosii.app');
+  L.push('');
+  L.push('AVISO: este plano não foi revisto por uma pessoa surda. Um sinal só pode ser');
+  L.push('ensinado como Língua Gestual Angolana quando está marcado como confirmado');
+  L.push('ou aprovado. Das ' + p.qtd + ' palavras do plano, ' + p.validas + ' estão.');
+  L.push('');
+  let t = 0;
+  p.blocos.forEach((b, i) => {
+    const inicio = t; t += b.min;
+    L.push((i + 1) + '. ' + b.titulo.toUpperCase() + '  [' + b.min + ' min' + (inicio ? ', aos ' + inicio + ' min' : '') + ']');
+    b.linhas.forEach(l => L.push('   ' + l.replace(/<[^>]+>/g, '')));
+    if (b.html.includes('prof-palavras')) {
+      p.palavras.forEach(w => L.push('   - ' + w.palavra + ' — ' + ESTADO_GLOSSARIO[w.estado].rotulo));
+    }
+    if (b.html.includes('prof-aulas')) {
+      p.aulas.forEach(a => L.push('   - ' + a.titulo + ' (https://www.youtube.com/watch?v=' + a.id + ')'));
+    }
+    if (p.frases.length && /prof-glosa/.test(b.html)) {
+      p.frases.slice(0, 3).forEach((r, j) => {
+        L.push('   Frase: ' + r.frase);
+        L.push('   Glosa (a validar): ' + (glosaTexto(r) || '—'));
+      });
+    }
+    L.push('');
+  });
+  L.push('ANTES DE COMEÇAR');
+  PROF_CHECK.forEach((c, i) => L.push((check && check[i] ? '[x] ' : '[ ] ') + c));
+  L.push('');
+  L.push('Palavras do plano, com o estado no dicionário:');
+  p.palavras.forEach(w => {
+    const mo = p.aulas.length ? momentoDe(w.palavra, p.aulas[0].id) : null;
+    L.push('- ' + w.palavra + ' — ' + ESTADO_GLOSSARIO[w.estado].rotulo + (mo ? ' — sinal visível entre ' + fmtT(mo.inicio) + ' e ' + fmtT(mo.fim) + ' de «' + p.aulas[0].titulo + '» (por validar)' : ''));
+  });
+  L.push('');
+  L.push('O que este plano não é: um currículo aprovado, uma tradução automática, um');
+  L.push('substituto de um intérprete de LGA, nem material validado pela comunidade surda.');
+  L.push('Protocolo de recolha e validação: docs/colheita-sinais-lga.md');
+  return L.join('\n') + '\n';
+}
+
+function professorHTML(s) {
+  const temas = profTemas();
+  const recursos = [
+    { ic: I.video, cls: 't', titulo: 'Aulas de LGA para referência', estado: 'disponivel',
+      texto: 'As 17 aulas do mini-curso oficial podem servir de referência e apoio em sala, tanto para ensinar LGA como para comunicação básica com alunos surdos.',
+      cta: 'Ver as aulas', href: '#/aprender-lga' },
+    { ic: I.doc, cls: 't', titulo: 'Planos de aula por tema', estado: 'disponivel',
+      texto: 'O planeador acima monta a aula com as horas dos blocos, a lista de vocabulário com o estado de cada sinal e a frase que escreveres. Copias ou descarregas — o site não guarda nada.',
+      cta: null },
+    { ic: I.book, cls: 't', titulo: 'Listas de vocabulário com estado de validação', estado: 'disponivel',
+      texto: 'Cada palavra mostra se o sinal está confirmado, aprovado, colhido ou a validar. É a diferença entre ensinar LGA e ensinar uma hipótese.',
+      cta: 'Ver o dicionário', href: '#/dicionario' },
+    { ic: I.spark, cls: 'a', titulo: 'Cartões e fichas ilustradas para os alunos', estado: 'em-breve',
+      texto: 'Materiais visuais imprimíveis para sala de aula. Enquanto a equipa não tiver uma versão revista por pessoas surdas, não publicamos nada com o nosso nome em cima.',
+      cta: null },
+    { ic: I.access, cls: 'a', titulo: 'Orientações de acessibilidade para a escola', estado: 'em-breve',
+      texto: 'Orientações para tornar a escola acessível a alunos surdos, a construir com professores e com a comunidade surda. As opções de leitura e contraste deste site já existem no painel «Acessibilidade».',
+      cta: null },
+  ];
+  return `
 <div class="wrap page-head">
+  <p class="eyebrow">${I.grad} Para quem ensina</p>
   <h1>Recursos para professores</h1>
-  <p class="lead">Espaço para professores e profissionais que ensinam ou apoiam pessoas surdas. Só publicamos materiais aprovados pela equipa — o que ainda não existe está claramente marcado como “Em breve”.</p>
+  <p class="lead">Espaço para professores e profissionais que ensinam ou apoiam pessoas surdas. O planeador abaixo monta uma aula com o que já existe: as 17 aulas reais do mini-curso, o dicionário com o estado de cada sinal e as marcações de tempo feitas neste aparelho. O que a equipa ainda não aprovou continua marcado como «Em breve».</p>
 </div>
 <section class="section tight">
   <div class="wrap">
-    <div class="grid g-2">
-      ${recursos.map(r => `
-      <article class="res-card rv">
-        <span class="res-ic ${r.cls}">${r.ic}</span>
-        <h3>${r.titulo}</h3>
-        ${r.estado === 'em-breve' ? soonBadge() : `<span class="chip">${I.check} Disponível</span>`}
-        <p>${r.texto}</p>
-        ${r.cta ? `<a class="btn btn-p btn-sm" href="${r.href}">${r.cta} ${I.arrow}</a>` : ''}
-      </article>`).join('')}
-    </div>
-    <div class="note-band" style="margin-top:30px">
-      ${I.chat}
-      <p><strong>Ensinas pessoas surdas e tens materiais para partilhar?</strong> Fala com a Viva Surdo nos canais oficiais — materiais só são publicados após revisão e aprovação da equipa.</p>
-    </div>
-    <div style="margin-top:24px">
-      <a class="btn btn-p" href="#/contacto">Falar com a Viva Surdo ${I.arrow}</a>
-    </div>
+
+    <section class="cov-bloco" id="prof-planeador" aria-labelledby="prof-planeador-h">
+      <h2 id="prof-planeador-h">${I.grad} Planeador de aula</h2>
+      <p class="muted">Escolhe o tema, a duração, o contexto e quantas palavras. O plano aparece logo e não fica guardado em lado nenhum — copia-se ou descarrega-se.</p>
+      <div class="prof-form">
+        <div class="f-field">
+          <label for="prof-tema">Tema da aula</label>
+          <select id="prof-tema">
+            ${temas.map(t => {
+              const g = GLOSSARIO.find(x => x.tema === t);
+              return `<option value="${esc(t)}">${esc(t)} · ${g.termos.length} ${pl(g.termos.length, 'palavra', 'palavras')}</option>`;
+            }).join('')}
+          </select>
+        </div>
+        <div class="f-field">
+          <label for="prof-dur">Duração da aula</label>
+          <select id="prof-dur">${PROF_DURACOES.map(d => `<option value="${d}">${d} minutos</option>`).join('')}</select>
+        </div>
+        <div class="f-field">
+          <label for="prof-ctx">Contexto</label>
+          <select id="prof-ctx">${PROF_CONTEXTOS.map(c => `<option value="${c.id}">${esc(c.rotulo)}</option>`).join('')}</select>
+        </div>
+        <div class="f-field">
+          <label for="prof-n">Palavras novas</label>
+          <select id="prof-n">${PROF_QTD.map(n => `<option value="${n}">${n} palavras</option>`).join('')}</select>
+        </div>
+      </div>
+      <div class="prof-form prof-form-2">
+        <div class="f-field">
+          <label for="prof-frase">Frase que vais usar na aula (opcional)</label>
+          <textarea id="prof-frase" rows="2" placeholder="Ex.: Hoje vamos aprender os sinais das cores."></textarea>
+          <p class="muted">Com a frase escrita, o plano traz a sequência de sinais gerada pelo dicionário — material de estudo, sempre «a validar», nunca uma tradução aprovada.</p>
+        </div>
+        <div class="f-field">
+          <label for="prof-cab">Cabeçalho do plano (opcional)</label>
+          <input type="text" id="prof-cab" placeholder="Escola, turma, data…" autocomplete="off" spellcheck="false">
+          <p class="muted">Só serve para o ficheiro que descarregas. Este site não guarda o que escreves aqui.</p>
+        </div>
+      </div>
+      <p class="prof-live" id="prof-live" role="status"></p>
+      <div id="prof-plano"></div>
+    </section>
+
+    <section class="cov-bloco" aria-labelledby="prof-check-h">
+      <h2 id="prof-check-h">${I.check} Antes de começar</h2>
+      <p class="muted">Sete condições que decidem se uma aula com um aluno surdo funciona. As marcas ficam <strong>só nesta visita</strong> — este site não guarda nada sobre ti — e entram na lista que copias ou descarregas, para levares impressa.</p>
+      <div class="ch-checks" id="prof-check">
+        ${PROF_CHECK.map((c, i) => `<label class="ch-check"><input type="checkbox" id="prof-ch-${i}"><span>${esc(c)}</span></label>`).join('')}
+      </div>
+    </section>
+
+    <section class="cov-bloco" aria-labelledby="prof-rec-h">
+      <h2 id="prof-rec-h">${I.book} O que já existe e o que ainda não há</h2>
+      <div class="grid g-2">
+        ${recursos.map(r => `
+        <article class="res-card rv">
+          <span class="res-ic ${r.cls}">${r.ic}</span>
+          <h3>${r.titulo}</h3>
+          ${r.estado === 'em-breve' ? soonBadge() : `<span class="chip">${I.check} Disponível</span>`}
+          <p>${r.texto}</p>
+          ${r.cta ? `<a class="btn btn-p btn-sm" href="${r.href}">${r.cta} ${I.arrow}</a>` : ''}
+        </article>`).join('')}
+      </div>
+      <div class="note-band" style="margin-top:26px">
+        ${I.chat}
+        <p><strong>Ensinas pessoas surdas e tens materiais para partilhar?</strong> Fala com a Viva Surdo nos canais oficiais — materiais só são publicados após revisão e aprovação da equipa, e quem sinaliza para eles é pago pela duração, alcance e uso do que sinaliza.</p>
+      </div>
+      <div style="margin-top:24px">
+        <a class="btn btn-p" href="#/contacto">Falar com a Viva Surdo ${I.arrow}</a>
+      </div>
+    </section>
   </div>
-</section>`, '/professores')
+</section>`;
+}
+
+function bindProfessor(state) {
+  const plano = $('#prof-plano'), live = $('#prof-live');
+  if (!plano) return;
+
+  const marcas = () => {
+    const c = $('#prof-check');
+    return c ? $$('#prof-check input[type="checkbox"]').map(x => !!x.checked) : [];
   };
-});
+
+  function desenhar() {
+    if (!$('#prof-plano')) return;
+    const p = profPlano(state);
+    plano.innerHTML = p ? profPlanoHTML(p) : `
+      <div class="empty">
+        ${I.grad}
+        <h3>Escolhe um tema para montar a aula</h3>
+        <p>Este tema não está no dicionário como conteúdo de ensino. Aprende com as aulas e o alfabeto, ou regista o que falta.</p>
+        <a class="btn btn-p btn-sm" href="#/aprender-lga">Ver as aulas ${I.arrow}</a>
+        <a class="btn btn-o btn-sm" href="#/colher">Registar um sinal</a>
+      </div>`;
+    if (live) {
+      live.textContent = p
+        ? `Plano de ${profDur(p.totalMin)}, ${p.blocos.length} blocos, ${p.qtd} ${pl(p.qtd, 'palavra', 'palavras')} — ${p.validas} com o sinal confirmado ou aprovado.`
+        : 'Sem plano: escolhe um tema.';
+    }
+  }
+
+  const ligaSelect = (sel, chave, num) => {
+    const el = $(sel);
+    if (!el) return;
+    el.value = String(state[chave]);
+    el.addEventListener('change', e => {
+      state[chave] = num ? Number(e.target.value) : e.target.value;
+      desenhar();
+    });
+  };
+  ligaSelect('#prof-tema', 'tema');
+  ligaSelect('#prof-dur', 'dur', true);
+  ligaSelect('#prof-ctx', 'ctx');
+  ligaSelect('#prof-n', 'n', true);
+
+  let ag = null;
+  const ligaTexto = (sel, chave) => {
+    const el = $(sel);
+    if (!el) return;
+    el.value = state[chave];
+    el.addEventListener('input', () => {
+      state[chave] = el.value;
+      clearTimeout(ag);
+      ag = setTimeout(desenhar, 300);
+    });
+  };
+  ligaTexto('#prof-frase', 'frase');
+  ligaTexto('#prof-cab', 'cab');
+
+  plano.addEventListener('click', e => {
+    const cp = e.target.closest('[data-prof-copy]');
+    if (cp) { copiarTexto(profTextoPlano(state, marcas()), cp); return; }
+    const dn = e.target.closest('[data-prof-dl]');
+    if (dn) {
+      const txt = profTextoPlano(state, marcas());
+      if (!txt) { if (live) live.textContent = 'Não há plano para descarregar: escolhe um tema.'; return; }
+      descarregarFicheiro('pamosii-aula-' + slugTema(state.tema) + '-' + state.dur + 'min.txt', txt, 'text/plain;charset=utf-8');
+      return;
+    }
+    const pm = e.target.closest('[data-prof-pamosii]');
+    if (pm) {
+      pmEstado.texto = state.frase;
+      pmEstado.modo = 'pt-lga';
+      go('/pamosii');
+    }
+  });
+
+  desenhar();
+}
+
+on('/professores', () => ({
+  active: '/professores',
+  h: shell(professorHTML(profEstado), '/professores'),
+  bind: bindProfessor,
+  state: profEstado,
+  meta: META['/professores'],
+}));
 
 /* ---------------- vista: biblioteca ---------------- */
 on('/biblioteca', () => {
