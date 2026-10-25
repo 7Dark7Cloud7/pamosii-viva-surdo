@@ -2025,6 +2025,8 @@ html.emb #sg-pagina,html.emb #sg-aponta,html.emb #sg-aponta-aviso{display:none}
 .prof-form-2{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
 .prof-live{margin:16px 0 0;font-size:14px;font-weight:700;color:var(--teal-deep);overflow-wrap:anywhere}
 .prof-live:empty{display:none}
+.prof-cab{margin:18px 0 0;padding-bottom:8px;border-bottom:2px solid var(--line);
+  font-family:var(--font-h);font-weight:800;font-size:19px;line-height:1.3;overflow-wrap:anywhere}
 .prof-ac{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 0}
 .prof-blocos{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:14px}
 .prof-bloco{padding:16px 18px;border:1.5px solid var(--line);border-radius:var(--radius);background:var(--surface)}
@@ -2074,3 +2076,47 @@ html.emb #sg-pagina,html.emb #sg-aponta,html.emb #sg-aponta-aviso{display:none}
 [data-contraste-alto] .prof-live{color:#000}
 [data-contraste-alto] .prof-glosa li{border-left-color:#000}
 [data-contraste-alto] .prof-avisos .ic{color:#000}
+
+/* ============================================================================
+   25. IMPRESSÃO — o plano de aula e a checklist vão para o papel.
+   Quem ensina imprime na escola: o que sai é o plano, não a aplicação. Por isso
+   tudo o que é controlo desaparece, qualquer tema imprime a preto sobre branco,
+   e cada link externo ganha o URL escrito — numa folha não se clica.
+   ============================================================================ */
+@page{margin:14mm}
+@media print{
+  :root,[data-tema-escuro],[data-contraste-alto]{
+    --ink:#000;--ink-soft:#111;--muted:#333;--teal:#0B5D55;--teal-deep:#08423D;--teal-dark:#000;
+    --teal-tint:#FFF;--amber:#7A5200;--amber-ink:#5A3D00;--amber-soft:#FFF;--amber-line:#8A8A8A;
+    --note-line:#BBB;--cream:#FFF;--paper:#FFF;--line:#8A8A8A;--line-soft:#C9C9C9;
+    --primary:#000;--primary-hover:#000;--primary-fg:#FFF;--accent:#000;--surface:#FFF;
+    --surface-soft:#FFF;--focus:#000;--shadow:none;--shadow-lg:none
+  }
+  html,body{background:#fff!important;color:#000!important;zoom:1!important}
+  /* a escala de texto do painel de acessibilidade é um zoom em estilo inline no #app:
+     sem !important aqui, quem imprime com texto a 150% levava o plano cortado. */
+  #app{zoom:1!important;--escala:1!important}
+  .skip,.site-head,.site-foot,.tabbar,#a11y-root,.sg-fab,.sg-painel,.emb-aviso,iframe{display:none!important}
+  main{padding:0!important}
+  .wrap{max-width:none!important;padding:0!important}
+  .section{padding:0 0 6mm!important}
+  a{color:#000!important;text-decoration:underline}
+  main a[href^="https://"]::after,main a[href^="http://"]::after{
+    content:" (" attr(href) ")";font-family:var(--font-b);font-weight:400;font-size:10pt;
+    line-height:1.35;color:#333;word-break:break-all}
+  button,.prof-form,.f-field,.f-chips,.prof-ac,.prof-live,.vfacade{display:none!important}
+  .ch-check input[type="checkbox"]{-webkit-print-color-adjust:exact;print-color-adjust:exact;
+    width:14px;height:14px;flex:none}
+  /* o Chrome não pinta fundos na impressão, a menos que a pessoa ligue «background
+     graphics»: tudo o que era texto claro sobre cor preenchida sairia branco sobre
+     branco. No papel volta tudo a preto sobre branco, separado por borda. */
+  .btn,.chip,.f-chip,.dic-badge,.mk-chip,.soon,.eyebrow,.pm-mode,.pm-num,.mod-n,.band,.vlink{
+    background:#fff!important;color:#000!important;box-shadow:none!important}
+  .band h2,.band p,.band li,.band a{color:#000!important}
+  .prof-bloco,.res-card,.cov-bloco,.ch-checks,.prof-avisos li{break-inside:avoid;page-break-inside:avoid}
+  .prof-bloco,.res-card,.prof-avisos li,.prof-glosa li{box-shadow:none!important;background:#fff!important;
+    border-color:#8A8A8A!important}
+  .prof-num,.prof-min{background:#fff!important;color:#000!important;border:1.5px solid #000}
+  h1{font-size:20pt}h2{font-size:15pt}h3{font-size:12.5pt}
+  p,li,td{font-size:11pt;line-height:1.5}
+}

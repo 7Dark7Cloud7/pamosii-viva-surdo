@@ -43,6 +43,7 @@ const I = {
   book: ic('<path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>'),
   video: ic('<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>'),
   doc: ic('<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8"/>'),
+  print: ic('<path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="7"/>'),
   clock: ic('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>'),
   target: ic('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'),
   spark: ic('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'),
@@ -2740,7 +2741,8 @@ function profPlano(s) {
         : 'Nenhuma destas palavras tem tempo marcado neste aparelho: a turma vê a aula toda, ou marca primeiro em <a href="#/marcar">Marcação</a> e o plano passa a dizer quando cada sinal aparece.',
     ], aulas.slice(0, 2).map(a => `<button class="btn btn-p btn-sm" type="button" data-play="${a.id}" data-titulo="${esc(a.titulo)}" aria-label="Ver a aula: ${esc(a.titulo)}">${I.play} ${esc(a.titulo)}</button>`),
       `<ul class="prof-aulas">${aulas.map(a => {
-        return `<li><strong>${esc(a.titulo)}</strong><span>${esc(a.tema)} · publicada a ${fmtData(a.data)}</span></li>`;
+        return `<li><strong>${esc(a.titulo)}</strong><span>${esc(a.tema)} · publicada a ${fmtData(a.data)}</span>`
+          + `<a class="vlink" href="https://www.youtube.com/watch?v=${a.id}" target="_blank" rel="noopener">Abrir no YouTube ${I.external}<span class="sr-only"> (abre em nova janela)</span></a></li>`;
       }).join('')}</ul>`);
   } else {
     add(mVideo, 'Sem aula ligada a este tema', [
@@ -2805,9 +2807,11 @@ function profPlano(s) {
 function profPlanoHTML(p) {
   let t = 0;
   return `
+${p.s.cab.trim() ? `<p class="prof-cab">${esc(p.s.cab.trim())}</p>` : ''}
 <div class="prof-ac">
   <button class="btn btn-p btn-sm" type="button" data-prof-copy>${I.doc} Copiar plano</button>
   <button class="btn btn-o btn-sm" type="button" data-prof-dl>${I.arrow} Descarregar .txt</button>
+  <button class="btn btn-o btn-sm" type="button" data-prof-print>${I.print} Imprimir plano</button>
 </div>
 <ol class="prof-blocos">
   ${p.blocos.map((b, i) => {
@@ -2943,7 +2947,7 @@ function professorHTML(s) {
         <div class="f-field">
           <label for="prof-cab">Cabeçalho do plano (opcional)</label>
           <input type="text" id="prof-cab" placeholder="Escola, turma, data…" autocomplete="off" spellcheck="false">
-          <p class="muted">Só serve para o ficheiro que descarregas. Este site não guarda o que escreves aqui.</p>
+          <p class="muted">Aparece no topo do plano — no ecrã, no papel e no ficheiro que descarregas. Este site não guarda o que escreves aqui.</p>
         </div>
       </div>
       <p class="prof-live" id="prof-live" role="status"></p>
@@ -3047,6 +3051,8 @@ function bindProfessor(state) {
       descarregarFicheiro('pamosii-aula-' + slugTema(state.tema) + '-' + state.dur + 'min.txt', txt, 'text/plain;charset=utf-8');
       return;
     }
+    const pr = e.target.closest('[data-prof-print]');
+    if (pr) { window.print(); return; }
     const pm = e.target.closest('[data-prof-pamosii]');
     if (pm) {
       pmEstado.texto = state.frase;
