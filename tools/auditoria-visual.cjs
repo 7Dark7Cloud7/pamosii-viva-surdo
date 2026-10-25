@@ -32,11 +32,12 @@ const ALTURA = Number(flag('altura', 640));
 const ESCALA = Number(flag('escala', 100));
 const TEMA = flag('tema', 'claro'); /* claro | escuro | alto */
 const PORTA = Number(flag('porta', 9333));
+const PRE = flag('pre', '');
 
 const ROTAS_PADRAO = [
-  '/', '/cursos', '/aprender-lga', '/pamosii', '/dicionario', '/professores',
+  '/', '/cursos', '/aprender-lga', '/pamosii', '/ouvir', '/dicionario', '/professores',
   '/biblioteca', '/biblia', '/biblia/genesis-1', '/evangelismo', '/colher', '/validar',
-  '/cobertura', '/marcar', '/fora', '/sobre', '/contacto',
+  '/cobertura', '/alfabeto', '/marcar', '/fora', '/sobre', '/contacto',
 ];
 
 const CHROME = [
@@ -254,6 +255,11 @@ async function main() {
     let falhas = 0;
     for (const rota of rotas) {
       await carregar(BASE + '?cb=aud#' + rota);
+      /* --pre= permite abrir um painel antes de medir: o que está escondido não se audita */
+      if (PRE) {
+        try { await avaliar(PRE); await dormir(400); }
+        catch (e) { console.log('aviso: o --pre falhou — ' + e.message); }
+      }
       const bruto = await avaliar('(' + SONDA + ')(' + JSON.stringify({}) + ')');
       const d = JSON.parse(bruto);
       const problemas = d.nOverflow + d.nPequenos + d.nFracos;

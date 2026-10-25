@@ -48,6 +48,7 @@ const I = {
   spark: ic('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'),
   external: ic('<path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/>'),
   chat: ic('<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>'),
+  mic: ic('<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0"/><path d="M12 18v4M9 22h6"/>'),
   grad: ic('<path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/>'),
   heart: ic('<path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 000-7.8z"/>'),
   access: ic('<circle cx="12" cy="4.5" r="2"/><path d="M4 8.5h16"/><path d="M12 8.5v6l4 6"/><path d="M12 14.5l-4 6"/>'),
@@ -1488,6 +1489,8 @@ const META = {
   '/marcar': { t: 'Marcação de tempos por sinal — Pamosii Viva Surdo', d: 'Ferramenta para marcar os segundos em que o sinal de cada palavra aparece nas 17 aulas de LGA. As marcações ficam no aparelho e exportam-se em JSON para a equipa cortar os clipes.' },
   '/validar': { t: 'Fila de validação de sinais LGA — Pamosii Viva Surdo', d: 'Três veredictos para cada sinal recolhido — correcto, variante regional ou errado — assinados por um apelido, com região e data. Ficam neste browser e exportam-se em JSONL para a equipa promover o estado no dicionário.' },
   '/cobertura': { t: 'Cobertura do glossário LGA — Pamosii Viva Surdo', d: 'Quantas palavras do dicionário têm sinal confirmado, quais continuam por validar, quais são demonstração e que palavras as pessoas procuraram e não encontraram. Contas honestas, sem prometer cobertura total da LGA.' },
+  '/alfabeto': { t: 'Alfabeto manual LGA (datilologia) — Pamosii Viva Surdo', d: 'As 26 letras usadas para soletrar nomes e palavras sem sinal em LGA: a aula real do Abecedário, o estado de cada letra e um treino da ordem das letras. O site não desenha formas de mão que não foram confirmadas por sinalizadores surdos.' },
+  '/ouvir': { t: 'Ouvir e ver → sinais LGA — Pamosii Viva Surdo', d: 'Dita ao microfone e vê as frases em glosa de sinais, ou carrega um vídeo teu com legendas .srt/.vtt e acompanha a glosa sincronizada. O áudio não é gravado: usa o ditado do browser. Não é tradução automática de fala para LGA — um intérprete surdo continua a ser necessário.' },
   '/contacto': { t: 'Contacto — Pamosii Viva Surdo', d: 'Canais oficiais verificados da Viva Surdo: Facebook, Instagram e YouTube. Telefone e e-mail serão divulgados após confirmação.' },
 };
 
@@ -1541,13 +1544,15 @@ function matchRoute(hash) {
 const NAV_ITENS = [
   { path: '/', rotulo: 'Início' },
   { path: '/cursos', rotulo: 'Cursos' },
-  { path: '/aprender-lga', rotulo: 'Aprender LGA' },
+  { path: '/aprender-lga', rotulo: 'Aprender' },
+  { path: '/alfabeto', rotulo: 'Alfabeto' },
   { path: '/pamosii', rotulo: 'Pamosii' },
+  { path: '/ouvir', rotulo: 'Ouvir' },
   { path: '/dicionario', rotulo: 'Dicionário' },
   { path: '/professores', rotulo: 'Professores' },
   { path: '/biblioteca', rotulo: 'Biblioteca' },
   { path: '/biblia', rotulo: 'Bíblia' },
-  { path: '/evangelismo', rotulo: 'Evangelismo' },
+  { path: '/evangelismo', rotulo: 'Evangelismo', extra: true },
   { path: '/colher', rotulo: 'Colheita', extra: true },
   { path: '/validar', rotulo: 'Validação', extra: true },
   { path: '/cobertura', rotulo: 'Cobertura', extra: true },
@@ -1782,6 +1787,20 @@ on('/', () => {
         <a class="btn btn-p btn-sm" href="#/evangelismo">Ver o roteiro ${I.arrow}</a>
       </article>
     </div>
+    <div class="grid g-2" style="margin-top:22px">
+      <article class="aud-card rv">
+        <span class="aud-ic t">${I.mic}</span>
+        <h3>Ouvir, ver um filme e chegar aos sinais</h3>
+        <p>Dita ao microfone e vê a sequência de sinais aparecer frase a frase, sem parar de falar. Ou escolhe um vídeo teu e o ficheiro das legendas (.srt ou .vtt): cada fala traz a sua glosa, sincronizada com o vídeo. O som não é gravado por este site — quem ditada é o ditado do teu browser.</p>
+        <a class="btn btn-p btn-sm" href="#/ouvir">Abrir o Ouvir ${I.arrow}</a>
+      </article>
+      <article class="aud-card rv">
+        <span class="aud-ic a">${I.grad}</span>
+        <h3>Alfabeto manual (datilologia)</h3>
+        <p>As 26 letras que servem para soletrar nomes e palavras ainda sem sinal, com a aula real do Abecedário, o estado de cada letra e um treino da ordem. Nenhuma forma de mão é desenhada aqui: o que não foi confirmado por sinalizadores surdos não se inventa.</p>
+        <a class="btn btn-p btn-sm" href="#/alfabeto">Ver o alfabeto ${I.arrow}</a>
+      </article>
+    </div>
   </div>
 </section>
 
@@ -2002,6 +2021,7 @@ on('/aprender-lga', () => {
     <div style="margin-top:26px">
       ${extLink(CONTATOS.playlist.url, 'Ver a playlist completa no YouTube', 'btn btn-p')}
       <a class="btn btn-o" href="#/dicionario" style="margin-left:10px">${I.book} Procurar uma palavra no dicionário</a>
+      <a class="btn btn-o" href="#/alfabeto" style="margin-left:10px">${I.doc} Alfabeto manual (datilologia)</a>
     </div>
   </div>
 </section>`, '/aprender-lga')
@@ -2028,6 +2048,7 @@ on('/dicionario', () => {
     </div>
     <p class="dic-cta">${I.arrow} <a href="#/pamosii">Queres uma frase inteira? O <strong>Pamosii</strong> decompõe a frase e mostra os sinais por ordem, com vídeo e ditado por voz.</a></p>
     <p class="dic-cta">${I.spark} <a href="#/cobertura"><strong>Ver a cobertura do glossário</strong></a> — quantas palavras já têm sinal confirmado e quais continuam por validar.</p>
+    <p class="dic-cta">${I.book} Nomes próprios e palavras sem sinal soletram-se: <a href="#/alfabeto"><strong>ver o alfabeto manual</strong></a> — as 26 letras, a aula do Abecedário e um treino da ordem.</p>
     <form class="filters" role="search" onsubmit="return false" style="margin-top:26px">
       <div class="f-field">
         <label for="dic-q">Procurar palavra em português</label>
@@ -2242,8 +2263,9 @@ function pamosiiHTML(state) {
         </div>
       </div>
       <div class="pm-tools pm-tools-row">
-        ${SR ? `<button class="btn btn-a btn-sm" type="button" id="pm-mic" aria-pressed="false">${I.video} Ditar por voz</button>`
+        ${SR ? `<button class="btn btn-a btn-sm" type="button" id="pm-mic" aria-pressed="false">${I.mic} Ditar por voz</button>`
              : `<span class="pm-noVoice">${I.info} Ditado por voz não está disponível neste browser — escreve no campo acima, ou usa o ditado do teu telemóvel.</span>`}
+        <a class="btn btn-o btn-sm" href="#/ouvir">${I.mic} Ditar sem parar, ou um filme com legendas</a>
         <label class="pm-check"><input type="checkbox" id="pm-soletrar"> Soletrar letras (nomes próprios, datilologia)</label>
         <button class="btn btn-o btn-sm" type="button" id="pm-clear">Limpar</button>
         <button class="btn btn-p btn-sm" type="button" id="pm-run">Ver a glosa ${I.arrow}</button>
@@ -2976,9 +2998,11 @@ async function render() {
   desligarCamara();
   desligarVLibras();   /* o avatar externo vive fora do #app: sem isto ficaria a pairar na página nova */
   signerParar();
+  alfParar();          /* o treino do alfabeto não continua a correr noutra página */
   desligarColheitaCam();
   pararSessao();       /* a sessão em curso vive só nesta página: mudar de rota apaga-a */
   desligarMarcacoes();   /* o leitor do YouTube vive dentro desta rota: sai com ela */
+  ovSair();              /* o microfone e o vídeo do #/ouvir não passam para a página seguinte */
   const m = matchRoute(hash);
   const resultado = m ? await m.view({ args: m.args }) : notFound();
   const app = $('#app');
@@ -3786,9 +3810,9 @@ async function carregarGlossarioExtra() {
   /* os registos que a própria pessoa guardou neste aparelho valem como glossário local:
      sem isto «kuduro» aparecia no dicionário até carregares de novo, e depois sumia-se */
   const n = registrarExtra(publicados.concat(locais, lerColheita())).length;
-  /* estas duas vistas desenham-se antes de o ficheiro chegar (o fetch é assíncrono):
+  /* estas vistas desenham-se antes de o ficheiro chegar (o fetch é assíncrono):
      se ele trouxe estados, redesenha-as agora que o glossário já os tem */
-  if (/^#\/(cobertura|dicionario)\b/.test(location.hash)) render();
+  if (n && /^#\/(cobertura|dicionario|alfabeto)\b/.test(location.hash)) render();
   if (n) {
     const aviso = $('#route-live');
     if (aviso) aviso.textContent = `${n} ${n === 1 ? 'sinal em fase de colheita disponível' : 'sinais em fase de colheita disponíveis'} neste aparelho.`;
@@ -3851,6 +3875,8 @@ function colheitaHTML(palavra) {
   const lacunas = Object.entries(lerLacunas()).sort((a, b) => b[1] - a[1]).slice(0, 40);
   const minhas = lerColheita();
   const temas = [...new Set(CH_TEMAS())];
+  const letra = /^[A-Za-z]$/.test(String(palavra || '').trim()) && temas.includes('Alfabeto');
+  const temaSel = letra ? 'Alfabeto' : temas[0];
   return `
 <div class="wrap page-head">
   <p class="eyebrow">${I.access} Colheita participada</p>
@@ -3897,8 +3923,12 @@ function colheitaHTML(palavra) {
       </p>
       <p class="ch-campo">
         <label for="ch-tema">Tema (para o dicionário)</label>
-        <select id="ch-tema" name="tema">${temas.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('')}</select>
+        <select id="ch-tema" name="tema">${temas.map(t => `<option value="${esc(t)}"${t === temaSel ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>
       </p>
+      ${letra ? `<p class="ch-campo ch-campo-lg muted" style="max-width:66ch">${I.info} Estás a registar a <strong>letra ${esc(String(palavra).toUpperCase())}</strong>.
+        Em «Configuração da mão» descreve a forma (que dedos estão esticados, para onde vai a palma); em
+        «Onde» diz se toca no corpo ou fica no ar. Uma descrição de letra segue o mesmo caminho de validação
+        que a de um sinal.</p>` : ''}
       <p class="ch-campo"><label for="ch-config">Configuração da mão (que mão, como está)</label>
         <input id="ch-config" name="configuracao" type="text" maxlength="120" autocomplete="off" placeholder="ex.: mão em Y, palma para cima"></p>
       <p class="ch-campo"><label for="ch-lugar">Lugar (onde toca / de onde parte)</label>
@@ -5742,6 +5772,957 @@ on('/cobertura', () => ({
     t: 'Cobertura do glossário LGA — Pamosii Viva Surdo',
     d: 'Quantas palavras do dicionário têm sinal confirmado, quais continuam por validar, quais são demonstração e que palavras as pessoas procuraram e não encontraram. Contas honestas, sem prometer cobertura total da LGA.',
   },
+}));
+
+/* ============================================================================
+   13.7 ALFABETO MANUAL — `#/alfabeto`
+   ----------------------------------------------------------------------------
+   Regras de integridade (ler antes de editar):
+     - Nenhuma forma de mão é desenhada, animada ou inventada a partir do
+       português. A forma de cada letra está no vídeo real da aula do Abecedário
+       e na comunidade; aqui mostra-se a LETRA, a ORDEM, o estado e só a
+       descrição que alguém registou na Colheita.
+     - O treino mostra a ordem das letras e diz isso no ecrã. Não ensina a forma
+       da mão e não é um tradutor.
+     - Uma letra só sai de «a validar» pelo mesmo caminho das palavras:
+       Colheita -> #/validar -> tools/ingerir-validacoes.cjs. Esta página lê
+       estados; nunca os promove.
+   ============================================================================ */
+const ALF_LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+/* «letra» é feminino: o rótulo do estado concorda com ela na grelha e nos avisos */
+const ALF_ESTADO_F = {
+  'a-validar': 'a validar', 'colhido': 'colhida', 'confirmado': 'confirmada',
+  'aprovado': 'aprovada', 'rejeitado': 'rejeitada', 'demonstracao': 'de demonstração',
+};
+const ALF_VEL = { '0.5': 1600, '1': 950, '1.5': 620 };
+const alfEstado = { foco: 'A', texto: '', passos: [], i: 0, a: false, relogio: 0, vel: '1' };
+
+function alfAula() { const a = aulasDeTema('Alfabeto'); return a[0] || null; }
+function alfRegisto(letra) { return COLHIDAS.get(norm(letra)) || null; }
+
+function alfDados() {
+  const g = GLOSSARIO.find(x => x.tema === 'Alfabeto');
+  const por = {};
+  COV_ESTADOS.forEach(e => { por[e] = 0; });
+  const letras = ALF_LETRAS.map(letra => {
+    const t = g && g.termos.find(x => norm(x.palavra) === norm(letra));
+    const estado = t ? t.estado : 'a-validar';
+    por[estado] = (por[estado] || 0) + 1;
+    const rec = alfRegisto(letra);
+    const descrita = !!(rec && (rec.configuracao || rec.lugar || rec.movimento || rec.mnm || rec.nota));
+    return { letra, estado, rec, descrita };
+  });
+  return { letras, por, descritas: letras.filter(x => x.descrita).length, confirmadas: por.confirmado + por.aprovado };
+}
+
+function alfDetalheHTML(letra, dados) {
+  const d = dados || alfDados();
+  const info = d.letras.find(x => x.letra === letra) || d.letras[0];
+  const rec = info.rec || {};
+  const est = ESTADO_GLOSSARIO[info.estado] || ESTADO_GLOSSARIO['a-validar'];
+  const aula = alfAula();
+  const pMo = aula ? momentoDe(letra, aula.id) : null;
+  const linhas = [
+    ['Configuração da mão', rec.configuracao],
+    ['Onde', rec.lugar],
+    ['Movimento', rec.movimento],
+    ['Expressão', rec.mnm],
+    ['Onde se aprendeu', rec.fonte],
+    ['Nota', rec.nota],
+  ].filter(x => x[1]);
+  return `
+  <article class="alf-detalhe" id="alf-detalhe" aria-labelledby="alf-detalhe-h">
+    <h3 id="alf-detalhe-h"><span class="alf-big" aria-hidden="true">${info.letra}</span><span class="sr-only">Letra ${info.letra}</span></h3>
+    <p class="alf-detalhe-topo"><span class="dic-badge is-${info.estado}">${esc(est.rotulo)}</span>
+      ${info.descrita ? '<span class="alf-mini">com descrição registada</span>' : ''}</p>
+    <p class="alf-detalhe-nota">${esc(est.nota)}</p>
+    ${linhas.length ? `<dl class="alf-desc">${linhas.map(([r, v]) => `<div><dt>${esc(r)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`
+      : `<p class="alf-sem">${I.info} Ainda ninguém descreveu a forma desta letra neste site. A forma está no vídeo da aula do Abecedário — e quem a registar por escrito ajuda a equipa a validá-la.</p>`}
+    <p class="alf-ac">
+      <a class="btn btn-p btn-sm" href="#/colher/${encodeURIComponent(info.letra)}">${I.doc} Registar a forma</a>
+      <button class="btn btn-o btn-sm" type="button" data-alf-pratica="${info.letra}">${I.play} Praticar esta letra</button>
+      <button class="btn btn-o btn-sm" type="button" data-alf-video>${I.video} Ver a aula do abecedário</button>
+    </p>
+    ${pMo ? `<div class="vfacade alf-detalhe-video"><button class="vplay" type="button" data-play="${aula.id}" data-titulo="${esc(aula.titulo)}"
+        data-start="${pMo.inicio}" data-end="${pMo.fim}" aria-label="Ver o momento da letra ${info.letra} na aula ${esc(aula.titulo)}">
+        <img src="https://i.ytimg.com/vi/${aula.id}/hqdefault.jpg" alt="" loading="lazy" decoding="async" width="480" height="360">
+        <span class="vbtn">${I.play}</span></button>
+        <p class="sg-vid-note">Momento marcado em ${esc(fmtT(pMo.inicio))}–${esc(fmtT(pMo.fim))}${pMo.estado === 'confirmado' ? ' (confirmado).' : ' (a validar).'}</p></div>`
+      : ''}
+  </article>`;
+}
+
+function alfabetoHTML() {
+  const d = alfDados();
+  const aula = alfAula();
+  const semForma = d.por['a-validar'];
+  const marcos = aula ? d.letras.filter(x => momentoDe(x.letra, aula.id)).length : 0;
+  return `
+<div class="wrap page-head">
+  <p class="eyebrow">${I.book} Alfabeto manual</p>
+  <h1>Soletrar em LGA, letra a letra</h1>
+  <p class="lead">Quando não há sinal para um nome ou uma palavra, soletra-se com o alfabeto manual — a
+  <strong>datilologia</strong>. Aqui encontras as 26 letras, a aula real onde são ensinadas, o estado de
+  cada uma e um treino da ordem. O que aqui <em>não</em> encontras: formas de mão inventadas.</p>
+</div>
+<section class="section tight"><div class="wrap">
+
+  <div class="note-band">
+    <p>${I.shield} <strong>Este site não desenha mãos.</strong> Uma forma de mão inventada a partir do
+    português seria LGA errada, e ensinar LGA errada faz mais mal do que não ensinar. A forma de cada
+    letra vive na aula do Abecedário e na memória de quem sinaliza; esta página mostra a letra, a ordem,
+    o estado e só a descrição que alguém registou na <a href="#/colher">Colheita</a>.</p>
+    <p>${I.info} <strong>${d.confirmadas} de 26 letras com forma confirmada</strong> · ${d.descritas} com
+    descrição registada. Quando uma pessoa surda validar uma forma, ela sobe de estado pelo caminho de
+    sempre: colheita, <a href="#/validar">fila de validação</a> e importação pela equipa.</p>
+  </div>
+
+  ${aula ? `<section class="alf-bloco" id="alf-aula-sec" aria-labelledby="alf-aula-h">
+    <h2 id="alf-aula-h">${I.video} A aula do Abecedário</h2>
+    <p class="muted">Esta é a fonte das formas: a aula pública do canal oficial da Viva Surdo. Vê-a uma
+    vez inteira e volta sempre que precisares de uma letra — o vídeo é que faz fé.</p>
+    <div class="alf-aula">
+      <div class="vfacade">
+        <button class="vplay" type="button" data-play="${aula.id}" data-titulo="${esc(aula.titulo)}"
+          aria-label="Ver o vídeo: ${esc(aula.titulo)}">
+          <img src="https://i.ytimg.com/vi/${aula.id}/hqdefault.jpg" alt="" loading="lazy" decoding="async" width="480" height="360">
+          <span class="vbtn">${I.play}</span>
+        </button>
+      </div>
+      <div>
+        <h3>${esc(aula.titulo)}</h3>
+        <p class="muted">Publicada a ${fmtData(aula.data)} · tema ${esc(aula.tema)}.</p>
+        <p class="muted">${marcos
+          ? `${marcos} de 26 letras já têm um momento marcado no vídeo; o leitor abre nesse segundo.`
+          : 'Ainda sem marcações de tempo por letra: o vídeo abre do início. Quando alguém marcar «aos 0:31 começa o B», a página passa a abrir nesse segundo.'}</p>
+        <a class="vlink" href="https://www.youtube.com/watch?v=${aula.id}" target="_blank" rel="noopener">Abrir no YouTube ${I.external}<span class="sr-only"> (abre em nova janela)</span></a>
+      </div>
+    </div>
+  </section>` : ''}
+
+  <section class="alf-bloco" aria-labelledby="alf-grade-h">
+    <h2 id="alf-grade-h">${I.check} As 26 letras e o que se sabe de cada uma</h2>
+    <p class="muted">Escolhe uma letra para ver o estado e a descrição registada. ${semForma
+      ? `${semForma === 1 ? '1 continua' : semForma + ' continuam'} <strong>a validar</strong> — ninguém confirmou a forma ainda.`
+      : 'Todas as letras têm forma confirmada pela equipa.'}</p>
+    <div class="alf-painel">
+      <ul class="alf-grade" id="alf-grade" aria-label="As 26 letras do alfabeto">
+        ${d.letras.map(x => `<li><button class="alf-l is-${x.estado}${x.letra === alfEstado.foco ? ' on' : ''}" type="button" data-alf-l="${x.letra}"
+          aria-pressed="${x.letra === alfEstado.foco ? 'true' : 'false'}"
+          aria-label="Letra ${x.letra}, ${esc(ALF_ESTADO_F[x.estado] || 'a validar')}${x.descrita ? ', com descrição registada' : ''}">
+          <span class="alf-l-letra" aria-hidden="true">${x.letra}</span>
+          <span class="alf-l-ponto is-${x.estado}" aria-hidden="true"></span></button></li>`).join('')}
+      </ul>
+      <div id="alf-detalhe-wrap">${alfDetalheHTML(alfEstado.foco, d)}</div>
+    </div>
+    <p class="alf-legenda muted">O ponto de cada cartão indica o estado:
+      <span class="alf-l-ponto is-confirmado" aria-hidden="true"></span> confirmado,
+      <span class="alf-l-ponto is-colhido" aria-hidden="true"></span> descrição registada,
+      <span class="alf-l-ponto is-a-validar" aria-hidden="true"></span> a validar.</p>
+  </section>
+
+  <section class="alf-bloco" id="alf-treino" aria-labelledby="alf-treino-h">
+    <h2 id="alf-treino-h">${I.play} Treinar a ordem das letras</h2>
+    <p class="muted">Escreve um nome ou uma palavra e vê a ordem em que as letras se soletram. Isto mostra
+    a <strong>ordem</strong>, não a forma da mão: para a forma, volta ao vídeo e pratica com pessoas surdas.</p>
+    <form id="alf-form" class="alf-form">
+      <label for="alf-palavra">Nome ou palavra para soletrar</label>
+      <input id="alf-palavra" type="text" maxlength="40" autocomplete="off" placeholder="ex.: Ana Manuel">
+      <button class="btn btn-p" type="submit">Soletrar</button>
+    </form>
+    <div class="alf-palco">
+      <ol class="alf-seq" id="alf-seq" aria-label="Letras da palavra"></ol>
+      <p class="alf-vazio" id="alf-vazio">Ainda sem palavra. Escreve acima e carrega em «Soletrar».</p>
+    </div>
+    <div class="alf-controlos" role="group" aria-label="Controlo do treino">
+      <button class="btn btn-o btn-sm" type="button" id="alf-ant" disabled>Anterior</button>
+      <button class="btn btn-a btn-sm" type="button" id="alf-play" aria-pressed="false" disabled>${I.play} Reproduzir</button>
+      <button class="btn btn-o btn-sm" type="button" id="alf-prox" disabled>Seguinte</button>
+      <p class="alf-vel"><label for="alf-vel-sel">Ritmo</label>
+        <select id="alf-vel-sel"><option value="0.5">Lento</option><option value="1" selected>Normal</option><option value="1.5">Rápido</option></select></p>
+      <button class="btn btn-o btn-sm" type="button" id="alf-limpar" disabled>Limpar</button>
+      <span class="alf-contador" id="alf-contador" aria-hidden="true">—</span>
+    </div>
+    <p class="alf-live" id="alf-live" role="status"></p>
+    <p class="alf-signer-ac"><button class="btn btn-o btn-sm" type="button" data-signer id="alf-signer" data-texto="" disabled>${I.chat} Ver no Signer</button>
+      <span class="muted">O Signer mostra a letra como glifo; a forma da mão continua a ser a do vídeo.</span></p>
+  </section>
+
+  <section class="alf-bloco" aria-labelledby="alf-subir-h">
+    <h2 id="alf-subir-h">${I.arrow} Como é que uma letra deixa de estar «a validar»</h2>
+    <ol class="ch-passo">
+      <li><strong>Alguém descreve a forma</strong> na <a href="#/colher">Colheita</a>: que mão, como está,
+        onde fica, se se move. Fica «colhido».</li>
+      <li><strong>Uma pessoa surda confirma</strong> na <a href="#/validar">fila de validação</a> —
+        correcto, variante regional ou errado, com assinatura.</li>
+      <li><strong>A equipa importa</strong> o JSONL: o estado sobe em <code>assets/glossario-extra.json</code>.</li>
+      <li><strong>Esta página volta a ler</strong> e mostra a letra como confirmada — sem ninguém editar código.</li>
+    </ol>
+    <p class="muted">A datilologia não substitui um sinal que já existe: nomes próprios e palavras sem
+    sinal são o uso normal do alfabeto manual.</p>
+  </section>
+</div></section>`;
+}
+
+function alfNormalizar(txt) {
+  return String(txt || '')
+    .toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Z ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function alfPintar(anunciar) {
+  const seq = $('#alf-seq'), vazio = $('#alf-vazio'), live = $('#alf-live');
+  const n = alfEstado.passos.length;
+  if (seq) {
+    seq.innerHTML = alfEstado.passos.map((p, i) => p.espaco
+      ? `<li><span class="alf-chip is-pausa${i === alfEstado.i ? ' on' : ''}"${i === alfEstado.i ? ' aria-current="step"' : ''}><span aria-hidden="true">·</span><span class="sr-only">espaço</span></span></li>`
+      : `<li><span class="alf-chip${i === alfEstado.i ? ' on' : ''}"${i === alfEstado.i ? ' aria-current="step"' : ''}>${esc(p.letra)}</span></li>`).join('');
+  }
+  if (vazio) vazio.hidden = n > 0;
+  const cont = $('#alf-contador');
+  if (cont) cont.textContent = n ? `${alfEstado.i + 1} / ${n}` : '—';
+  const play = $('#alf-play');
+  if (play) {
+    play.innerHTML = alfEstado.a ? `${I.close} Pausar` : `${I.play} Reproduzir`;
+    play.setAttribute('aria-pressed', alfEstado.a ? 'true' : 'false');
+    play.disabled = !n;
+  }
+  const ant = $('#alf-ant'), prox = $('#alf-prox'), limpar = $('#alf-limpar'), sign = $('#alf-signer');
+  if (ant) ant.disabled = !n || alfEstado.i <= 0;
+  if (prox) prox.disabled = !n || alfEstado.i >= n - 1;
+  if (limpar) limpar.disabled = !n;
+  if (sign) { sign.disabled = !n; sign.dataset.texto = alfEstado.texto; }
+  if (!live) return;
+  if (!n) { live.textContent = 'Sem palavra carregada.'; return; }
+  if (anunciar) {
+    const p = alfEstado.passos[alfEstado.i];
+    live.textContent = p.espaco
+      ? `Pausa entre palavras, passo ${alfEstado.i + 1} de ${n}.`
+      : `Letra ${p.letra}, passo ${alfEstado.i + 1} de ${n}.`;
+  }
+}
+
+function alfParar() {
+  alfEstado.a = false;
+  if (alfEstado.relogio) { clearTimeout(alfEstado.relogio); alfEstado.relogio = 0; }
+  if (document.getElementById('alf-play')) alfPintar(false);
+}
+
+function alfAvancar() {
+  if (!alfEstado.a) return;
+  if (alfEstado.i >= alfEstado.passos.length - 1) {
+    alfEstado.a = false;
+    alfEstado.relogio = 0;
+    alfPintar(false);
+    const live = $('#alf-live');
+    if (live) live.textContent = 'Fim. A palavra foi soletrada até à última letra.';
+    return;
+  }
+  alfEstado.i++;
+  alfPintar(true);
+  alfEstado.relogio = setTimeout(alfAvancar, ALF_VEL[alfEstado.vel] || 950);
+}
+
+function alfTocar() {
+  if (!alfEstado.passos.length) return;
+  if (alfEstado.a) {
+    alfParar();
+    const live = $('#alf-live');
+    if (live) live.textContent = 'Treino em pausa.';
+    return;
+  }
+  if (alfEstado.i >= alfEstado.passos.length - 1) alfEstado.i = 0;
+  alfEstado.a = true;
+  alfPintar(true);
+  alfEstado.relogio = setTimeout(alfAvancar, ALF_VEL[alfEstado.vel] || 950);
+}
+
+function alfCarregar(texto) {
+  const limpo = alfNormalizar(texto);
+  alfEstado.texto = limpo;
+  alfEstado.passos = [...limpo].map(c => c === ' ' ? { espaco: true } : { letra: c });
+  alfEstado.i = 0;
+  alfEstado.a = false;
+  if (alfEstado.relogio) { clearTimeout(alfEstado.relogio); alfEstado.relogio = 0; }
+  alfPintar(false);
+  const campo = $('#alf-palavra');
+  if (campo) campo.value = texto;
+  const live = $('#alf-live');
+  if (live && limpo) live.textContent = `Palavra carregada: ${limpo}. ${alfEstado.passos.filter(p => p.letra).length} letras.`;
+}
+
+function bindAlfabeto() {
+  const grade = $('#alf-grade');
+  const wrap = $('#alf-detalhe-wrap');
+
+  if (grade) {
+    grade.addEventListener('click', e => {
+      const b = e.target.closest('[data-alf-l]');
+      if (!b) return;
+      alfEstado.foco = b.dataset.alfL;
+      grade.querySelectorAll('[data-alf-l]').forEach(x => {
+        const sel = x.dataset.alfL === alfEstado.foco;
+        x.classList.toggle('on', sel);
+        x.setAttribute('aria-pressed', sel ? 'true' : 'false');
+      });
+      if (wrap) wrap.innerHTML = alfDetalheHTML(alfEstado.foco);
+      const info = alfDados().letras.find(x => x.letra === alfEstado.foco);
+      const live = $('#alf-live');
+      if (live && info) live.textContent = `Letra ${info.letra}: ${ALF_ESTADO_F[info.estado] || 'a validar'}${info.descrita ? ', com descrição registada' : ', ainda sem descrição da forma'}.`;
+    });
+  }
+
+  if (wrap) {
+    wrap.addEventListener('click', e => {
+      const prat = e.target.closest('[data-alf-pratica]');
+      if (prat) {
+        alfCarregar(prat.dataset.alfPratica);
+        const sec = $('#alf-treino'), campo = $('#alf-palavra');
+        if (sec) sec.scrollIntoView({ block: 'center' });
+        if (campo) { campo.focus({ preventScroll: true }); campo.select(); }
+        return;
+      }
+      if (e.target.closest('[data-alf-video]')) {
+        const sec = $('#alf-aula-sec');
+        const botao = sec && sec.querySelector('.vplay');
+        if (sec) sec.scrollIntoView({ block: 'center' });
+        if (botao) botao.focus({ preventScroll: true });
+        const live = $('#alf-live');
+        if (live && botao) live.textContent = 'Aula do Abecedário em destaque. Carrega em reproduzir para ver o vídeo.';
+      }
+    });
+  }
+
+  const form = $('#alf-form');
+  if (form) {
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const campo = $('#alf-palavra');
+      const txt = campo ? campo.value : '';
+      if (!alfNormalizar(txt)) {
+        const live = $('#alf-live');
+        if (live) live.textContent = 'Escreve primeiro um nome ou uma palavra — só letras.';
+        if (campo) campo.focus();
+        return;
+      }
+      alfCarregar(txt);
+      const play = $('#alf-play');
+      if (play) play.focus();
+    });
+  }
+
+  const play = $('#alf-play');
+  if (play) play.addEventListener('click', alfTocar);
+  const prox = $('#alf-prox');
+  if (prox) prox.addEventListener('click', () => {
+    if (!alfEstado.passos.length) return;
+    alfParar();
+    alfEstado.i = Math.min(alfEstado.i + 1, alfEstado.passos.length - 1);
+    alfPintar(true);
+  });
+  const ant = $('#alf-ant');
+  if (ant) ant.addEventListener('click', () => {
+    if (!alfEstado.passos.length) return;
+    alfParar();
+    alfEstado.i = Math.max(alfEstado.i - 1, 0);
+    alfPintar(true);
+  });
+  const vel = $('#alf-vel-sel');
+  if (vel) {
+    vel.value = alfEstado.vel;
+    vel.addEventListener('change', () => { alfEstado.vel = vel.value; });
+  }
+  const limpar = $('#alf-limpar');
+  if (limpar) limpar.addEventListener('click', () => {
+    alfCarregar('');
+    const campo = $('#alf-palavra');
+    if (campo) { campo.value = ''; campo.focus(); }
+    const live = $('#alf-live');
+    if (live) live.textContent = 'Treino limpo.';
+  });
+
+  if (alfEstado.passos.length) {
+    alfPintar(false);
+    const campo = $('#alf-palavra');
+    if (campo) campo.value = alfEstado.texto;
+  }
+}
+
+on('/alfabeto', () => ({
+  active: '/alfabeto',
+  h: shell(alfabetoHTML(), '/alfabeto'),
+  bind: bindAlfabeto,
+  meta: {
+    t: 'Alfabeto manual LGA (datilologia) — Pamosii Viva Surdo',
+    d: 'As 26 letras usadas para soletrar nomes e palavras sem sinal em LGA: a aula real do Abecedário, o estado de cada letra e um treino da ordem das letras. O site não desenha formas de mão que não foram confirmadas por sinalizadores surdos.',
+  },
+}));
+
+/* ============================================================================
+   13.8 OUVIR E VER → LGA — `#/ouvir`
+   ----------------------------------------------------------------------------
+   O pedido honesto: «falo, escreve e mostra-me os sinais» e «tenho um vídeo ou
+   um filme, quero os sinais de cada fala».
+
+   O que acontece de verdade:
+     1. MICROFONE — quem ouve é o ditado por voz do PRÓPRIO BROWSER
+        (SpeechRecognition: Chrome, Edge; com internet). Este site não grava
+        áudio, não tem servidor e não recebe som nenhum: o áudio vai para o
+        serviço de ditado do browser, que devolve texto. O texto é transcrição
+        automática e erra (nomes, números, sotaque) — por isso aparece sempre
+        editável, para rever antes de servir para seja o que for.
+     2. VÍDEO/FILME COM LEGENDAS — a pessoa escolhe o ficheiro do vídeo e o
+        ficheiro de legendas (.srt/.vtt) no próprio aparelho. As legendas já são
+        texto transcrito por pessoas; o site lê a fala que está a tocar e faz a
+        glosa com o dicionário. Instantâneo mesmo num filme de duas horas, e
+        sem internet.
+     3. O QUE NÃO HÁ — transcrever a banda sonora de um vídeo SEM legendas exige
+        um modelo de fala a correr num servidor: custa dinheiro por minuto,
+        demora, e faz sair do aparelho o som de terceiros sem consentimento.
+        Não há servidor neste site, por isso não se finge que há.
+
+   Regras de integridade (ler antes de editar):
+     - nenhuma frase desta página pode afirmar que o site traduz fala para LGA:
+       há transcrição do browser + glosa de estudo do glossário;
+     - LGA → texto por câmara continua a não existir (não há dados; README,
+       FASE 1B), e esta página diz isso em vez de o simular;
+     - o microfone só liga com um toque e desliga ao sair da página;
+     - os ficheiros escolhidos ficam na memória do separador: ao sair, somem.
+   ============================================================================ */
+
+const OV_IDIOMAS = [['pt-PT', 'Português europeu (pt-PT)'], ['pt-BR', 'Português do Brasil (pt-BR)'], ['en-US', 'Inglês (en-US)']];
+const OV_MAX_FRASES = 8;   /* o painel ao vivo mostra só as últimas frases: a dicta pode durar minutos */
+
+const ovEstado = {
+  modo: 'mic', texto: '', interim: '', activo: false, idioma: 'pt-PT', auto: false, segundos: 0,
+  cues: [], actual: -1, seguir: false, videoNome: '', legendaNome: '', url: '', resumo: null,
+};
+let ovRec = null, ovTick = 0, ovAgenda = 0, ovSilencios = 0;
+
+/* --- 13.8.1 o texto → a glosa (o mesmo motor do Pamosii, em versão contínua) --- */
+function ovDesenhar() {
+  const out = $('#ov-out'), status = $('#ov-status');
+  if (!out || !status) return;
+  const texto = ovEstado.texto.trim();
+  if (!texto) {
+    out.innerHTML = '';
+    status.textContent = 'Ainda sem texto: fala, ou escreve no campo. A sequência de sinais aparece aqui.';
+    return;
+  }
+  const rs = analisarTexto(texto);
+  if (!rs.length) {
+    out.innerHTML = '';
+    status.textContent = 'Só há pontuação e espaços: escreve ou diz alguma palavra.';
+    return;
+  }
+  const vistas = rs.slice(-OV_MAX_FRASES);
+  const comSinal = rs.reduce((t, r) => t + r.sinais.length, 0);
+  const unidades = rs.reduce((t, r) => t + (r.unidades || r.itens.length), 0);
+  const dati = rs.reduce((t, r) => t + r.datilologias.length, 0);
+  registrarLacunas(rs.reduce((t, r) => t.concat(r.datilologias.filter(x => !x.nome).map(x => x.palavra)), []));
+  status.textContent = `${rs.length} ${rs.length === 1 ? 'frase' : 'frases'} · ${comSinal} de ${unidades} ${unidades === 1 ? 'palavra tem' : 'palavras têm'} sinal no glossário`
+    + (dati ? ` · ${dati} em alfabeto manual` : '')
+    + (rs.length > vistas.length ? ` · mostram-se as últimas ${vistas.length} frases` : '');
+  out.innerHTML = vistas.map((r, i) => pmSentenca(r, rs.length - vistas.length + i)).join('');
+}
+function ovMarcar() {
+  const campo = $('#ov-texto');
+  if (campo && document.activeElement !== campo && campo.value !== ovEstado.texto) campo.value = ovEstado.texto;
+  const aoVivo = $('#ov-interim');
+  if (aoVivo) aoVivo.textContent = ovEstado.interim ? '… ' + ovEstado.interim : '';
+  const relogio = $('#ov-relogio');
+  if (relogio) relogio.textContent = Math.floor(ovEstado.segundos / 60) + ':' + String(ovEstado.segundos % 60).padStart(2, '0');
+  const botao = $('#ov-mic');
+  if (botao) {
+    botao.setAttribute('aria-pressed', ovEstado.activo ? 'true' : 'false');
+    botao.innerHTML = ovEstado.activo ? I.close + ' Parar de ouvir' : I.mic + ' Ouvir com o microfone';
+  }
+}
+function ovMensagem(texto) { const alvo = $('#ov-msg'); if (alvo) alvo.textContent = texto; }
+
+/* --- 13.8.2 microfone: o ditado do browser, com reinício enquanto se fala --- */
+const OV_ERROS = {
+  'not-allowed': 'O microfone foi recusado. Sem permissão nada é ouvido — escreve o texto no campo.',
+  'service-not-allowed': 'O browser bloqueou o serviço de ditado deste site. Usa o ditado por voz do teclado do telemóvel, ou escreve.',
+  'no-speech': 'Não se ouviu nada.',
+  'audio-capture': 'Não há microfone disponível neste dispositivo.',
+  'network': 'O ditado do browser precisa de internet. Sem ligação escreve o texto — a glosa funciona na mesma, e até sem rede.',
+  'speech-not-allowed': 'O browser não deixou usar o ditado por voz nesta página. Escreve o texto, ou abre em Chrome/Edge com permissão.',
+  'nao-arrancou': 'O ditado não arrancou. Tenta outra vez, ou escreve o texto no campo.',
+};
+function ovPintarMic() { ovMarcar(); clearTimeout(ovAgenda); ovAgenda = setTimeout(ovDesenhar, 260); }
+function ovPararMic(porQue) {
+  ovEstado.activo = false;
+  if (ovRec) { try { ovRec.onend = null; ovRec.stop(); } catch (e) { /* já parado */ } ovRec = null; }
+  if (ovTick) { clearInterval(ovTick); ovTick = 0; }
+  ovEstado.interim = '';
+  ovMarcar();
+  ovDesenhar();
+  if (porQue) ovMensagem(porQue);
+}
+/* Junta a frase ditada ao texto que já existe. Se a pessoa estiver a editar o campo,
+   o texto do campo manda — perder uma frase ditada porque o cursor estava lá dentro
+   seria a pior avaria possível numa ferramenta de ditado. */
+function ovJuntarFrase(frase) {
+  const campo = $('#ov-texto');
+  const aEditar = !!campo && document.activeElement === campo;
+  const base = String(aEditar ? campo.value : ovEstado.texto).trim();
+  ovEstado.texto = base ? base + ' ' + frase : frase;
+  if (aEditar && campo.value !== ovEstado.texto) {
+    campo.value = ovEstado.texto;
+    try { campo.setSelectionRange(ovEstado.texto.length, ovEstado.texto.length); } catch (e) { /* sem selecção */ }
+  }
+}
+function ovOuvir() {
+  if (!SR) { ovMensagem('Este browser não tem ditado por voz. Escreve o texto no campo — a glosa é a mesma — ou abre esta página em Chrome ou Edge.'); return; }
+  if (ovEstado.activo) { ovPararMic('O ditado parou. O texto ficou aqui em cima, para reveres.'); return; }
+  ovEstado.activo = true;
+  ovSilencios = 0;
+  const rec = new SR();
+  rec.lang = ovEstado.idioma;
+  rec.continuous = true;
+  rec.interimResults = true;
+  rec.maxAlternatives = 1;
+  rec.onresult = ev => {
+    let parcial = '', final = '';
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      const r = ev.results[i];
+      if (r.isFinal) final += r[0].transcript; else parcial += r[0].transcript;
+    }
+    if (final.trim()) {
+      const frase = final.trim();
+      ovJuntarFrase(frase);
+      ovEstado.interim = '';
+      ovSilencios = 0;
+      /* a transcrição é automaticamente errável: diz-se, não se esconde */
+      ovMensagem('Ouvi: «' + frase + '». Confirma o texto — nomes e números costumam errar.');
+      if (ovEstado.auto && /[.!?…]$/.test(frase)) ovSinalizar(frase);
+    } else {
+      ovEstado.interim = parcial.trim();
+    }
+    ovPintarMic();
+  };
+  rec.onerror = ev => {
+    const erro = String(ev.error || '');
+    if (OV_ERROS[erro]) ovMensagem(OV_ERROS[erro]);
+    else ovMensagem('O ditado interrompeu — podes continuar a escrever no campo.');
+    if (['not-allowed', 'service-not-allowed', 'audio-capture', 'network', 'speech-not-allowed'].includes(erro)) {
+      ovPararMic(OV_ERROS[erro] || 'O ditado parou.');
+    }
+  };
+  rec.onend = () => {
+    ovRec = null;
+    if (!ovEstado.activo) return;
+    /* o browser corta o ditado ao fim de um silêncio: enquanto a pessoa quiser
+       ouvir volta a ligar, com travão para não ficar a rodar sozinho. */
+    if (++ovSilencios > 4) { ovPararMic('Parei de ouvir: vieram dali vários silêncios seguidos. Carrega outra vez se quiseres continuar.'); return; }
+    ovRec = rec;
+    setTimeout(() => {
+      if (ovEstado.activo && ovRec === rec) {
+        try { rec.start(); } catch (e) { ovPararMic(OV_ERROS['nao-arrancou']); }
+      }
+    }, 300);
+  };
+  try {
+    rec.start();
+    ovRec = rec;
+    ovEstado.segundos = 0;
+    ovTick = setInterval(() => {
+      ovEstado.segundos++;
+      const r = $('#ov-relogio');
+      if (r) r.textContent = Math.floor(ovEstado.segundos / 60) + ':' + String(ovEstado.segundos % 60).padStart(2, '0');
+    }, 1000);
+    ovMensagem('A ouvir. Fala normalmente e vê o texto a aparecer. O áudio vai para o serviço de ditado do teu browser — não para este site.');
+    ovMarcar();
+  } catch (e) {
+    ovPararMic(OV_ERROS['nao-arrancou']);
+  }
+}
+
+/* --- 13.8.3 ao Signer: o texto dito, sinalizado com um toque --- */
+function ovSinalizar(texto) {
+  const t = String(texto || '').trim();
+  if (!t) { ovMensagem('Ainda não há texto para sinalizar.'); return; }
+  if (!sgEstado.aberto) sgAbrir(t); else { sgCarregar(t, 'voz'); sgReproduzir(); }
+}
+
+/* --- 13.8.4 legendas: .srt e .vtt, lidos no aparelho --- */
+function ovHora(t) {
+  const m = String(t || '').trim().match(/^(?:(\d{1,2}):)?(\d{1,2}):(\d{2})[.,](\d{1,3})/);
+  if (!m) return null;
+  const h = m[1] ? Number(m[1]) : 0, min = Number(m[2]), seg = Number(m[3]);
+  const ms = Number(String(m[4]).padEnd(3, '0').slice(0, 3));
+  return h * 3600 + min * 60 + seg + ms / 1000;
+}
+const ovLimparLegenda = linha => String(linha).replace(/<[^>]*>/g, '').replace(/\{[^}]*\}/g, '').replace(/^\s*[-•]\s?/, '').trim();
+function ovParseLegendas(bruto) {
+  const blocos = String(bruto || '').replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').split(/\n{2,}/);
+  const cues = [];
+  blocos.forEach(bloco => {
+    const linhas = bloco.split('\n').map(l => l.trim()).filter(Boolean);
+    if (/^(NOTE|STYLE|WEBVTT)/i.test(linhas[0] || '')) return;
+    const i = linhas.findIndex(l => l.includes('-->'));
+    if (i < 0) return;
+    const partes = linhas[i].split('-->');
+    const ini = ovHora(partes[0]), fim = ovHora(partes[1]);
+    if (ini == null || fim == null) return;
+    const corpo = linhas.slice(i + 1).map(ovLimparLegenda).filter(Boolean).join(' ');
+    if (!corpo) return;
+    cues.push({ ini, fim: Math.max(fim, ini + 0.3), texto: corpo });
+  });
+  return cues.sort((a, b) => a.ini - b.ini);
+}
+
+/* contas de cobertura do filme inteiro: as primeiras 400 falas, e diz que são 400 */
+function ovResumoCues(cues) {
+  const vistas = cues.slice(0, 400);
+  let comSinal = 0, unidades = 0, dati = 0;
+  const semSinal = new Set();
+  vistas.forEach(c => {
+    analisarTexto(c.texto).forEach(r => {
+      comSinal += r.sinais.length;
+      unidades += r.unidades || r.itens.length;
+      dati += r.datilologias.length;
+      r.datilologias.filter(x => !x.nome).forEach(x => semSinal.add(norm(x.palavra)));
+    });
+  });
+  return { falas: cues.length, vistas: vistas.length, comSinal, unidades, dati, lacunas: [...semSinal] };
+}
+function ovPintarCues() {
+  const lista = $('#ov-cues');
+  if (!lista) return;
+  if (!ovEstado.cues.length) { lista.innerHTML = '<li class="ov-cue-vazio">Ainda sem legendas carregadas.</li>'; return; }
+  const a = Math.max(0, (ovEstado.actual < 0 ? 0 : ovEstado.actual) - 6);
+  const b = Math.min(ovEstado.cues.length, a + 30);
+  lista.innerHTML = ovEstado.cues.slice(a, b).map((c, n) => {
+    const i = a + n;
+    return `<li><button type="button" class="ov-cue${i === ovEstado.actual ? ' on' : ''}" data-ov-cue="${i}"${i === ovEstado.actual ? ' aria-current="true"' : ''}>`
+      + `<span class="ov-cue-t">${esc(fmtT(c.ini))}</span><span class="ov-cue-x">${esc(c.texto)}</span></button></li>`;
+  }).join('') + (b < ovEstado.cues.length
+    ? `<li class="ov-cue-vazio">…mais ${ovEstado.cues.length - b} falas. Carrega numa fala para o vídeo saltar para ela.</li>` : '');
+}
+function ovFala(i) {
+  const c = ovEstado.cues[i];
+  const titulo = $('#ov-agora-t'), texto = $('#ov-agora-x'), glosa = $('#ov-agora-g'), sg = $('#ov-sg-fala');
+  if (!c) {
+    ovEstado.actual = -1;
+    if (titulo) titulo.textContent = 'Sem fala';
+    if (texto) texto.textContent = ovEstado.cues.length
+      ? (ovEstado.videoNome ? 'O vídeo está num ponto sem legendas — salta de fala em fala.' : 'Sem vídeo carregado: usa as setas para ver cada fala e a glosa dela.')
+      : 'Escolhe o vídeo e o ficheiro de legendas.';
+    if (glosa) glosa.innerHTML = '';
+    if (sg) sg.disabled = true;
+    ovPintarCues();
+    return;
+  }
+  ovEstado.actual = i;
+  const r = analisarTexto(c.texto)[0];
+  if (titulo) titulo.textContent = `Fala ${i + 1} de ${ovEstado.cues.length} · ${fmtT(c.ini)} → ${fmtT(c.fim)}`;
+  if (texto) texto.textContent = c.texto;
+  if (glosa) {
+    const gl = r ? glosaTexto(r) : '';
+    const pct = r && r.unidades ? Math.round(r.sinais.length / r.unidades * 100) : 0;
+    glosa.innerHTML = gl
+      ? `<strong>Glosa:</strong> ${esc(gl)} <span class="ov-cue-pct">${r.sinais.length}/${r.unidades} com sinal · ${pct}% do glossário</span>`
+      : '<span class="muted">Sem palavras para glosar nesta fala.</span>';
+  }
+  if (sg) { sg.disabled = false; sg.dataset.texto = c.texto; }
+  ovPintarCues();
+  if (ovEstado.seguir && sgEstado.aberto) { sgCarregar(c.texto, 'voz'); sgReproduzir(); }
+}
+function ovProcuraCue(seg) {
+  const cues = ovEstado.cues;
+  for (let i = 0; i < cues.length; i++) { if (seg >= cues[i].ini && seg < cues[i].fim) return i; }
+  let melhor = -1;
+  for (let i = 0; i < cues.length; i++) { if (cues[i].ini <= seg) melhor = i; else break; }
+  return melhor;
+}
+function ovLerFicheiro(ficheiro, aoTexto, aoErro) {
+  const ler = new FileReader();
+  ler.onload = () => aoTexto(String(ler.result || ''));
+  ler.onerror = () => aoErro('Não consegui ler esse ficheiro.');
+  ler.readAsText(ficheiro);
+}
+function ovBaixarLegendas() {
+  if (!ovEstado.cues.length) { ovMensagem('Carrega primeiro o ficheiro de legendas.'); return; }
+  const linhas = [
+    'PAMOSII — GLOSA DE UM VÍDEO, FALA A FALA',
+    'Vídeo: ' + (ovEstado.videoNome || '—') + ' · Legendas: ' + (ovEstado.legendaNome || '—'),
+    'Gerado em ' + new Date().toISOString() + ' · ' + ovEstado.cues.length + ' falas',
+    '',
+    'Glosa de estudo feita com o dicionário deste site. NÃO é uma frase correcta em LGA:',
+    'a ordem e os marcadores têm de ser revistos por uma pessoa sura sinalizadora.',
+    '',
+  ];
+  ovEstado.cues.forEach((c, i) => {
+    const r = analisarTexto(c.texto)[0];
+    linhas.push(String(i + 1).padStart(3, '0') + ' [' + fmtT(c.ini) + ' → ' + fmtT(c.fim) + '] ' + c.texto);
+    linhas.push('    GLOSA: ' + (r ? glosaTexto(r) : '—'));
+  });
+  descarregarFicheiro('pamosii-glosa-' + (ovEstado.legendaNome || 'video').replace(/\.[^.]+$/, '') + '.txt',
+    linhas.join('\n') + '\n', 'text/plain;charset=utf-8');
+}
+
+/* --- 13.8.5 sair da página: o microfone cala, o vídeo pára, a memória limpa --- */
+function ovSair() {
+  ovEstado.activo = false;
+  if (ovRec) { try { ovRec.onend = null; ovRec.stop(); } catch (e) { /* já parado */ } ovRec = null; }
+  if (ovTick) { clearInterval(ovTick); ovTick = 0; }
+  clearTimeout(ovAgenda);
+  ovEstado.cues = []; ovEstado.actual = -1; ovEstado.resumo = null;
+  ovEstado.texto = ''; ovEstado.interim = ''; ovEstado.segundos = 0; ovEstado.seguir = false;
+  ovEstado.videoNome = ''; ovEstado.legendaNome = '';
+  if (ovEstado.url) { try { URL.revokeObjectURL(ovEstado.url); } catch (e) { /* já liberada */ } ovEstado.url = ''; }
+  const player = $('#ov-player');
+  if (player) { try { player.pause(); } catch (e) { /* já parado */ } player.removeAttribute('src'); player.load(); }
+}
+
+function ovHTML() {
+  return `
+<div class="wrap page-head">
+  <h1>Ouvir, ver um filme e chegar aos sinais</h1>
+  <p class="lead">Dita uma frase e vê a sequência de sinais à medida que falas. Ou escolhe um vídeo e o ficheiro das legendas, e o Pamosii mostra os sinais de cada fala, sincronizados com o que está a tocar.</p>
+</div>
+<section class="section tight">
+  <div class="wrap">
+    <div class="note-band">
+      ${I.shield}
+      <p><strong>Quem ouve o quê.</strong> O áudio vai para o serviço de ditado do <em>teu browser</em> (Chrome ou Edge, com internet) — este site não grava som, não tem servidor e não recebe nada. O vídeo e as legendas que escolheres ficam só na memória deste separador e desaparecem ao saíres. E o texto que sai do microfone <strong>é uma transcrição automática</strong>: erra nomes, números e palavras raras, por isso aparece editável, para reveres antes de servir para qualquer coisa.</p>
+    </div>
+    <div class="note-band is-demo">
+      ${I.info}
+      <p><strong>Uma coisa que não há aqui.</strong> Nenhum botão desta página traduz fala para LGA. O que há é: fala → texto (ditado do browser) → <em>glosa</em> (a sequência de sinais do dicionário, com o vídeo de cada um). A LGA tem gramática própria, e transformar fala numa frase correcta de LGA é trabalho de um <strong>intérprete surdo</strong>, não de um site. A tecnologia ajuda a preparar e a estudar; não substitui o intérprete.</p>
+    </div>
+
+    <div class="ov-modos" role="group" aria-label="O que queres fazer">
+      <button class="ov-modo" type="button" data-modo="mic" aria-pressed="true">${I.mic}<span><strong>Ditar e ver</strong><em>Falo, o texto escreve-se, os sinais aparecem.</em></span></button>
+      <button class="ov-modo" type="button" data-modo="leg" aria-pressed="false">${I.video}<span><strong>Vídeo ou filme com legendas</strong><em>Escolhes o ficheiro e as legendas; cada fala tem a sua glosa.</em></span></button>
+      <button class="ov-modo" type="button" data-modo="nao" aria-pressed="false">${I.clock}<span><strong>O que ainda não há</strong><em>Porque é que não se transcreve o som de um vídeo sem legendas.</em></span></button>
+    </div>
+
+    <div id="ov-p-mic">
+      <h2>Ditar e ver</h2>
+      <div class="ov-barra">
+        <button class="btn btn-p" type="button" id="ov-mic" aria-pressed="false">${I.mic} Ouvir com o microfone</button>
+        <span class="ov-relogio" id="ov-relogio" aria-hidden="true">0:00</span>
+        <label class="pm-check">Ditado em
+          <select id="ov-idioma">${OV_IDIOMAS.map(([v, r]) => `<option value="${v}">${esc(r)}</option>`).join('')}</select>
+        </label>
+        <label class="pm-check"><input type="checkbox" id="ov-auto"> Abrir os sinais animados no fim de cada frase</label>
+      </div>
+      <p class="pm-hint" id="ov-msg" role="status">Carrega no microfone e fala. Podes parar quando quiseres.</p>
+      <p class="ov-interim" id="ov-interim" aria-hidden="true"></p>
+      <div class="f-field">
+        <label for="ov-texto">Texto ditado — revê e corrige aqui, sem pressa</label>
+        <textarea id="ov-texto" rows="4" autocomplete="off" spellcheck="false" placeholder="O que o microfone ouviu, ou o que quiseres escrever."></textarea>
+      </div>
+      <div class="pm-tools pm-tools-row">
+        <button class="btn btn-o btn-sm" type="button" id="ov-signer">${I.chat} Sinais animados deste texto</button>
+        <button class="btn btn-o btn-sm" type="button" id="ov-copy">${I.doc} Copiar o texto</button>
+        <button class="btn btn-o btn-sm" type="button" id="ov-baixar-txt">${I.doc} Descarregar o texto</button>
+        <button class="btn btn-o btn-sm" type="button" id="ov-clear">Limpar</button>
+      </div>
+      <p class="pm-cobertura" id="ov-status" role="status">Ainda sem texto: fala, ou escreve no campo. A sequência de sinais aparece aqui.</p>
+      <p class="pm-hint">As palavras que não estão no glossário ficam em <a href="#/alfabeto">alfabeto manual</a> e entram na lista de lacunas da Colheita — é assim que se sabe o que falta gravar.</p>
+      <div id="ov-out" class="pm-out"></div>
+    </div>
+
+    <div id="ov-p-leg" hidden>
+      <h2>Vídeo ou filme com legendas</h2>
+      <p class="muted" style="max-width:66ch">Isto <strong>não é inteligência artificial a ver o vídeo</strong>: o site lê o ficheiro de legendas que já existe — texto escrito por pessoas — e mostra, para a fala que está a tocar, a sequência de sinais do dicionário. É instantâneo mesmo num filme inteiro, e não precisa de internet.</p>
+      <div class="ov-escolhas">
+        <label class="ov-file" for="ov-video">Vídeo ou filme (só neste aparelho)
+          <input type="file" id="ov-video" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.m4v,.mov">
+        </label>
+        <p class="muted ov-nome" id="ov-video-nome">Nenhum vídeo escolhido.</p>
+        <label class="ov-file" for="ov-legenda">Legendas em .srt ou .vtt
+          <input type="file" id="ov-legenda" accept=".srt,.vtt,text/plain">
+        </label>
+        <p class="muted ov-nome" id="ov-legenda-nome">Nenhuma legenda escolhida.</p>
+      </div>
+      <video id="ov-player" class="ov-player" controls playsinline preload="metadata" hidden aria-label="O teu vídeo"></video>
+      <div class="pm-tools pm-tools-row">
+        <button class="btn btn-o btn-sm" type="button" id="ov-ant">‹ Fala anterior</button>
+        <button class="btn btn-o btn-sm" type="button" id="ov-prox">Fala seguinte ›</button>
+        <button class="btn btn-o btn-sm" type="button" data-signer id="ov-sg-fala" disabled>Sinalizar esta fala</button>
+        <label class="pm-check"><input type="checkbox" id="ov-seguir"> Acompanhar: o Signer segue o vídeo</label>
+        <button class="btn btn-o btn-sm" type="button" id="ov-exportar">${I.doc} Descarregar todas as glosas</button>
+      </div>
+      <div class="ov-agora">
+        <p class="ov-agora-t" id="ov-agora-t">Sem fala</p>
+        <p class="ov-agora-x" id="ov-agora-x">Escolhe o vídeo e o ficheiro de legendas.</p>
+        <p class="ov-agora-g" id="ov-agora-g"></p>
+      </div>
+      <p class="pm-cobertura" id="ov-leg-status" role="status"></p>
+      <ul class="ov-cues" id="ov-cues" aria-label="Falas das legendas"></ul>
+      <p class="pm-hint"><strong>O vídeo não tem legendas?</strong> Põe o som a sair pelas colunas e usa o ditado no painel «Ditar e ver» — é aproximado e perde qualidade, mas funciona. Transcrever um ficheiro de vídeo aqui dentro não funciona: ver o painel «O que ainda não há».</p>
+    </div>
+
+    <div id="ov-p-nao" hidden>
+      <h2>O que ainda não há, e porque é que se diz isso</h2>
+      <ul class="ov-lista">
+        <li>
+          <h3>${I.clock} Transcrever o som de um vídeo sem legendas ${soonBadge()}</h3>
+          <p>Dentro do browser não existe modelo para isso. É preciso um serviço de fala num servidor: custa dinheiro por minuto de áudio, demora, e faz sair do aparelho o som de pessoas que não deram consentimento. Sem servidor e sem orçamento aprovado, este site não finge que faz.</p>
+          <p class="muted">Enquanto não há: as legendas do vídeo (painel anterior), ou ditar por cima do som pelas colunas.</p>
+        </li>
+        <li>
+          <h3>${I.clock} Filmares-te a sinalizar e o site escrever por ti ${soonBadge()}</h3>
+          <p>Isso precisa de milhares de amostras de LGA gravadas e rotuladas por sinalizadores surdos. Não existem em número suficiente para a LGA — é exactamente por isso que a <a href="#/colher">Colheita</a> existe, e é o que o <a href="#/cobertura">painel de cobertura</a> conta com honestidade.</p>
+          <p class="muted">O caminho de hoje para LGA → texto é manual: escolher os sinais por ordem no <a href="#/pamosii">Pamosii</a>, e o site escreve e lê o português.</p>
+        </li>
+        <li>
+          <h3>${I.clock} Um avatar que sinalize LGA fluentemente ${soonBadge()}</h3>
+          <p>O boneco desta página mostra a <strong>família de movimento</strong> de cada sinal do dicionário, não a forma exacta — e não há modelo de avatar para LGA. Um avatar que imitasse uma pessoa sura real precisaria de autorização escrita e separada dessa pessoa (regra da Convenção sobre os Direitos das Pessoas com Deficiência que este projecto assumiu).</p>
+          <p class="muted">Há um modo de teste com o avatar brasileiro VLibras, em <a href="#/pamosii">Pamosii</a> e na <a href="#/biblia">Bíblia</a>. É <strong>Libras</strong>, outra língua: serve para comparar, não para aprender LGA.</p>
+        </li>
+      </ul>
+      <p class="pm-hint">Nada nesta lista é promessa de data. Se algum dela tiver de virar trabalho pago com orçamento, <a href="#/contacto">fala com a equipa</a> — e os sinalizadores surdos que fornecem os dados têm de ser pagos pela duração, alcance e uso do que sinalizam.</p>
+    </div>
+  </div>
+</section>`;
+}
+
+function bindOuvir(state) {
+  const mudarModo = (modo) => {
+    state.modo = modo;
+    $$('.ov-modo').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.modo === modo)));
+    $('#ov-p-mic').hidden = modo !== 'mic';
+    $('#ov-p-leg').hidden = modo !== 'leg';
+    $('#ov-p-nao').hidden = modo !== 'nao';
+  };
+  $$('.ov-modo').forEach(b => b.addEventListener('click', () => mudarModo(b.dataset.modo)));
+
+  const campo = $('#ov-texto'), player = $('#ov-player');
+  campo.value = state.texto;
+  $('#ov-idioma').value = state.idioma;
+  $('#ov-auto').checked = state.auto;
+  $('#ov-idioma').addEventListener('change', e => {
+    state.idioma = e.target.value;
+    if (state.activo) ovPararMic('Mudei o idioma do ditado. Carrega outra vez em “Ouvir com o microfone”.');
+    else ovMensagem('Idioma do ditado: ' + e.target.selectedOptions[0].textContent + '.');
+  });
+  $('#ov-auto').addEventListener('change', e => { state.auto = e.target.checked; });
+  $('#ov-mic').addEventListener('click', ovOuvir);
+  campo.addEventListener('input', () => {
+    state.texto = campo.value;
+    state.interim = '';
+    clearTimeout(ovAgenda);
+    ovAgenda = setTimeout(ovDesenhar, 260);
+  });
+  $('#ov-clear').addEventListener('click', () => {
+    state.texto = ''; state.interim = '';
+    campo.value = '';
+    ovMarcar(); ovDesenhar();
+    ovMensagem('Limpo.');
+    campo.focus();
+  });
+  $('#ov-copy').addEventListener('click', e => copiarTexto(state.texto, e.currentTarget));
+  $('#ov-signer').addEventListener('click', () => ovSinalizar(state.texto));
+  $('#ov-baixar-txt').addEventListener('click', () => {
+    if (!state.texto.trim()) { ovMensagem('Não há texto para descarregar.'); return; }
+    descarregarFicheiro('pamosii-ditado-' + new Date().toISOString().slice(0, 10) + '.txt',
+      'PAMOSII — DITADO E GLOSA\nGerado em ' + new Date().toISOString() + '\n\nTEXTO DITADO (transcrição do browser, a rever):\n'
+      + state.texto + '\n\nGLOSA (estudo, a rever por uma pessoa sura sinalizadora):\n'
+      + analisarTexto(state.texto).map((r, i) => (i + 1) + '. ' + r.frase + '\n   ' + glosaTexto(r)).join('\n') + '\n',
+      'text/plain;charset=utf-8');
+  });
+
+  /* os botões dos cartões de frase (falar, copiar) são os mesmos do Pamosii;
+     «Sinais animados» já é tratado pelo atalho global [data-signer] */
+  $('#ov-out').addEventListener('click', e => {
+    const spk = e.target.closest('[data-speak]');
+    if (spk) { falarTexto(spk.dataset.speak, spk); return; }
+    const cp = e.target.closest('[data-copy]');
+    if (cp) copiarTexto(cp.dataset.copy, cp);
+  });
+
+  /* painel do vídeo + legendas */
+  const legStatus = () => $('#ov-leg-status');
+  function pintaLegStatus(aviso) {
+    const alvo = legStatus();
+    if (!alvo) return;
+    if (aviso) { alvo.textContent = aviso; return; }
+    if (!state.cues.length) { alvo.textContent = 'Ainda sem legendas carregadas.'; return; }
+    const r = state.resumo || ovResumoCues(state.cues);
+    alvo.textContent = `${r.falas} falas lidas · ${r.comSinal} de ${r.unidades} palavras com sinal no glossário`
+      + (r.dati ? ` · ${r.dati} em alfabeto manual` : '')
+      + (r.falas > r.vistas ? ` (contas das primeiras ${r.vistas} falas)` : '')
+      + (r.lacunas.length ? ` · ${r.lacunas.length} ${r.lacunas.length === 1 ? 'palavra sem sinal' : 'palavras sem sinal'}` : '')
+      + (state.videoNome ? '' : ' · falta o ficheiro do vídeo para sincronizar — salta de fala em fala');
+  }
+  $('#ov-video').addEventListener('change', e => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    if (state.url) { try { URL.revokeObjectURL(state.url); } catch (err) { /* já liberada */ } }
+    state.url = URL.createObjectURL(f);
+    state.videoNome = f.name;
+    player.src = state.url;
+    player.hidden = false;
+    $('#ov-video-nome').textContent = f.name + ' · ' + Math.round(f.size / 1048576 * 10) / 10 + ' MB · fica só neste separador';
+    pintaLegStatus();
+  });
+  $('#ov-legenda').addEventListener('change', e => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    ovLerFicheiro(f, txt => {
+      const cues = ovParseLegendas(txt);
+      state.legendaNome = f.name;
+      $('#ov-legenda-nome').textContent = f.name + ' · ' + cues.length + ' falas';
+      if (!cues.length) {
+        state.cues = []; state.resumo = null;
+        pintaLegStatus('Não encontrei nenhuma linha com horas no formato de legenda (.srt ou .vtt).');
+        ovPintarCues();
+        ovFala(-1);
+        return;
+      }
+      state.cues = cues;
+      state.resumo = ovResumoCues(cues);
+      pintaLegStatus();
+      /* sem vídeo escolhido não há tempo a seguir: mostra logo a primeira fala */
+      ovFala(player.hidden ? Math.max(0, ovProcuraCue(0)) : ovProcuraCue(player.currentTime || 0));
+    }, mensagem => pintaLegStatus(mensagem));
+  });
+  player.addEventListener('timeupdate', () => {
+    if (!state.cues.length) return;
+    const i = ovProcuraCue(player.currentTime);
+    if (i !== state.actual) ovFala(i);
+  });
+  player.addEventListener('ended', () => { if (state.seguir) sgParar(); });
+  function saltarFala(dir) {
+    if (!state.cues.length) { ovMensagem('Carrega primeiro as legendas.'); return; }
+    const i = Math.max(0, Math.min(state.cues.length - 1, (state.actual < 0 ? 0 : state.actual + dir)));
+    if (!player.hidden) player.currentTime = state.cues[i].ini;
+    ovFala(i);
+  }
+  $('#ov-ant').addEventListener('click', () => saltarFala(-1));
+  $('#ov-prox').addEventListener('click', () => saltarFala(1));
+  $('#ov-cues').addEventListener('click', e => {
+    const b = e.target.closest('[data-ov-cue]');
+    if (!b) return;
+    const i = Number(b.dataset.ovCue);
+    if (!player.hidden) { player.currentTime = state.cues[i].ini; player.play(); }
+    ovFala(i);
+  });
+  $('#ov-seguir').addEventListener('change', e => { state.seguir = e.target.checked; });
+  $('#ov-exportar').addEventListener('click', ovBaixarLegendas);
+
+  ovMarcar();
+  ovDesenhar();
+  pintaLegStatus();
+  if (state.cues.length) { ovPintarCues(); ovFala(Math.max(state.actual, 0)); }
+  mudarModo(state.modo);
+}
+
+on('/ouvir', () => ({
+  active: '/ouvir',
+  h: shell(ovHTML(), '/ouvir'),
+  bind: bindOuvir,
+  state: ovEstado,
+  meta: META['/ouvir'],
 }));
 
 /* ============================================================================

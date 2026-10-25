@@ -78,6 +78,13 @@ const PROIBIDAS = [
 ];
 
 const corpo = norm([app, html, css].map(semComentarios).join('\n '));
+/* o removedor de comentários é simples por propósito: um `/*` escrito dentro de um
+   atributo HTML (accept="video/*") comeria o código até ao próximo `*/`, e as claims
+   dessa zona deixariam de ser vistas. Um sentinela perto do fim do ficheiro prova que
+   a varredura não engoliu nada. */
+if (!corpo.includes('ouvir com o microfone')) {
+  falhas.push('A varredura de comentários perdeu o texto de #/ouvir: há provavelmente um `/*` dentro de um atributo — usa listas de tipos explícitas em vez de `video/*`.');
+}
 for (const [frase, porque] of PROIBIDAS) {
   const contexto = afirmacaoProibida(corpo, frase);
   if (contexto) falhas.push('CLAIM proibida (afirmada, nao negada): «' + frase + '» — ' + porque +
@@ -369,6 +376,56 @@ if (blocoValidar) {
 }
 if (!/\{ path: '\/validar', rotulo: 'Validação'/.test(app)) falhas.push('#/validar saiu do menu: ninguém encontra a fila.');
 if (!/const VA_CHAVE = 'vs\.validar'/.test(app)) falhas.push('A chave de armazenamento da fila mudou sem actualizar a promessa escrita na página.');
+
+/* --------------------------------------------- 13. ouvir/ver → LGA (#/ouvir) */
+/* FASE 1B (7). A fronteira é o microfone: o site usa o ditado do PRÓPRIO BROWSER
+   e não pode, em circunstância alguma, parecer um conversor fala → LGA. Se alguém
+   acrescentar getUserMedia ou um envio de áudio, a página passa a gravar som de
+   pessoas que não deram consentimento — e isso o brief não autoriza. */
+const blocoOuvir = (function () {
+  const a = app.indexOf('13.8 OUVIR E VER');
+  const b = app.indexOf("on('/ouvir'");
+  return a >= 0 && b > a ? app.slice(a, b + 900) : '';
+})();
+if (!blocoOuvir) falhas.push('A página #/ouvir desapareceu do código.');
+if (blocoOuvir) {
+  const semComOV = blocoOuvir.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  /* 13.1 o áudio nunca é capturado por nós */
+  if (/getUserMedia/.test(semComOV)) {
+    falhas.push('#/ouvir passou a usar getUserMedia: o microfone é do ditado do browser, e o site promete não gravar som.');
+  }
+  if (/MediaRecorder|createMediaStreamSource|AudioContext/.test(semComOV)) {
+    falhas.push('#/ouvir passou a processar áudio do microfone — a página diz, por escrito, que não grava som.');
+  }
+  if (/navigator\.sendBeacon|XMLHttpRequest|method:\s*['"]POST|fetch\(/.test(semComOV)) {
+    falhas.push('O código de #/ouvir faz rede: o ditado é do browser e os ficheiros ficam no separador.');
+  }
+  if (/localStorage\.setItem/.test(semComOV)) {
+    falhas.push('#/ouvir passou a guardar texto do microfone no aparelho; o ditado é efémero e editável.');
+  }
+  /* 13.2 as duas honestidades que sustentam a página */
+  if (!/traduz fala para LGA/.test(blocoOuvir)) {
+    falhas.push('#/ouvir deixou de dizer que nenhum botão traduz fala para LGA.');
+  }
+  if (!/n[aã]o grava som/.test(blocoOuvir)) {
+    falhas.push('#/ouvir deixou de dizer que o site não grava som.');
+  }
+  if (!/n[aã]o [eé] intel|n[aã]o [eé] uma transcri/i.test(blocoOuvir)) {
+    falhas.push('#/ouvir deixou de avisar que o texto do microfone é aproximado (ou que o leitor de legendas não é IA).');
+  }
+  if (!/type="file"/.test(semComOV)) {
+    falhas.push('#/ouvir deixou de ler as legendas a partir de um ficheiro escolhido por quem usa.');
+  }
+  if (!/OV_ERROS/.test(semComOV)) {
+    falhas.push('#/ouvir perdeu as mensagens de erro do microfone; sem elas o silêncio parece avaria do site.');
+  }
+  if (!/role="status"/.test(semComOV)) falhas.push('#/ouvir deixou de anunciar estados a leitores de ecrã.');
+  if (!/soonBadge\(\)/.test(semComOV)) {
+    falhas.push('#/ouvir deixou de mostrar o painel «O que ainda não há» — é o que impede a página de parecer um tradutor.');
+  }
+}
+if (!/\{ path: '\/ouvir', rotulo: 'Ouvir'/.test(app)) falhas.push('#/ouvir saiu do menu: ninguém chega ao ditado.');
+if (!/ovSair\(\);/.test(app)) falhas.push('#/ouvir deixou de desligar o microfone ao mudar de rota.');
 
 /* ----------------------------------------------------------------- relatorio */
 const saida = [];

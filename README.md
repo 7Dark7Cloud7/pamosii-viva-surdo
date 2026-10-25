@@ -155,7 +155,9 @@ Fora do repositório de trabalho: `.deploy-gh/` é o clone ligado ao repo public
 | `#/cursos/:slug`  | Detalhe de curso              | `mini-curso-lga` (17 aulas reais por tema, `<details>` nativo), detalhes laterais, notas honestas sobre inscrição/certificado |
 | `#/aprender-lga`  | Aprender LGA                  | As 17 aulas organizadas por tema, com navegação por âncoras |
 | `#/dicionario`    | Dicionário LGA                | Glossário pesquisável português → tema → aula onde o sinal é ensinado; estado de validação em cada entrada |
+| `#/alfabeto`      | Alfabeto manual (datilologia) | As 26 letras com o estado de cada uma (confirmada / a validar / sem registo), a aula real do Abecedário, soletração com controlo de velocidade e treino da ordem |
 | `#/pamosii`       | Pamosii (português ↔ LGA)     | As quatro direcções em atalhos + frases de exemplo; glosa de uma ou várias frases com vídeo e glifo animado por sinal, barra de cobertura e alfabeto manual para o que não tem sinal; ditado por voz; construção de sequência de sinais → frase escrita e falada; módulo de câmara para gravar e rever o próprio sinal |
+| `#/ouvir`         | Ouvir e ver → sinais           | Ditar ao microfone (ditado por voz do browser) e ver a glosa contínua, ou escolher um vídeo/filme local + legendas `.srt`/`.vtt` e acompanhar a glosa da fala que está a tocar; painel explícito do que ainda não há |
 | `#/professores`   | Recursos para professores     | Aulas de referência (real) + recursos "Em breve" |
 | `#/biblioteca`    | Biblioteca                    | Pesquisável; itens reais (vídeos) + itens planeados "Em breve" |
 | `#/biblia`        | Bíblia                        | Passagens reais (Almeida, domínio público) em texto, leitura em voz alta e **glosa de sinais versículo a versículo**; `#/biblia/:chave` abre uma passagem (`genesis-1`, `joao-3-16`, `salmos-23`, `marcos-7-31`) |
@@ -169,7 +171,7 @@ Fora do repositório de trabalho: `.deploy-gh/` é o clone ligado ao repo public
 | `#/sobre`         | Sobre                         | Missão, modelo (fontes públicas), reconhecimento com atribuição de fonte, valores |
 | `#/contacto`      | Contacto                      | Apenas canais verificados: Facebook, Instagram, YouTube + playlist |
 
-A rota antiga `#/catalogo` redirecciona para `#/cursos`. Além destas 19 vistas registadas, há dois widgets que não são rotas: o **Pamosii Signer** (botão flutuante presente em todas as páginas) e o **painel de acessibilidade**.
+A rota antiga `#/catalogo` redirecciona para `#/cursos`. Além destas 21 vistas registadas, há dois widgets que não são rotas: o **Pamosii Signer** (botão flutuante presente em todas as páginas) e o **painel de acessibilidade**.
 
 ---
 
@@ -401,6 +403,41 @@ A página `#/fora` explica os três à pessoa que chega do dicionário ou do Sig
 
 ---
 
+## Alfabeto manual (`#/alfabeto`) — datilologia
+
+Soletrar é o recurso de emergência de quem sinaliza: serve para nomes próprios e para palavras ainda sem sinal. Esta página é o primeiro produto completo do FASE 1B porque é a única coisa do site que **já existe sem inventar nada**: o Abecedário é uma das 17 aulas reais do canal oficial.
+
+Quatro painéis, todos com o mesmo princípio — a forma da mão vem do vídeo, nunca do código:
+
+- **A aula do Abecedário** — a fonte das formas, com fachada de vídeo acessível (reprodução só por toque) e link directo para o YouTube. Se alguma letra já tiver segundos marcados em `#/marcar`, o leitor abre nesse momento.
+- **As 26 letras e o estado de cada uma** — cada cartão leva o estado que está no glossário (`a validar`, `colhido`, `confirmado`, `aprovado`, …) e o detalhe mostra a descrição que alguém registou na Colheita (configuração da mão, lugar, movimento, expressão, onde se aprendeu) mais um atalho «Registar a forma» para `#/colher/:letra`. A contagem («X de 26 letras com forma confirmada») é lida dos dados, não escrita à mão.
+- **Treinar a ordem** — escreve-se um nome e a página soletra a sequência, com anterior/reproduzir/seguinte, ritmo lento/normal/rápido (`1600`/`950`/`620` ms por letra) e contador. O texto da página diz explicitamente que mostra a **ordem**, não a forma da mão.
+- **Como é que uma letra deixa de estar «a validar»** — os quatro passos do fluxo real (descrever → confirmar na fila → importar → a página relê), para ninguém ficar à espera que o site promova uma letra sozinho.
+
+Regra de integridade que vive no código (`tools/integridade-test.cjs` falha se for partida): **o site não desenha formas de mão**. Não há SVG de mão por letra, nem glifo inventado a partir do português — o Signer mostra a letra como glifo e remete para o vídeo.
+
+---
+
+## Ouvir e ver → sinais (`#/ouvir`)
+
+A resposta honesta ao pedido «falo, escreve e mostra-me os sinais» e «tenho um filme, quero os sinais de cada fala». A página abre no microfone, porque é o único caminho que já funciona hoje no browser, sem servidor e sem gastar dinheiro.
+
+**Modo 1 — ditado contínuo.** Quem transcreve o áudio é o **ditado por voz do próprio browser** (`SpeechRecognition`: Chrome/Edge, e com internet, porque é o serviço do browser que transcreve). O site **não grava som, não tem `getUserMedia` nesta página, não envia nada a lado nenhum e não guarda o texto ditado em `localStorage`**. O microfone liga com um toque e desliga-se ao sair da rota (`ovSair()` no `render()`), há contador de segundos, e o ditado aparece sempre **editável**, com o aviso de que a transcrição automática erra (nomes, números, sotaque). Cada frase final vai para o mesmo motor de glosa do Pamosii e entra no painel ao vivo (últimas 8 frases), com atalho para o Signer. Se o cursor estiver dentro do campo de texto, a frase ditada é **juntada ao que a pessoa escreveu** (`ovJuntarFrase()`) em vez de a substituir — perder ditado por causa do foco seria a pior avaria possível aqui.
+
+**Modo 2 — vídeo ou filme com legendas.** A pessoa escolhe, no próprio aparelho, o ficheiro de vídeo (`<input type="file">`, `accept` com lista explícita de tipos) e o ficheiro de legendas `.srt` ou `.vtt`. O parser lê as cues, mostra a fala que está a tocar e faz a glosa dela com o glossário; há navegação de fala em fala, saltar para a cue seguinte em paralelo com o vídeo, e o resumo de cobertura. É instantâneo mesmo num filme de duas horas e funciona sem internet, porque **as legendas já são texto transcrito por pessoas** — o site só traduz para glosa, não ouve som. Os ficheiros ficam na memória do separador e desaparecem ao sair.
+
+**Modo 3 — o que ainda não há** (um painel com três estados «Em breve», não uma promessa):
+
+| Falta | Porque não se finge |
+|---|---|
+| Transcrever o som de um vídeo **sem** legendas | exige um modelo de fala num servidor: custa dinheiro por minuto, demora, e tira do aparelho o som de terceiros sem consentimento. |
+| LGA → texto pela câmara | não há dados de sinais angolanos marcados nem modelo treinável; o caminho real é Colheita → validação → marcação de tempos (`#/marcar`). |
+| Avatar que faça LGA fluida | os glifos são ilustrações de estudo; nenhum avatar imita a cara, voz ou estilo de uma pessoa real sem autorização escrita prévia, e as pessoas que sinalizam têm de ser pagas. |
+
+Regras verificadas por `tools/integridade-test.cjs`: nenhuma frase desta página pode afirmar que o site traduz fala para LGA; a página tem de manter «não grava som», o aviso de transcrição errável, os `role="status"`, o `type="file"`, as mensagens de erro do microfone (`OV_ERROS`) e os estados «Em breve»; e `ovSair();` tem de continuar no `render()`, para o microfone e o vídeo não passarem para a página seguinte.
+
+---
+
 ## Painel de acessibilidade (fixo, em todas as páginas)
 
 Botão **"Acessibilidade"** no canto inferior direito. Opções reais, sem promessas vazias:
@@ -466,12 +503,14 @@ Ajustar, se necessário, o bloco `.brand` em `styles.css`. Nada mais precisa de 
 ## O que funciona de verdade vs. o que está deliberadamente pendente
 
 ### Implementado e funcional
-- Navegação completa entre as 11 páginas do menu: no telemóvel os quatro destinos principais vivem numa **barra fixa no fundo do ecrã** (tipo app) e o 5.º botão, "Mais", abre o mesmo menu completo; em tablet/desktop a barra de topo com os rótulos (o 12.º, "Colheita", aparece até 1280px e passa a viver no "Mais" acima disso — medido, para a barra caber numa linha de 1076px), ou o hambúrguer. Tudo operável por teclado. O item "Pamosii" da barra inferior usa o **boneco do Signer** em vez de um ícone genérico, parado (um ícone em movimento na navegação distraía do próprio Signer).
+- Navegação completa entre as 18 páginas do menu: no telemóvel os quatro destinos principais vivem numa **barra fixa no fundo do ecrã** (tipo app) e o 5.º botão, "Mais", abre o mesmo menu completo; em tablet/desktop a barra de topo mostra os **12 rótulos não-`extra`** (Início, Cursos, Aprender, Alfabeto, Pamosii, Ouvir, Dicionário, Professores, Biblioteca, Bíblia, Sobre, Contacto — medidos a 1281/1366/1440px: 1 linha, 68px, 22px de folga), e os seis itens de trabalho (`extra`: Evangelismo, Colheita, Validação, Cobertura, Marcação, Fora deste site) ficam no painel "Mais"/hambúrguer, onde continuam acessíveis em qualquer largura. `styles.css` esconde os `.nav-extra` **só** acima de 1280px — nada fica inacessível no telemóvel. Tudo operável por teclado. O item "Pamosii" da barra inferior usa o **boneco do Signer** em vez de um ícone genérico, parado (um ícone em movimento na navegação distraía do próprio Signer).
 - Catálogo com pesquisa e filtro, sem conteúdo fictício.
 - Reprodução das 17 aulas reais de LGA (leitor YouTube carregado a pedido do utilizador).
 - Biblioteca pesquisável com itens reais e planeados.
 - **Dicionário português ↔ LGA** pesquisável, com estado de validação visível em cada entrada, mini-glifo por palavra e atalho "Registar este sinal" quando a procura não encontra nada.
 - **Pamosii** (`#/pamosii`): glosa de uma ou várias frases com vídeo real por sinal e glifos vectoriais animados, modo de datilologia, ditado por voz, sequência de sinais → frase escrita e falada, e módulo de câmara para gravar/rever/capturar. Ver secção própria.
+- **Alfabeto manual** (`#/alfabeto`): as 26 letras com o estado de cada uma, a aula real do Abecedário, registo da forma a partir da Colheita e treino da soletração com ritmo. Não desenha formas de mão que ninguém confirmou. Ver secção própria.
+- **Ouvir e ver → sinais** (`#/ouvir`): ditado contínuo pelo serviço do browser (sem gravar som, sem rede própria, texto sempre editável) e leitura de um vídeo/filme local com legendas `.srt`/`.vtt`, com a glosa da fala que está a tocar; painel explícito do que ainda não há. Ver secção própria.
 - **Pamosii Signer**: leitor de sinais flutuante em todas as páginas, com figura animada por família de movimento, velocidade, transporte por teclado e convite directo para registar a palavra que falta. Ver secção própria.
 - **Bíblia** (`#/biblia`) com texto real de Almeida e glosa versículo a versículo; **Evangelismo** (`#/evangelismo`) com roteiros e cada frase sinalizável; **modo de teste em Libras** (VLibras, opt-in, claramente rotulado como brasileiro).
 - **Colheita participada** (`#/colher`): backlog de palavras sem sinal, formulário dos campos do protocolo, fotografias locais, **sessão de gravação guiada** (consentimento → 3 repetições naturais + 1 lenta, sem áudio, quadros + clipes na memória) e **verificador de qualidade do quadro** (luz, contraste, nitidez e movimento medidos ao vivo, com o resumo a sair no JSONL como `qualidade`), exportação JSON/TXT/JSONL e ingestão por `tools/ingerir-colheita.cjs`.
@@ -512,9 +551,10 @@ node tools/integridade-test.cjs      # lê app.js/index.html/sw.js/extension e f
 node tools/ingerir-colheita.cjs tools/exemplos/sessoes-exemplo.jsonl --dry-run
 node tools/ingerir-validacoes.cjs tools/exemplos/validacoes-exemplo.jsonl --dry-run
 node tools/auditoria-visual.cjs      # abre o Chrome instalado em headless (CDP, sem dependências)
-                              # e mede as 17 rotas: scroll horizontal, alvos <24px e contraste
+                              # e mede as 19 rotas: scroll horizontal, alvos <24px e contraste
                               # (<4,5:1, ou 3:1 em texto grande). Flags: --rotas=/validar,/colher,
-                              # --largura=, --altura=, --escala=150, --tema=claro|escuro|alto
+                              # --largura=, --altura=, --escala=150, --tema=claro|escuro|alto,
+                              # --pre=<expressão JS> (abre um painel escondido antes de medir)
 node tools/make-icons.cjs   # regenera os PNG do manifest a partir da marca (sem dependências)
 node tools/serve.cjs        # http://127.0.0.1:8123 — URL estável usado nestes testes
 ```
@@ -530,8 +570,11 @@ Verificado nesta entrega (medição no browser em `http://127.0.0.1:8123`; telem
 - **Pacote da equipa largado em `#/validar`** (3 linhas JSONL: 2 repetições de uma palavra nova + 1 linha `estado:'aprovado'`): entraram as 2 repetições como «manga · 2 repetições · 0 quadros · 8 segundos · origem: pacote da equipa», a linha já aprovada foi ignorada (a fila só julga `colhido`), o `input` volta a vazio e nada foi guardado no `localStorage`.
 - **Exportação real capturada** (blob interceptado antes do download): `pamosii-validacoes-2026-10-24.jsonl`, `application/x-ndjson;charset=utf-8`, 2 linhas com `schema:1`, assinatura, região, data e nota. O ficheiro foi escrito em disco e passado por `tools/ingerir-validacoes.cjs`: `colhido → confirmado` nos dois termos, `variantes: ["Huíla — Lubango: no Namibe fazem a palma virada para fora"]`, e uma segunda execução não mexeu em nada («já está em confirmado, estado não desce») nem duplicou a nota de proveniência.
 - **Bug apanhado por esta medição e corrigido:** as contagens do cabeçalho da fila liam `.veredicto` de um registo de sinal (que não tem esse campo) e mostravam sempre `0 Correcto / 0 Variante regional / 0 Errado`. Passaram a contar os veredictos, não os sinais.
-- **`#/cobertura` medida com e sem dados:** em repouso mostra `236` palavras (`203` ligadas às aulas + `33` de demonstração), todos os estados a zero excepto «A validar 202 / 85,6%» e «Demonstração 33 / 14%», e o bloco «O que a equipa publicou» diz que o ficheiro está vazio. Com um pacote local que traz `água` como `confirmado`, a palavra passa a «Confirmado» no **dicionário** (antes continuava «A validar») e a cobertura conta `1` confirmada, `202` a validar e `1` em «Comida e bebida» — o ficheiro de dados não foi tocado.
+- **`#/cobertura` medida com e sem dados:** em repouso mostra `236` palavras (`203` ligadas às aulas + `33` de demonstração), todos os estados a zero excepto «A validar 203 / 86%» e «Demonstração 33 / 14%», e o bloco «O que a equipa publicou» diz que o ficheiro está vazio. Com um pacote local que traz `água` como `confirmado`, a palavra passa a «Confirmado» no **dicionário** (antes continuava «A validar») e a cobertura conta `1` confirmada, `202` a validar e `1` em «Comida e bebida» — o ficheiro de dados não foi tocado. **Re-medido a 2026-10-25 com o aparelho limpo** (foram apagados os dois fixtures de teste que esta sessão tinha semeado, `vs.extra` com a letra `C` e `vs.lacunas` com `vai`): `A validar 203 / 86%`, `Demonstração 33 / 14%`, tudo o resto a zero, `#/alfabeto` a ler «0 de 26 letras com forma confirmada · 0 com descrição registada». Os números que a pessoa vê são os do glossário de origem, não os de um teste.
 - **Frescura do desenho:** a cobertura e o dicionário desenham-se antes de `assets/glossario-extra.json` chegar (o `fetch` é assíncrono). Quando os estados entram, `carregarGlossarioExtra()` redesenha só essas duas vistas — sem isso, a primeira visita mostrava sempre o glossário de origem e parecia que o ficheiro publicado estava a ser ignorado.
+- **`#/alfabeto` e `#/ouvir` ao navegador (2026-10-25, `vs76`):** as duas rotas novas medidas por `tools/auditoria-visual.cjs` a 320×640 com texto a 150% nos três temas (claro, escuro, contraste alto) e a 1366×900 — `scrollWidth − clientWidth = 0` em todas as seis execuções, 0 alvos abaixo de 24×24, 0 falhas de contraste. Os painéis escondidos do `#/ouvir` (legendas, «O que ainda não há», ditado) foram medidos com o novo `--pre=<expressão>` da ferramenta, que abre o painel antes de medir — o que está escondido não se audita. Em 1366–1440px a barra de topo continua com **12 itens numa linha de 68px** com 22px de folga, com `flex-wrap` a não disparar.
+- **Ditado por voz verificado ao nível dos gestores** (o `SpeechRecognition` real deste ambiente responde `not-allowed`, por isso chamou-se `rec.onresult`/`rec.onend` com o formato que o browser usa): frase final → entra no painel ao vivo e no campo editável, com o aviso «Confirma o texto — nomes e números costumam errar»; resultado parcial → só o `interim`; quatro silêncios seguidos → o ditado pára sozinho; sair da rota → `ovSair()` desliga o microfone. **Bug apanhado por esta verificação e corrigido:** com o cursor dentro do campo de texto, a frase ditada era posta no estado e não no campo — ouvia-se e não se via. Passou por `ovJuntarFrase()`, que junta a frase ao que a pessoa escreveu e devolve o cursor ao fim (medido: `Chamo-me Ana Bom dia!`, cursor na posição 21).
+- **Legendas verificadas com ficheiros reais** (`filme.srt` e `filme.vtt` carregados por `DataTransfer`, sem rede): três cues analisadas, glosa por fala, salta de fala em fala com as setas, sincronização pelo tempo do leitor quando há vídeo, e — quando só há legendas sem vídeo — a página mostra logo a primeira fala em vez de «Sem fala» e o estado diz «falta o ficheiro do vídeo para sincronizar».
 
 - Consola sem erros nas 10 rotas (`#`, `/cursos`, `/cursos/mini-curso-lga`, `/aprender-lga`, `/dicionario`, `/pamosii`, `/professores`, `/biblioteca`, `/sobre`, `/contacto`) e na 404, depois de percorrer todas as rotas em três larguras e de encher cada ecrã de testes (glosa, soletração, cadeia LGA, voz, câmara).
 - **Zero scroll horizontal**: 320px, 360px, 390px e 1012px × escala 100/130/150 × 10 rotas = 90 medições, todas com `scrollWidth − clientWidth = 0`.
