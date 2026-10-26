@@ -2,6 +2,6 @@
   "schema": 1,
   "tipo": "pamosii-glossario-extra",
   "geradoEm": "2026-10-22",
-  "nota": "Sinais publicados pela equipa do Pamosii Viva Surdo a partir de pacotes de colheita (tools/ingerir-colheita.cjs). Estado 'colhido' = ainda não validado por um sinalizador surdo angolano; estado 'confirmado' só quando a equipa confirmar. Este ficheiro é gerado — não editar à mão sem voltar a correr o ingestor.",
+  "nota": "Sinais publicados pela equipa da Agatha Viva Surdo a partir de pacotes de colheita (tools/ingerir-colheita.cjs). Estado 'colhido' = ainda não validado por um sinalizador surdo angolano; estado 'confirmado' só quando a equipa confirmar. Este ficheiro é gerado — não editar à mão sem voltar a correr o ingestor.",
   "termos": []
 }
