@@ -1,7 +1,7 @@
 {
-  "name": "Pamosii Viva Surdo — Língua Gestual Angolana",
-  "short_name": "Pamosii",
-  "description": "Aulas gratuitas de Língua Gestual Angolana, dicionário de sinais, o Pamosii (português para sinais e sinais para português) e a Bíblia em texto, áudio e sinais.",
+  "name": "Agatha Viva Surdo — Língua Gestual Angolana",
+  "short_name": "Agatha",
+  "description": "Aulas gratuitas de Língua Gestual Angolana, dicionário de sinais, o Pamosii (tradutor português ↔ sinais) e a Bíblia em texto, áudio e sinais.",
   "lang": "pt-AO",
   "dir": "ltr",
   "start_url": "./",

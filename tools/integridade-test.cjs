@@ -588,6 +588,54 @@ if (!/\{ path: '\/alfabeto', rotulo: 'Alfabeto'/.test(app)) {
   falhas.push('#/alfabeto saiu do menu: ninguém chega à folha de datilologia.');
 }
 
+/* ----------------------------------- 17. folha de colheita imprimível (#/cobertura) */
+/* FASE 1B (12). A folha leva o glossário a uma casa sem internet: é uma pergunta em
+   papel, não uma lição. O que a mantém honesta é isto — as palavras e os estados são
+   lidos do dicionário, a folha diz o dia em que foram lidos, diz quantas ficaram de
+   fora, e a coluna da resposta nasce vazia. Se alguém escrever um sinal ou uma lista
+   à mão, a folha passa a ensinar o que ninguém validou — e é isso que se está a tentar
+   impedir. A impressão tem de deixar sair só a folha, não a página inteira. */
+const blocoFolha = (function () {
+  const a = app.indexOf('A FOLHA DE COLHEITA');
+  const b = app.indexOf("on('/cobertura'", a);
+  return a >= 0 && b > a ? app.slice(a, b) : '';
+})();
+if (!blocoFolha) falhas.push('A folha de colheita desapareceu do código de /cobertura.');
+if (blocoFolha) {
+  if (!/Esta folha não ensina nada/.test(blocoFolha)) {
+    falhas.push('A folha de colheita deixou de dizer que não ensina nenhum sinal.');
+  }
+  if (!/fmtData\(new Date\(\)/.test(blocoFolha)) {
+    falhas.push('A folha de colheita deixou de datar a leitura do glossário: sem data, «N de M» não se verifica.');
+  }
+  if (!/covFolhaTema\(|semSinal/.test(blocoFolha) || !/COV_FOLHA_LIMITE/.test(blocoFolha)) {
+    falhas.push('A folha deixou de ser lida do glossário ou perdeu o limite de linhas por A4.');
+  }
+  if (!/fora/.test(blocoFolha) || !/ficaram de fora/.test(blocoFolha)) {
+    falhas.push('A folha deixou de dizer quantas palavras ficaram de fora: esconder o resto é pior do que não caber.');
+  }
+  if (!/cov-folha-escreve/.test(blocoFolha) || !/Como é que se faz\?/.test(blocoFolha)) {
+    falhas.push('A folha deixou de ter a coluna vazia onde se escreve o sinal — passou a ser um quadro para copiar.');
+  }
+  if (!/data-cov-print/.test(blocoFolha) || !/window\.print\(\)/.test(blocoFolha)) {
+    falhas.push('O botão «Imprimir esta folha» existe mas já não chama window.print(): é um botão que não faz nada.');
+  }
+  const semCom = blocoFolha.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  if (/fetch\(|localStorage\.setItem|sendBeacon|XMLHttpRequest/.test(semCom)) {
+    falhas.push('A folha de colheita passou a fazer rede ou a escrever no aparelho: uma folha imprime-se sem enviar nada.');
+  }
+  const print = (css.match(/@media print\{([\s\S]*?)\n\}/) || [])[1] || '';
+  if (!/main:has\(\.cov-folha\)[\s\S]{0,400}?\.page-head/.test(print) || !/\.cov-bloco:has\(\.cov-folha\)>:not\(\.cov-folha\)/.test(print)) {
+    falhas.push('A impressão deixou de esconder o resto do #/cobertura: sairiam as tabelas, o seletor e os botões em vez da folha.');
+  }
+  if (!/table\.cov-folha-tab\{[^}]*table-layout:fixed/.test(print)) {
+    falhas.push('A folha impressa deixou de assentar as colunas (table-layout:fixed) — volta a sair desalinhada do papel.');
+  }
+  if (new RegExp('#cov-folha[^{}]*\\{[^}]*display:none').test(print)) {
+    falhas.push('A impressão esconde a própria folha de colheita: o botão imprimiria tudo excepto aquilo que prometeu.');
+  }
+}
+
 /* ----------------------------------------------------------------- relatorio */
 const saida = [];
 saida.push('Integridade do Pamosii — ' + falhas.length + ' falha(s), ' + avisos.length + ' aviso(s).');
