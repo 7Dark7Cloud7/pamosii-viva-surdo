@@ -124,6 +124,23 @@ Limite desta medição: como em `vs78`, o tamanho do casulo é a **soma dos fich
 
 Correcção de medição, e vale para as tabelas de `vs78` e `vs79` acima: os corpos dentro da `Cache API` **leem-se**, o que ali dava 0 bytes era erro do verificador — `cache.keys()` devolve **`Request`** objects, cujos corpos são efectivamente vazios. Com `cache.matchAll()` (as `Response`) o `casulo-vs80` deu **633.310 B**, o mesmo número da soma dos 13 ficheiros servidos por `fetch`, medido por dois caminhos independentes. Continua por provar o que não se pode provar daqui: o PDF de cada browser e as impressoras reais.
 
+**Publicação `vs81` (2026-10-26)** — a plataforma passa a chamar-se **Agatha Viva Surdo**, recebe a pele pública nova e a folha de colheita:
+
+| Verificação | Resultado no host publicado |
+| --- | --- |
+| Ficheiros alterados vs. `app/` | **byte a byte iguais** (SHA-256) nos cinco que mudaram — `app.js`, `styles.css`, `sw.js`, `index.html`, `manifest.webmanifest`; os restantes não foram tocados |
+| `sw.js` e `index.html` ao vivo | `const VERSAO = 'vs81'` no `sw.js` servido e os dois `?v=vs81` no `index.html` servido |
+| Nome ao vivo | `<title>` «Agatha Viva Surdo — Aprender, ensinar e comunicar em Língua Gestual Angolana»; cabeçalho com a marca `Agatha · Viva Surdo · Língua Gestual Angolana`; manifest com `Agatha Viva Surdo — Língua Gestual Angolana` / `Agatha`; os ficheiros de exportação e a extensão continuam `pamosii-*` (ver a nota de nomes no topo) |
+| `#/cobertura` no host | `node tools/sonda-cobertura.cjs --base=https://…` corrido **contra o site publicado**, duas vezes seguidas: **26 casos, 0 falhas, 0 erros de consola** — 14 linhas com os estados do dicionário, duas células de resposta vazias por palavra, «Esta folha não ensina nada», o aviso do que ficou de fora, `window.print()` 1 vez, e no papel **641×916 px** com texto preto e células de 29 px |
+| `#/alfabeto` no host (regressão) | `node tools/sonda-alfabeto.cjs --base=https://…`, duas vezes seguidas: **22 casos, 0 falhas, 0 erros de consola** — a folha A–Z continua a caber numa página (978 px numa página de 1017) |
+| `localStorage` no host | **vazio** à entrada e à saída das duas sondas |
+| Service worker | `controlado=true`, scope `…/pamosii-viva-surdo/`; caches **só** `casulo-vs81` e `externo-vs81` |
+| Casulo sem rede no host | **13 entradas / 660.191 B** lidos com `matchAll()` em `casulo-vs81` (`vs80` tinha 633.310 B; os **+26.881 B** são a pele nova e a folha de colheita em `styles.css`/`app.js`); `externo-vs81` com 3 respostas opacas (os tipos da Google), como antes |
+| Impressão no local | 19 rotas a 794×1123 px (A4 a 96 dpi) em media `print`: **0 problemas** — foi esta medição que apanhou o contraste 1:1 da pele nova no papel e obrigou a forçar as superfícies escuras a branco |
+| Consola no host publicado | **zero** mensagens em duas cargas de `#/cobertura` e `#/alfabeto`. Numa primeira carga a frio, num perfil novo, ficaram registados três `ERR_SSL_PROTOCOL_ERROR` de recursos externos (tipos/miniaturas); as cargas seguintes — e as duas corridas completas das sondas — não repetiram o erro, pelo que foi tratado como falha de rede do ambiente, não do site |
+
+Limite desta publicação: os testes de impressão acima são a folha `@media print` renderizada no DOM (o Chrome `headless` não abre diálogo de impressão); o PDF de cada browser e as impressoras reais continuam por verificar. A paleta continua sem manual de marca oficial verificável (ver «De onde vem a identidade visual»).
+
 Limites honestos: a emulação "Offline" do DevTools **não bloqueia pedidos neste ambiente** (`navigator.onLine` fica `true` e os JPEGs do YouTube continuam a carregar), portanto a queda para o cache sem rede foi comprovada (a) matando o servidor local com o mesmo `sw.js` e (b) lendo as entradas do cache no host ao vivo — não por emulação. A sessão de gravação **nunca foi corrida com uma pessoa real nem com uma câmara real neste ambiente**: o que está medido acima é o cano completo com uma fonte de imagem sintética, mais o caminho de falha (câmara pendurada) no host publicado. O reconhecimento de gestos continua inexistente: depende do corpus descrito em `docs/colheita-sinais-lga.md`.
 
 ### Actualizar o site publicado

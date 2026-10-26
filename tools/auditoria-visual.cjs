@@ -280,7 +280,7 @@ async function main() {
       const estado = problemas ? 'FALHA' : 'OK   ';
       console.log(`${estado} ${rota.padEnd(16)} ${d.titulo.slice(0, 52)}`);
       console.log(`      largura ${d.docW}/${d.vw} px · zoom ${d.zoom}`);
-      if (rota !== '/' && d.titulo === 'Pamosii Viva Surdo') {
+      if (rota !== '/' && d.titulo === 'Agatha Viva Surdo') {
         console.log('      aviso: título é o da página inicial — rota inexistente ou sem metadados');
       }
       d.overflow.forEach(o => console.log(`      overflow +${o.dir}px  ${o.el}`));

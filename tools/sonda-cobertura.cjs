@@ -106,7 +106,18 @@ const SELECTORES = ['.page-head', '.site-head', '.site-foot', '.tabbar', '.sg-fa
     const carregar = async url => {
       const pronto = new Promise(res => cliente.ao(m => { if (m.method === 'Page.loadEventFired') res(); }));
       await p('Page.navigate', { url });
-      await Promise.race([pronto, dormir(15000)]);
+      await Promise.race([pronto, dormir(30000)]);
+      /* o host pode demorar mais do que o load event: fontes e miniaturas do
+         YouTube seguram a rede e, no primeiro carregamento, o service worker
+         ainda está a instalar. Só se mede depois de o router ter montado. */
+      for (let i = 0; i < 60; i++) {
+        let montado = false;
+        try {
+          montado = await avaliar(`document.readyState === 'complete' && !!document.querySelector('#app') && document.querySelector('#app').children.length > 0`);
+        } catch (e) { /* contexto a trocar durante a navegação */ }
+        if (montado) break;
+        await dormir(250);
+      }
       await dormir(400);
     };
     const ver = async sel => await avaliar(`(function(){var e=document.querySelector(${JSON.stringify(sel)});
