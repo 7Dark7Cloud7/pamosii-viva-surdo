@@ -1,6 +1,6 @@
 'use strict';
 /* ============================================================================
-   Pamosii Viva Surdo — aplicação de página única (JavaScript puro, sem build)
+   Agatha Viva Surdo — aplicação de página única (JavaScript puro, sem build)
    ----------------------------------------------------------------------------
    CONTEÚDO EDITÁVEL (ver README.md):
      1. CONTATOS       → canais oficiais verificados
@@ -862,7 +862,7 @@ async function vistaBiblia(chave) {
   const p = bibPassagem(bibEstado.chave);
   return {
     active: '/biblia',
-    meta: { t: `${p.referencia} — Bíblia em português, áudio e sinais | Pamosii Viva Surdo`, d: `Ler e ouvir ${p.referencia} em português (Almeida, domínio público), com glosa de sinais por versículo e teste em Libras. Não é uma tradução bíblica em Língua Gestual Angolana.` },
+    meta: { t: `${p.referencia} — Bíblia em português, áudio e sinais | Agatha Viva Surdo`, d: `Ler e ouvir ${p.referencia} em português (Almeida, domínio público), com glosa de sinais por versículo e teste em Libras. Não é uma tradução bíblica em Língua Gestual Angolana.` },
     h: shell(bibliaHTML(), '/biblia'),
     bind: bindBiblia,
   };
@@ -1474,25 +1474,25 @@ function falarTexto(texto, btn) {
 }
 
 /* ---------------- metadados por página ---------------- */
-const META_BASE = 'Pamosii Viva Surdo';
+const META_BASE = 'Agatha Viva Surdo';
 const META = {
-  '/': { t: 'Pamosii Viva Surdo — Aprender, ensinar e comunicar em Língua Gestual Angolana', d: 'Plataforma angolana de inclusão das pessoas surdas: aulas gratuitas de Língua Gestual Angolana (LGA), dicionário, tradutor de bolso Pamosii e recursos para professores.' },
-  '/cursos': { t: 'Cursos — Pamosii Viva Surdo', d: 'Catálogo de cursos da Viva Surdo: Língua Gestual Angolana para iniciantes e formação em preparação. Sem preços inventados — apenas oferta real.' },
-  '/aprender-lga': { t: 'Aprender LGA — Pamosii Viva Surdo', d: 'Aprende Língua Gestual Angolana com as 17 aulas gratuitas do mini-curso oficial da Viva Surdo, organizadas por tema: saudações, alfabeto, números, cores, verbos e mais.' },
-  '/pamosii': { t: 'Glosa português ↔ Língua Gestual Angolana — Pamosii Viva Surdo', d: 'Escreve ou dita uma frase em português e vê a sequência de sinais com o vídeo da aula; ou escolhe os sinais e ouve a frase em português. Glosa de estudo, não tradução automática.' },
-  '/dicionario': { t: 'Dicionário português ↔ LGA — Pamosii Viva Surdo', d: 'Procura palavras em português e descobre em que aula de Língua Gestual Angolana o sinal é ensinado. Glossário por tema, com estado de validação visível em cada entrada.' },
-  '/professores': { t: 'Recursos para professores — Pamosii Viva Surdo', d: 'Planeador de aula em Língua Gestual Angolana: monta uma aula a partir das 17 aulas reais, do dicionário com o estado de validação de cada sinal e de uma frase com glosa. Copia-se ou descarrega-se; nada fica guardado. Materiais ainda por aprovar estão marcados como Em breve.' },
-  '/biblioteca': { t: 'Biblioteca — Pamosii Viva Surdo', d: 'Biblioteca pesquisável de conteúdos gratuitos da Viva Surdo: aulas de LGA em vídeo e materiais em preparação.' },
-  '/biblia': { t: 'Bíblia em português, áudio e sinais — Pamosii Viva Surdo', d: 'Texto bíblico real (João Ferreira de Almeida, domínio público), leitura em voz alta para pessoas cegas e glosa de sinais por versículo. Não existe Bíblia publicada em Língua Gestual Angolana; há testes em Libras.' },
-  '/evangelismo': { t: 'Evangelismo acessível — Pamosii Viva Surdo', d: 'Roteiros curtos de partilha da Bíblia para usar com pessoas surdas: frases em português com glosa de sinais, áudio e copiar. Conteúdo de estudo, sem promessas de tradução automática.' },
-  '/sobre': { t: 'Sobre — Pamosii Viva Surdo', d: 'Pamosii é a plataforma da Viva Surdo, iniciativa angolana de inclusão das pessoas surdas através da educação, da formação e da Língua Gestual Angolana (LGA).' },
-  '/colher': { t: 'Colheita participada de sinais LGA — Pamosii Viva Surdo', d: 'Registar sinais de Língua Gestual Angolana com método (configuração da mão, lugar, movimento, expressão) ou gravar uma sessão guiada: consentimento no início, 3 repetições e uma lenta, sem áudio. Tudo fica no aparelho de quem regista e é exportado para a equipa validar.' },
-  '/marcar': { t: 'Marcação de tempos por sinal — Pamosii Viva Surdo', d: 'Ferramenta para marcar os segundos em que o sinal de cada palavra aparece nas 17 aulas de LGA. As marcações ficam no aparelho e exportam-se em JSON para a equipa cortar os clipes.' },
-  '/validar': { t: 'Fila de validação de sinais LGA — Pamosii Viva Surdo', d: 'Três veredictos para cada sinal recolhido — correcto, variante regional ou errado — assinados por um apelido, com região e data. Ficam neste browser e exportam-se em JSONL para a equipa promover o estado no dicionário.' },
-  '/cobertura': { t: 'Cobertura do glossário LGA — Pamosii Viva Surdo', d: 'Quantas palavras do dicionário têm sinal confirmado, quais continuam por validar, quais são demonstração e que palavras as pessoas procuraram e não encontraram. Contas honestas, sem prometer cobertura total da LGA.' },
-  '/alfabeto': { t: 'Alfabeto manual LGA (datilologia) — Pamosii Viva Surdo', d: 'As 26 letras usadas para soletrar nomes e palavras sem sinal em LGA: a aula real do Abecedário, o estado de cada letra e um treino da ordem das letras. O site não desenha formas de mão que não foram confirmadas por sinalizadores surdos.' },
-  '/ouvir': { t: 'Ouvir e ver → sinais LGA — Pamosii Viva Surdo', d: 'Dita ao microfone e vê as frases em glosa de sinais, ou carrega um vídeo teu com legendas .srt/.vtt e acompanha a glosa sincronizada. O áudio não é gravado: usa o ditado do browser. Não é tradução automática de fala para LGA — um intérprete surdo continua a ser necessário.' },
-  '/contacto': { t: 'Contacto — Pamosii Viva Surdo', d: 'Canais oficiais verificados da Viva Surdo: Facebook, Instagram e YouTube. Telefone e e-mail serão divulgados após confirmação.' },
+  '/': { t: 'Agatha Viva Surdo — Aprender, ensinar e comunicar em Língua Gestual Angolana', d: 'Plataforma angolana de inclusão das pessoas surdas: aulas gratuitas de Língua Gestual Angolana (LGA), dicionário, tradutor de bolso Pamosii e recursos para professores.' },
+  '/cursos': { t: 'Cursos — Agatha Viva Surdo', d: 'Catálogo de cursos da Viva Surdo: Língua Gestual Angolana para iniciantes e formação em preparação. Sem preços inventados — apenas oferta real.' },
+  '/aprender-lga': { t: 'Aprender LGA — Agatha Viva Surdo', d: 'Aprende Língua Gestual Angolana com as 17 aulas gratuitas do mini-curso oficial da Viva Surdo, organizadas por tema: saudações, alfabeto, números, cores, verbos e mais.' },
+  '/pamosii': { t: 'Glosa português ↔ Língua Gestual Angolana — Agatha Viva Surdo', d: 'Escreve ou dita uma frase em português e vê a sequência de sinais com o vídeo da aula; ou escolhe os sinais e ouve a frase em português. Glosa de estudo, não tradução automática.' },
+  '/dicionario': { t: 'Dicionário português ↔ LGA — Agatha Viva Surdo', d: 'Procura palavras em português e descobre em que aula de Língua Gestual Angolana o sinal é ensinado. Glossário por tema, com estado de validação visível em cada entrada.' },
+  '/professores': { t: 'Recursos para professores — Agatha Viva Surdo', d: 'Planeador de aula em Língua Gestual Angolana: monta uma aula a partir das 17 aulas reais, do dicionário com o estado de validação de cada sinal e de uma frase com glosa. Copia-se ou descarrega-se; nada fica guardado. Materiais ainda por aprovar estão marcados como Em breve.' },
+  '/biblioteca': { t: 'Biblioteca — Agatha Viva Surdo', d: 'Biblioteca pesquisável de conteúdos gratuitos da Viva Surdo: aulas de LGA em vídeo e materiais em preparação.' },
+  '/biblia': { t: 'Bíblia em português, áudio e sinais — Agatha Viva Surdo', d: 'Texto bíblico real (João Ferreira de Almeida, domínio público), leitura em voz alta para pessoas cegas e glosa de sinais por versículo. Não existe Bíblia publicada em Língua Gestual Angolana; há testes em Libras.' },
+  '/evangelismo': { t: 'Evangelismo acessível — Agatha Viva Surdo', d: 'Roteiros curtos de partilha da Bíblia para usar com pessoas surdas: frases em português com glosa de sinais, áudio e copiar. Conteúdo de estudo, sem promessas de tradução automática.' },
+  '/sobre': { t: 'Sobre — Agatha Viva Surdo', d: 'Pamosii é a plataforma da Viva Surdo, iniciativa angolana de inclusão das pessoas surdas através da educação, da formação e da Língua Gestual Angolana (LGA).' },
+  '/colher': { t: 'Colheita participada de sinais LGA — Agatha Viva Surdo', d: 'Registar sinais de Língua Gestual Angolana com método (configuração da mão, lugar, movimento, expressão) ou gravar uma sessão guiada: consentimento no início, 3 repetições e uma lenta, sem áudio. Tudo fica no aparelho de quem regista e é exportado para a equipa validar.' },
+  '/marcar': { t: 'Marcação de tempos por sinal — Agatha Viva Surdo', d: 'Ferramenta para marcar os segundos em que o sinal de cada palavra aparece nas 17 aulas de LGA. As marcações ficam no aparelho e exportam-se em JSON para a equipa cortar os clipes.' },
+  '/validar': { t: 'Fila de validação de sinais LGA — Agatha Viva Surdo', d: 'Três veredictos para cada sinal recolhido — correcto, variante regional ou errado — assinados por um apelido, com região e data. Ficam neste browser e exportam-se em JSONL para a equipa promover o estado no dicionário.' },
+  '/cobertura': { t: 'Cobertura do glossário LGA — Agatha Viva Surdo', d: 'Quantas palavras do dicionário têm sinal confirmado, quais continuam por validar, quais são demonstração e que palavras as pessoas procuraram e não encontraram. Contas honestas, sem prometer cobertura total da LGA.' },
+  '/alfabeto': { t: 'Alfabeto manual LGA (datilologia) — Agatha Viva Surdo', d: 'As 26 letras usadas para soletrar nomes e palavras sem sinal em LGA: a aula real do Abecedário, o estado de cada letra e um treino da ordem das letras. O site não desenha formas de mão que não foram confirmadas por sinalizadores surdos.' },
+  '/ouvir': { t: 'Ouvir e ver → sinais LGA — Agatha Viva Surdo', d: 'Dita ao microfone e vê as frases em glosa de sinais, ou carrega um vídeo teu com legendas .srt/.vtt e acompanha a glosa sincronizada. O áudio não é gravado: usa o ditado do browser. Não é tradução automática de fala para LGA — um intérprete surdo continua a ser necessário.' },
+  '/contacto': { t: 'Contacto — Agatha Viva Surdo', d: 'Canais oficiais verificados da Viva Surdo: Facebook, Instagram e YouTube. Telefone e e-mail serão divulgados após confirmação.' },
 };
 
 function setMeta(title, desc) {
@@ -1598,9 +1598,9 @@ function shell(content, active) {
   return `
 <header class="site-head">
   <div class="wrap nav">
-    <a class="brand" href="#/" aria-label="Pamosii Viva Surdo — página inicial">
+    <a class="brand" href="#/" aria-label="Agatha Viva Surdo — página inicial">
       ${logoHTML(38)}
-      <span class="wm">Pamosii<small>Viva Surdo<span class="tg-lga"> · Língua Gestual Angolana</span></small></span>
+      <span class="wm">Agatha<small>Viva Surdo<span class="tg-lga"> · Língua Gestual Angolana</span></small></span>
     </a>
     <button class="burger" id="burger" aria-label="Abrir menu de navegação" aria-expanded="false" aria-controls="nav-links">${I.menu}</button>
     <nav class="nav-links" id="nav-links" aria-label="Navegação principal">${links}</nav>
@@ -1611,8 +1611,8 @@ function shell(content, active) {
   <div class="wrap">
     <div class="foot-in">
       <div>
-        <a class="foot-brand" href="#/" aria-label="Pamosii Viva Surdo — página inicial">
-          ${logoHTML(36)}<span class="wm">Pamosii Viva Surdo</span>
+        <a class="foot-brand" href="#/" aria-label="Agatha Viva Surdo — página inicial">
+          ${logoHTML(36)}<span class="wm">Agatha Viva Surdo</span>
         </a>
         <p style="font-size:14px;margin:0;max-width:34ch">Iniciativa angolana de inclusão das pessoas surdas. Aprender, ensinar e comunicar em Língua Gestual Angolana.</p>
       </div>
@@ -1631,7 +1631,7 @@ function shell(content, active) {
     </div>
     <div class="foot-bottom">
       <span class="foot-creditos">Aplicação criada pela <strong>equipa Horizonte Futuro</strong> e pela <strong>equipa Viva Surdo</strong>.</span>
-      <span>© ${ano} Pamosii Viva Surdo. Conteúdos de LGA publicados com autorização do canal oficial da Viva Surdo.</span>
+      <span>© ${ano} Agatha Viva Surdo. Conteúdos de LGA publicados com autorização do canal oficial da Viva Surdo.</span>
       <span>Sem registo de contas e sem recolha de dados pessoais nesta versão.</span>
     </div>
   </div>
@@ -1716,26 +1716,69 @@ on('/', () => {
     active: '/',
     h: shell(`
 <section class="hero">
-  <div class="wrap hero-in">
+  <svg class="hero-blobs" viewBox="0 0 1440 700" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+    <path fill="rgba(14,117,107,.55)" d="M-80,-70 C110,-90 250,40 232,180 C214,318 60,382 -70,318 C-190,258 -230,20 -80,-70 Z"/>
+    <path fill="rgba(247,201,72,.12)" d="M1150,-80 C1330,-60 1470,60 1452,190 C1436,300 1320,330 1236,262 C1150,192 1060,20 1150,-80 Z"/>
+    <path fill="rgba(10,79,73,.85)" d="M300,-60 C560,-40 640,150 520,270 C420,370 470,470 620,520 C790,576 760,790 560,800 C380,808 300,660 380,540 C450,436 330,360 250,240 C180,134 180,-70 300,-60 Z"/>
+    <ellipse cx="1010" cy="430" rx="160" ry="118" fill="rgba(255,255,255,.05)"/>
+  </svg>
+  <div class="wrap">
+  <div class="hero-in">
     <div>
       <p class="eyebrow">${I.spark} Iniciativa angolana de inclusão das pessoas surdas</p>
       <h1>Aprender, ensinar e comunicar em <span class="hl">Língua Gestual Angolana</span>.</h1>
-      <p class="lead">O Pamosii reúne pessoas surdas, professores e pessoas ouvintes que querem aprender LGA. Aqui encontras o mini-curso gratuito de Língua Gestual Angolana, o dicionário, o tradutor de bolso e recursos para quem ensina — tudo construído com a comunidade surda da Viva Surdo.</p>
+      <p class="lead">A Agatha reúne pessoas surdas, professores e pessoas ouvintes que querem aprender LGA: as ${LGA_AULAS.length} aulas reais do canal da Viva Surdo, um dicionário que mostra o estado de cada sinal, o tradutor de bolso Pamosii e ferramentas para quem ensina.</p>
       <div class="hero-ctas">
-        <a class="btn btn-p btn-lg" href="#/aprender-lga">Começar a aprender LGA ${I.arrow}</a>
+        <a class="btn btn-a btn-lg" href="#/aprender-lga">Começar a aprender LGA ${I.arrow}</a>
         <a class="btn btn-o btn-lg" href="#/pamosii">Traduzir com o Pamosii</a>
-        <button class="btn btn-o btn-lg" type="button" data-signer data-texto="olá, como está?">Ver no Signer ${I.video}</button>
-        <a class="btn btn-o btn-lg" href="#/cursos">Ver cursos</a>
       </div>
-      <p class="hero-note">Aulas gratuitas em vídeo, no canal oficial da Viva Surdo. Sem registo, sem pagamento.</p>
+      <p class="hero-note">Aulas gratuitas em vídeo. Sem registo, sem pagamento e sem recolha de dados. <a href="#/sobre">Como nasceu a Agatha</a>.</p>
     </div>
-    <div class="hero-art">${HERO_ART}</div>
+    <div class="hero-visual">
+      <div class="hero-frame">
+        <span class="hf-top">Pamosii · glosa de estudo</span>
+        <p class="hf-pt">«olá, como está?»</p>
+        <div class="hf-sign">${sgFigura('Diálogos', 'A')}</div>
+        <div class="hf-glosa"><span>OLÁ</span><span>COMO</span><span>ESTAR</span><span>?</span></div>
+        <p class="hf-note">Glosa gerada pelo motor Pamosii com o glossário deste site — <strong>a validar</strong> por sinalizadores surdos. Não é tradução automática de fala para LGA.</p>
+      </div>
+      <div class="float f1"><span class="fi">${I.grad}</span><div><b>${LGA_AULAS.length} aulas</b>reais, em vídeo</div></div>
+      <div class="float f2"><span class="fi">${I.book}</span><div><b>${GLOSSARIO.reduce((t, g) => t + g.termos.length, 0)} palavras</b>com o estado à vista</div></div>
+    </div>
+  </div>
+  </div>
+  <div class="trust-band"><div class="wrap tb-in">
+    <div class="tb"><b>${LGA_AULAS.length}</b><span>aulas de LGA em vídeo</span></div>
+    <div class="tb"><b>${GLOSSARIO.reduce((t, g) => t + g.termos.length, 0)}</b><span>palavras no dicionário</span></div>
+    <div class="tb"><b>${ALF_LETRAS.length}</b><span>letras do alfabeto manual</span></div>
+    <div class="tb"><b>4</b><span>direções de tradução</span></div>
+  </div></div>
+</section>
+
+<section class="section tight" aria-labelledby="h-perc">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div><span class="eyebrow-t">${I.target} POR ONDE COMEÇAR</span><h2 id="h-perc">Quatro percursos, os mesmos sinais</h2></div>
+      <a class="see-all" href="#/aprender-lga">Ver o mini-curso ${I.arrow}</a>
+    </div>
+    <div class="rail">
+      <a class="tile" href="#/aprender-lga"><span class="tile-ic">${I.grad}</span><b>Curso de LGA</b>
+        <small>${LGA_AULAS.length} aulas gratuitas, organizadas por tema.</small><span class="tile-go">Abrir →</span></a>
+      <a class="tile is-amber" href="#/alfabeto"><span class="tile-ic">${I.doc}</span><b>Alfabeto manual</b>
+        <small>As ${ALF_LETRAS.length} letras da datilologia e o estado de cada uma.</small><span class="tile-go">Abrir →</span></a>
+      <a class="tile" href="#/dicionario"><span class="tile-ic">${I.book}</span><b>Dicionário</b>
+        <small>Procura a palavra e vê a aula onde o sinal aparece.</small><span class="tile-go">Abrir →</span></a>
+      <a class="tile is-dark" href="#/pamosii"><span class="tile-ic">${I.chat}</span><b>Tradutor Pamosii</b>
+        <small>Português ↔ LGA, com glosa marcada como a validar.</small><span class="tile-go">Abrir →</span></a>
+    </div>
   </div>
 </section>
 
 <section class="section" aria-labelledby="h-aud">
   <div class="wrap">
-    <h2 id="h-aud">Como queres usar o Pamosii?</h2>
+    <div class="sec-head rv">
+      <div><span class="eyebrow-t">${I.users} PARA QUEM É</span><h2 id="h-aud">Como queres usar a Agatha?</h2></div>
+    </div>
     <div class="grid g-3">
       ${audiencias.map(a => `
       <article class="aud-card rv">
@@ -1750,15 +1793,47 @@ on('/', () => {
 
 <section class="section tight" aria-labelledby="h-cur">
   <div class="wrap">
-    <h2 id="h-cur">Conteúdo disponível agora</h2>
+    <div class="sec-head rv">
+      <div><span class="eyebrow-t">${I.play} CONTEÚDO DISPONÍVEL AGORA</span><h2 id="h-cur">Só publicamos o que existe de facto</h2></div>
+      <a class="see-all" href="#/cursos">Todos os cursos ${I.arrow}</a>
+    </div>
     <p class="muted" style="max-width:64ch">Só publicamos como curso aquilo que existe de facto. Hoje, o mini-curso de LGA é o nosso conteúdo real e completo.</p>
     <div class="grid" style="margin-top:20px">${courseCard(c)}</div>
   </div>
 </section>
 
-<section class="section" aria-labelledby="h-ferr">
+<section class="section" aria-labelledby="h-como">
   <div class="wrap">
-    <h2 id="h-ferr">Ferramentas de comunicação</h2>
+    <div class="band band-wide rv">
+      <div class="sec-head">
+        <div><span class="eyebrow-t light">${I.spark} O QUE JÁ FUNCIONA</span>
+          <h2 id="h-como" style="color:#fff">Começa por uma aula real</h2></div>
+        <a class="see-all light" href="#/aprender-lga">Ver as aulas ${I.arrow}</a>
+      </div>
+      <div class="goal-row">
+        <a class="goal" href="#/aprender-lga">Cumprimentar alguém</a>
+        <a class="goal" href="#/aprender-lga">Soletrar um nome</a>
+        <a class="goal" href="#/alfabeto">Treinar as 26 letras</a>
+        <a class="goal" href="#/ouvir">Ditar e ver a glosa</a>
+        <a class="goal" href="#/professores">Preparar uma aula</a>
+        <a class="goal" href="#/colher">Registar um sinal novo</a>
+      </div>
+      <div class="steps">
+        ${passos.map(p => `
+        <div class="step rv">
+          <h3>${p.t}</h3>
+          <p>${p.d}</p>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section tight" aria-labelledby="h-ferr">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div><span class="eyebrow-t">${I.chat} FERRAMENTAS</span><h2 id="h-ferr">Comunicar e aprender</h2></div>
+    </div>
     <p class="muted" style="max-width:66ch">A LGA tem gramática própria, por isso estas ferramentas são um apoio de estudo e não um tradutor automático. Cada palavra mostra o vídeo da aula onde o sinal se vê.</p>
     <div class="grid g-2" style="margin-top:20px">
       <article class="aud-card rv">
@@ -1805,15 +1880,21 @@ on('/', () => {
   </div>
 </section>
 
-<section class="section" aria-labelledby="h-como">
+<section class="section tight" aria-labelledby="h-oficina">
   <div class="wrap">
-    <h2 id="h-como">Como funciona</h2>
-    <div class="steps">
-      ${passos.map(p => `
-      <div class="step rv">
-        <h3>${p.t}</h3>
-        <p>${p.d}</p>
-      </div>`).join('')}
+    <div class="promo-row">
+      <div class="promo promo-a rv">
+        <span class="eyebrow-t light">${I.grad} PARA QUEM ENSINA</span>
+        <h3>Um plano de aula em cinco minutos</h3>
+        <p>Escolhe o tema, junta sinais do dicionário com o estado à vista e uma frase com glosa. Copia, descarrega ou imprime numa folha A4 — sem conta e sem internet.</p>
+        <a class="btn btn-a" href="#/professores">Abrir o planeador ${I.arrow}</a>
+      </div>
+      <div class="promo promo-b rv">
+        <span class="eyebrow-t">${I.shield} PARA A COMUNIDADE</span>
+        <h3 id="h-oficina">Um sinal de cada vez</h3>
+        <p>A Colheita regista como se faz um sinal, com autorização de quem sinalizou. A Validação assina cada veredicto. A Cobertura diz quantas palavras ainda faltam — com contas honestas.</p>
+        <a class="btn btn-p" href="#/colher">Registar um sinal ${I.arrow}</a>
+      </div>
     </div>
   </div>
 </section>
@@ -3173,14 +3254,14 @@ on('/sobre', () => {
     active: '/sobre',
     h: shell(`
 <div class="wrap page-head">
-  <h1>Sobre o Pamosii e a Viva Surdo</h1>
+  <h1>Sobre a Agatha e a Viva Surdo</h1>
   <p class="lead">Uma iniciativa angolana dedicada à inclusão económica e social, à educação e à acessibilidade das pessoas surdas.</p>
 </div>
 <section class="section tight">
   <div class="wrap about-grid">
     <div>
       <h2>A nossa missão</h2>
-      <p><strong>Pamosii</strong> é o nome desta plataforma; a <strong>Viva Surdo</strong> é a iniciativa angolana que a publica. Quando falamos de aulas, vídeos e canais oficiais, falamos sempre da Viva Surdo.</p>
+      <p><strong>Agatha</strong> é o nome desta plataforma; a <strong>Viva Surdo</strong> é a iniciativa angolana que a publica. O <strong>Pamosii</strong> é o motor de glosa de estudo que a plataforma usa para mostrar a sequência de sinais. Quando falamos de aulas, vídeos e canais oficiais, falamos sempre da Viva Surdo.</p>
       <p>A Viva Surdo nasceu em Angola para ampliar o acesso à aprendizagem e à formação para pessoas surdas, tendo a Língua Gestual Angolana (LGA) como língua de comunicação e de ensino.</p>
       <p>A plataforma reúne três públicos: pessoas surdas em busca de formação acessível, professores e profissionais que ensinam ou apoiam pessoas surdas, e pessoas ouvintes — familiares, colegas, educadores — que querem aprender LGA.</p>
       <p>A comunidade surda não é tratada como exceção: é o público principal e coautora desta experiência. Os materiais de LGA são validados com utilizadores da língua antes de serem publicados.</p>
@@ -3224,7 +3305,7 @@ on('/sobre', () => {
   <div class="wrap">
     <div class="fact-card rv creditos">
       <h2>${I.users} Quem faz esta aplicação</h2>
-      <p><strong>O Pamosii foi criado pela equipa Horizonte Futuro em conjunto com a equipa Viva Surdo.</strong>
+      <p><strong>A Agatha foi criada pela equipa Horizonte Futuro em conjunto com a equipa Viva Surdo.</strong>
         A Horizonte Futuro constrói e mantém a plataforma; a Viva Surdo é a iniciativa angolana que publica o
         conteúdo, define o que é correto em Língua Gestual Angolana e decide o que pode ser divulgado.</p>
       <p style="margin-top:10px">As duas equipas trabalham sobre o mesmo princípio: <strong>a comunidade surda
@@ -3232,7 +3313,7 @@ on('/sobre', () => {
         tem de ser pago — proporcional à duração, ao alcance e ao uso dos dados recolhidos. Enquanto esse
         orçamento não estiver garantido, as ferramentas de recolha (Colheita, Marcação) servem para preparar o
         material, não para o publicar como válido.</p>
-      <p style="margin-top:10px">Nenhum boneco animado deste site substitui uma pessoa sura, nenhum avatar
+      <p style="margin-top:10px">Nenhum boneco animado deste site substitui uma pessoa surda, nenhum avatar
         imita a cara, a voz ou o estilo de sinalizar de alguém real sem <strong>autorização escrita, prévia e
         separada</strong> dessa pessoa. E nenhum texto deste site traduz automaticamente fala para LGA ou LGA
         para fala: o que existe é uma <em>glosa de estudo</em> feita a partir do glossário, marcada
@@ -5933,7 +6014,7 @@ on('/validar', () => ({
   h: shell(validarlheiraHTML(), '/validar'),
   bind: bindValidar,
   meta: {
-    t: 'Fila de validação de sinais LGA — Pamosii Viva Surdo',
+    t: 'Fila de validação de sinais LGA — Agatha Viva Surdo',
     d: 'Três veredictos por sinal recolhido — correcto, variante regional ou errado — assinados por um apelido, com região e data. Fica neste browser e exporta-se em JSONL para a equipa promover o estado no dicionário. O site nunca se auto-valida.',
   },
 }));
@@ -6058,8 +6139,69 @@ function covAmostras(d) {
   };
 }
 
+/* ----------------------------------------------------------------------------
+   A FOLHA DE COLHEITA — a versão de papel da rota #/colher
+   Um professor ou um voluntário vai a uma casa, a uma escola ou a um culto onde
+   não há internet, senta-se com uma pessoa surda e pergunta-lhe, uma a uma, as
+   palavras que este site ainda não tem. Isso faz-se em papel. A folha:
+     - não ensina nenhum sinal: tem uma coluna vazia à espera da resposta;
+     - diz quantas palavras do tema faltam e quais, lidas do glossário no dia;
+     - cabe numa folha A4 (o limite é medido em papel, não adivinhado) e diz
+         quando fica algo de fora, em vez de o esconder;
+     - não leva nomes nem contactos impressos: quem preencher decide se os escreve,
+         e é no papel que eles ficam até alguém os passar para a Colheita.
+   ---------------------------------------------------------------------------- */
+const COV_FOLHA_LIMITE = 24;
+const covFolhaEstado = { tema: null };
+function covFolhaTema(d, tema) {
+  const comFalta = d.temas
+    .filter(t => t.n > t.confirmado + t.aprovado)
+    .map(t => t.tema);
+  const escolhido = tema && comFalta.indexOf(tema) >= 0 ? tema : (comFalta[0] || '');
+  const g = GLOSSARIO.find(x => x.tema === escolhido);
+  const palavras = (g ? g.termos : []).map(t => ({ palavra: t.palavra, estado: t.estado }));
+  const semSinal = palavras.filter(x => x.estado !== 'confirmado' && x.estado !== 'aprovado');
+  return {
+    temas: comFalta, tema: escolhido, palavras, semSinal,
+    mostra: semSinal.slice(0, COV_FOLHA_LIMITE),
+    fora: Math.max(0, semSinal.length - COV_FOLHA_LIMITE),
+  };
+}
+function covFolhaHTML(f) {
+  const hoje = fmtData(new Date().toISOString().slice(0, 10));
+  const site = location.origin + location.pathname;
+  const rotulo = e => esc((ESTADO_GLOSSARIO[e] || { rotulo: 'sem estado' }).rotulo);
+  return `
+  <section class="cov-folha" id="cov-folha" aria-labelledby="cov-folha-h">
+    <h2 id="cov-folha-h">Folha de colheita — ${esc(f.tema)}</h2>
+    <p class="cov-folha-nota">Palavras deste tema <strong>sem sinal confirmado</strong> a ${hoje}:
+      <strong>${f.semSinal.length}</strong> de ${f.palavras.length}. Esta folha não ensina nada — serve para
+      <em>perguntar</em>. Senta-te com uma pessoa surda, mostra a palavra, e escreve na coluna da direita
+      como ela faz o sinal e quem to respondeu. Nada aqui foi validado por alguém: o que fica validado é o
+      que for registado depois na Colheita e confirmado na fila de validação.
+      ${f.fora ? `Cabem ${COV_FOLHA_LIMITE} palavras numa folha A4; <strong>ficaram de fora ${f.fora}</strong>
+        ${pl(f.fora, 'palavra', 'palavras')} deste tema — escolhe outro tema ou imprime esta folha outra vez.` : ''}</p>
+    <div class="cov-tab-wrap"><table class="cov-folha-tab">
+      <caption class="sr-only">Palavras de ${esc(f.tema)} ainda sem sinal confirmado, com espaço em branco para descrever o sinal e apontar quem respondeu</caption>
+      <thead><tr><th scope="col">Palavra</th><th scope="col">Estado</th>
+        <th scope="col">Como é que se faz? (descreve aqui)</th>
+        <th scope="col">Quem respondeu · onde · quando</th></tr></thead>
+      <tbody>${f.mostra.map(x => `<tr>
+        <th scope="row">${esc(x.palavra)}</th>
+        <td class="cov-folha-est">${rotulo(x.estado)}</td>
+        <td class="cov-folha-escreve"></td>
+        <td class="cov-folha-escreve"></td></tr>`).join('')}</tbody>
+    </table></div>
+    <p class="cov-folha-rod">Com a folha cheia: <a href="${esc(site)}#/colher">${esc(site)}#/colher</a> —
+      um sinal por vez, com a autorização de quem sinalizou. O protocolo (quem valida, como se paga a quem
+      sinaliza, o que não se grava sem consentimento) está em <code>docs/colheita-sinais-lga.md</code> e é
+      resumido na secção «Como é que um número sobe» desta página.</p>
+  </section>`;
+}
+
 function coberturaHTML() {
   const d = covDados();
+  const f = covFolhaTema(d, covFolhaEstado.tema);
   const am = covAmostras(d);
   const publicadasNaEquipa = d.por.confirmado + d.por.aprovado;
   const resumoBarra = COV_ESTADOS.filter(e => d.por[e])
@@ -6137,6 +6279,15 @@ function coberturaHTML() {
         </tbody>
       </table>
     </div>
+    <p class="cov-ac"><label for="cov-folha-tema">Folha de colheita de um tema</label>
+      <select id="cov-folha-tema">${f.temas.map(t =>
+        `<option value="${esc(t)}"${t === f.tema ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>
+      <button class="btn btn-p btn-sm" type="button" data-cov-print>${I.print} Imprimir esta folha</button></p>
+    <p class="muted">É a pergunta feita em papel: as palavras do tema que ainda não têm sinal confirmado,
+      com espaço para escrever a resposta de quem sabe. Escolhe o tema acima — a folha muda aqui em baixo e
+      é exactamente ela que vai para o papel.</p>
+    <p class="cov-live" id="cov-live" role="status"></p>
+    ${covFolhaHTML(f)}
   </section>
 
   <section class="cov-bloco" aria-labelledby="cov-equipa-h">
@@ -6268,11 +6419,38 @@ function coberturaHTML() {
 </div></section>`;
 }
 
+function bindCobertura() {
+  const sel = $('#cov-folha-tema'), folha = $('#cov-folha'), live = $('#cov-live');
+  if (!sel || !folha) return;
+  sel.value = covFolhaEstado.tema || sel.value;
+  sel.addEventListener('change', e => {
+    covFolhaEstado.tema = e.target.value;
+    const d = covDados();
+    const f = covFolhaTema(d, covFolhaEstado.tema);
+    covFolhaEstado.tema = f.tema;
+    const nova = document.createElement('div');
+    nova.innerHTML = covFolhaHTML(f).trim();
+    folha.replaceWith(nova.firstElementChild);
+    if (live) {
+      live.textContent = `Folha de colheita de ${f.tema}: ${f.semSinal.length} de ${f.palavras.length} palavras `
+        + `ainda sem sinal confirmado` + (f.fora ? `, ${f.fora} de fora desta folha — escolhe outro tema ou imprime outra vez` : '') + '.';
+    }
+  });
+  const botao = $('[data-cov-print]');
+  if (botao) {
+    botao.addEventListener('click', () => {
+      if (live) live.textContent = 'A abrir a caixa de impressão do browser — sai só a folha de colheita, sem barra, sem tabelas e sem botões. Se não aparecer nada, usa o menu do browser → Imprimir.';
+      window.print();
+    });
+  }
+}
+
 on('/cobertura', () => ({
   active: '/cobertura',
   h: shell(coberturaHTML(), '/cobertura'),
+  bind: bindCobertura,
   meta: {
-    t: 'Cobertura do glossário LGA — Pamosii Viva Surdo',
+    t: 'Cobertura do glossário LGA — Agatha Viva Surdo',
     d: 'Quantas palavras do dicionário têm sinal confirmado, quais continuam por validar, quais são demonstração e que palavras as pessoas procuraram e não encontraram. Contas honestas, sem prometer cobertura total da LGA.',
   },
 }));
@@ -6694,7 +6872,7 @@ on('/alfabeto', () => ({
   h: shell(alfabetoHTML(), '/alfabeto'),
   bind: bindAlfabeto,
   meta: {
-    t: 'Alfabeto manual LGA (datilologia) — Pamosii Viva Surdo',
+    t: 'Alfabeto manual LGA (datilologia) — Agatha Viva Surdo',
     d: 'As 26 letras usadas para soletrar nomes e palavras sem sinal em LGA: a aula real do Abecedário, o estado de cada letra e um treino da ordem das letras. O site não desenha formas de mão que não foram confirmadas por sinalizadores surdos.',
   },
 }));
@@ -7987,7 +8165,7 @@ function vistaMarcacoes() {
     active: '/marcar',
     h: shell(marcacoesHTML(), '/marcar'),
     bind: bindMarcacoes,
-    meta: { t: 'Marcação de tempos por sinal — Pamosii Viva Surdo', d: 'Ferramenta para marcar os segundos em que o sinal de cada palavra aparece nas 17 aulas de LGA. As marcações ficam no aparelho e exportam-se em JSON {aula, palavra, inicio, fim, estado} para a equipa cortar os clipes.' },
+    meta: { t: 'Marcação de tempos por sinal — Agatha Viva Surdo', d: 'Ferramenta para marcar os segundos em que o sinal de cada palavra aparece nas 17 aulas de LGA. As marcações ficam no aparelho e exportam-se em JSON {aula, palavra, inicio, fim, estado} para a equipa cortar os clipes.' },
   };
 }
 

@@ -1,4 +1,4 @@
-/* Pamosii Viva Surdo — service worker (funcionar sem rede)
+/* Agatha Viva Surdo — service worker (funcionar sem rede)
 
    O que fica guardado neste telemóvel/computador:
      - a estrutura da página, o estilo, o motor (todos os dados — glossário, cursos,
@@ -15,7 +15,7 @@
    Se mudares app.js ou styles.css sem mudar o `?v=` do index.html, o offline continua a
    servir a versão antiga. Por isso a VERSÃO abaixo acompanha sempre o `?v=`.          */
 
-const VERSAO = 'vs80';
+const VERSAO = 'vs81';
 const CASULO = 'casulo-' + VERSAO;
 const EXTERNO = 'externo-' + VERSAO;
 

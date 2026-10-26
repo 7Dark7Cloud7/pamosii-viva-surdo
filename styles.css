@@ -1833,6 +1833,38 @@ html.emb #sg-pagina,html.emb #sg-aponta,html.emb #sg-aponta-aviso{display:none}
 [data-contraste-alto] .cov-seg-confirmado{background:#00443c}
 [data-contraste-alto] .cov-seg-aprovado,[data-contraste-alto] .cov-seg-rejeitado{background:#000}
 
+/* A FOLHA DE COLHEITA: a versão de papel da Colheita, para uma sala sem internet.
+   No ecrã vê-se exactamente o que vai para o papel — o site não esconde o que imprime.
+   As duas colunas da direita são em branco de propósito: é a resposta que falta. */
+.cov-folha{margin:18px 0 0;padding:16px;border:1.5px dashed var(--line);border-radius:14px;background:var(--cream)}
+.cov-folha h2{margin:0 0 6px;font-family:var(--font-h);font-size:19px;line-height:1.25}
+.cov-folha-nota{margin:0 0 12px;font-size:13.5px;line-height:1.55;color:var(--ink-soft)}
+.cov-folha-nota strong{color:var(--ink)}
+.cov-folha .cov-tab-wrap{margin:0}
+.cov-folha-tab{width:100%;min-width:520px;border-collapse:collapse;font-size:14px}
+.cov-folha-tab th,.cov-folha-tab td{padding:7px 9px;border:1.5px solid var(--line);text-align:left;vertical-align:top}
+.cov-folha-tab thead th{font-size:11.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;color:var(--muted)}
+.cov-folha-tab thead th:nth-child(1){width:24%}
+.cov-folha-tab thead th:nth-child(2){width:15%}
+.cov-folha-tab thead th:nth-child(3){width:33%}
+.cov-folha-tab tbody th{font-weight:800;color:var(--ink)}
+.cov-folha-est{font-size:11.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;color:var(--muted)}
+.cov-folha-escreve{height:38px;background:var(--paper)}
+.cov-folha-rod{margin:12px 0 0;font-size:12.5px;line-height:1.6;color:var(--ink-soft);overflow-wrap:anywhere}
+.cov-folha-rod a{min-height:24px;padding:2px 0}
+.cov-ac label{font-size:13.5px;font-weight:800;color:var(--ink-soft);display:flex;align-items:center;gap:8px}
+.cov-ac select{font:inherit;font-size:15px;padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;
+  background:var(--surface);color:var(--ink);min-width:min(240px,100%)}
+.cov-live{margin:10px 0 0;min-height:22px;font-size:13.5px;font-weight:700;color:var(--ink-soft)}
+@media(max-width:720px){
+  .cov-folha{padding:13px 12px}
+  .cov-ac label{width:100%}
+}
+[data-contraste-alto] .cov-folha{background:#fff;border-color:#000;color:#000}
+[data-contraste-alto] .cov-folha-tab th,[data-contraste-alto] .cov-folha-tab td{border-color:#000;color:#000;background:#fff}
+[data-contraste-alto] .cov-folha-nota,[data-contraste-alto] .cov-folha-rod{color:#000}
+[data-contraste-alto] .cov-ac select{background:#fff;border-color:#000;color:#000}
+
 /* o medidor das amostras treináveis: quantidade, não promessa */
 .amo-medidor{height:18px;margin:16px 0 0;border:1.5px solid var(--line);border-radius:999px;
   overflow:hidden;background:var(--paper)}
@@ -2097,7 +2129,183 @@ html.emb #sg-pagina,html.emb #sg-aponta,html.emb #sg-aponta-aviso{display:none}
 [data-contraste-alto] .prof-avisos .ic{color:#000}
 
 /* ============================================================================
-   25. IMPRESSÃO — o plano de aula e a checklist vão para o papel.
+   25. PELE PÚBLICA — AGATHA.
+   O esqueleto é o da academia (barra fixa com marca em chip, herói escuro com
+   manchas, faixa de números, prateleiras de cartões, secções escuras e
+   promoções em par). As cores são as da Viva Surdo: teal profundo, âmbar e
+   creme — nenhuma cor nova entra por causa do desenho.
+   ============================================================================ */
+
+/* --- botões autocolante: sombra sólida de 3 px, sem desfoque --- */
+.btn{border-radius:14px;border:2px solid transparent;box-shadow:0 3px 0 rgba(16,52,47,.20);
+  transition:transform .12s,box-shadow .12s,filter .12s,background .12s}
+.btn:active{transform:translateY(3px)!important;box-shadow:0 0 0 transparent!important}
+.btn-p{background:var(--primary);color:var(--primary-fg);border-color:var(--primary-hover);
+  box-shadow:0 3px 0 var(--primary-hover)}
+.btn-p:hover{background:var(--primary-hover);color:var(--primary-fg);transform:translateY(-1px);
+  box-shadow:0 4px 0 var(--primary-hover);filter:brightness(1.06)}
+.btn-a{border-color:#C99400;box-shadow:0 3px 0 #C99400}
+.btn-a:hover{transform:translateY(-1px);box-shadow:0 4px 0 #C99400}
+.btn-o{background:var(--surface);color:var(--ink);border-color:var(--line);
+  box-shadow:0 3px 0 var(--line-soft)}
+.btn-o:hover{background:var(--surface);color:var(--teal-deep);border-color:var(--teal);box-shadow:0 3px 0 var(--line)}
+.btn-o.on-dark{background:transparent;color:#fff;border-color:rgba(255,255,255,.5);box-shadow:0 3px 0 rgba(0,0,0,.28)}
+.btn-o.on-dark:hover{background:rgba(255,255,255,.12);color:#fff;border-color:#fff}
+
+/* --- cabeçalho: a barra já era escura; ganha o fio de cor e a marca em chip --- */
+.site-head{background:var(--teal-dark);box-shadow:0 10px 30px rgba(16,52,47,.28)}
+.site-head::before{content:"";position:absolute;left:0;right:0;top:0;height:5px;z-index:1;
+  background:repeating-linear-gradient(90deg,var(--teal) 0 26px,var(--amber) 26px 34px,var(--ink) 34px 42px,var(--teal-dark) 42px 68px)}
+.brand img{border-radius:15px;box-shadow:0 3px 0 var(--teal-deep),0 0 0 1.5px rgba(255,255,255,.10)}
+.brand .wm{color:#fff}
+.brand .wm small{color:var(--amber);letter-spacing:1.6px}
+.nav-links a{font-weight:700;border-radius:11px}
+.nav-links a[aria-current="page"]{background:rgba(247,201,72,.16);color:#fff}
+.nav-links a[aria-current="page"]::after{background:var(--amber)}
+
+/* --- títulos de secção (olho + título + "ver tudo") --- */
+.sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px 24px;
+  flex-wrap:wrap;margin:0 0 22px}
+.sec-head h2{margin:6px 0 0}
+.eyebrow-t{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:800;
+  letter-spacing:1.5px;text-transform:uppercase;color:var(--teal-deep)}
+.eyebrow-t .ic{width:15px;height:15px}
+.eyebrow-t.light{color:var(--amber)}
+.see-all{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-weight:800;font-size:14px;
+  color:var(--teal-deep);text-decoration:none}
+.see-all:hover{text-decoration:underline}
+.see-all.light{color:var(--amber)}
+.see-all .ic{width:16px;height:16px}
+
+/* --- herói escuro --- */
+.hero{background:var(--teal-dark);color:#fff;border-radius:0 0 34px 34px;padding-bottom:0}
+.hero-blobs{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.hero-in{position:relative;z-index:1;grid-template-columns:1.12fr .88fr;gap:42px;
+  padding:58px 0 46px;align-items:center}
+.hero .eyebrow{background:rgba(247,201,72,.14);border-color:rgba(247,201,72,.45);color:var(--amber)}
+.hero h1{color:#fff;font-size:clamp(32px,4.2vw,52px);line-height:1.06;letter-spacing:-.4px}
+.hero h1 .hl{color:var(--amber)}
+.hero .lead{color:rgba(255,255,255,.88);font-size:17px}
+.hero-ctas{margin-top:24px}
+.hero-note{color:rgba(255,255,255,.72)}
+.hero-note a{color:var(--amber)}
+.hero .btn-o{background:transparent;color:#fff;border-color:rgba(255,255,255,.5);
+  box-shadow:0 3px 0 rgba(0,0,0,.28)}
+.hero .btn-o:hover{background:rgba(255,255,255,.12);color:#fff;border-color:#fff}
+
+/* o painel do herói: um cartão do Signer, com o boneco que já existe no site —
+   sem fotografias de pessoas, que não temos autorizadas */
+.hero-visual{position:relative;display:grid;place-items:center;min-height:320px}
+.hero-frame{position:relative;width:min(360px,100%);background:var(--paper);color:var(--ink);
+  border-radius:24px;padding:18px 18px 16px;box-shadow:0 24px 60px rgba(4,20,18,.45);
+  border:1.5px solid rgba(255,255,255,.18)}
+.hf-top{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:800;letter-spacing:1.2px;
+  text-transform:uppercase;color:var(--muted)}
+.hf-top::before{content:"";width:8px;height:8px;border-radius:99px;background:var(--teal);flex:none}
+.hf-pt{margin:12px 0 0;font-family:var(--font-h);font-size:19px;line-height:1.25;color:var(--ink)}
+.hf-sign{display:grid;place-items:center;margin:10px 0 6px;padding:10px 0;
+  background:var(--teal-tint);border-radius:16px;border:1.5px solid var(--note-line)}
+.hf-sign svg{width:104px;height:132px;height:auto}
+.hf-glosa{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}
+.hf-glosa span{font-size:12.5px;font-weight:800;letter-spacing:.6px;padding:4px 9px;border-radius:8px;
+  background:var(--amber-soft);border:1.5px solid var(--amber-line);color:var(--amber-ink)}
+.hf-note{margin:10px 0 0;font-size:12px;line-height:1.45;color:var(--muted)}
+.hf-note strong{color:var(--amber-ink)}
+.float{position:absolute;display:flex;align-items:center;gap:10px;background:var(--paper);color:var(--ink);
+  border:1.5px solid var(--line);border-radius:14px;padding:9px 12px;font-size:12.5px;line-height:1.25;
+  box-shadow:0 12px 28px rgba(4,20,18,.28);font-weight:600}
+.float b{display:block;font-family:var(--font-h);font-size:14px;font-weight:800}
+.float .fi{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;flex:none;
+  background:var(--teal-tint);color:var(--teal-deep)}
+.float .fi .ic{width:18px;height:18px}
+/* os selos ficam fora do cartão, encostados à borda: por cima do texto tapavam
+   a legenda e a nota de honestidade do próprio cartão. */
+.float.f1{left:6px;top:-46px}
+.float.f2{right:2px;bottom:-44px}
+
+/* faixa de números, encostada ao fundo do herói */
+.trust-band{position:relative;z-index:1;margin-top:6px;background:rgba(255,255,255,.07);
+  border-top:1px solid rgba(255,255,255,.16)}
+.tb-in{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 22px;padding:18px 0}
+.tb b{display:block;font-family:var(--font-h);font-size:23px;line-height:1.1;color:var(--amber)}
+.tb span{font-size:12.5px;line-height:1.4;color:rgba(255,255,255,.8)}
+
+/* --- prateleira de percursos (desliza na horizontal, sem imagens) --- */
+.rail{display:flex;gap:16px;overflow-x:auto;padding:4px 2px 16px;scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch}
+.rail>*{flex:0 0 min(250px,78vw);scroll-snap-align:start}
+.tile{position:relative;display:block;min-height:172px;padding:20px;border-radius:20px;
+  background:var(--paper);border:1.5px solid var(--line);box-shadow:0 6px 18px rgba(16,52,47,.08);
+  color:var(--ink);text-decoration:none;transition:transform .14s,box-shadow .14s}
+.tile:hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(16,52,47,.16)}
+.tile-ic{display:grid;place-items:center;width:46px;height:46px;border-radius:13px;
+  background:var(--teal-tint);color:var(--teal-deep);box-shadow:0 3px 0 var(--note-line)}
+.tile-ic .ic{width:23px;height:23px}
+.tile b{display:block;margin-top:14px;font-family:var(--font-h);font-size:18px;line-height:1.2}
+.tile small{display:block;margin-top:4px;font-size:13px;line-height:1.45;color:var(--muted)}
+.tile-go{position:absolute;right:16px;bottom:14px;font-size:12px;font-weight:800;color:var(--teal-deep)}
+.tile.is-amber .tile-ic{background:var(--amber-soft);color:var(--amber-ink);box-shadow:0 3px 0 var(--amber-line)}
+.tile.is-dark{background:var(--teal-dark);color:#fff;border-color:var(--teal-dark)}
+.tile.is-dark small{color:rgba(255,255,255,.78)}
+.tile.is-dark .tile-go{color:var(--amber)}
+.tile.is-dark .tile-ic{background:rgba(255,255,255,.12);color:var(--amber);box-shadow:none}
+
+/* --- faixa escura dentro da página --- */
+.band{position:relative;overflow:hidden;background:linear-gradient(125deg,var(--teal-dark) 0%,#0A4F49 70%,#0E756B 100%);
+  border-radius:26px;padding:40px 34px;color:#fff;box-shadow:0 18px 44px rgba(10,79,73,.30)}
+.goal-row{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 24px}
+.goal{display:inline-flex;align-items:center;min-height:42px;padding:9px 16px;border-radius:999px;
+  background:rgba(255,255,255,.10);border:1.5px solid rgba(255,255,255,.24);color:#fff;
+  font-size:13.5px;font-weight:700;text-decoration:none}
+.goal:hover{background:rgba(255,255,255,.18);text-decoration:none}
+/* variante da faixa para conteúdo largo: uma coluna, porque aqui vivem o
+   cabeçalho, os atalhos e os passos — não é o par «texto + botão». */
+.band.band-wide{display:block}
+.band-wide .goal-row{margin:2px 0 26px}
+.band-wide .steps{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;margin-top:26px}
+/* os passos passaram a viver dentro da faixa escura: em cartão branco, a cor de
+   texto da faixa (quase branca) ficava branca sobre branco. Aqui são vidro. */
+.band .step{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.20);box-shadow:none}
+.band .step p{color:rgba(255,255,255,.86)}
+.band .step::before{background:var(--amber);color:var(--ink);box-shadow:none}
+.band .step h3{color:#fff}
+
+/* --- promoções em par --- */
+.promo-row{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:26px 0 0}
+.promo{position:relative;overflow:hidden;border-radius:24px;padding:26px 26px 24px;
+  border:1.5px solid var(--line);background:var(--paper);box-shadow:0 10px 26px rgba(16,52,47,.10)}
+.promo h3{margin:8px 0 6px;font-size:21px}
+.promo p{margin:0 0 16px;font-size:14.5px;line-height:1.55;color:var(--ink-soft)}
+.promo-a{background:linear-gradient(135deg,var(--teal) 0%,var(--teal-deep) 82%);border-color:var(--teal-deep);color:#fff}
+.promo-a h3{color:#fff}
+.promo-a p{color:rgba(255,255,255,.88)}
+.promo-a .eyebrow-t{color:var(--amber)}
+.promo-b{background:var(--amber-soft);border-color:var(--amber-line)}
+.promo-b .eyebrow-t{color:var(--amber-ink)}
+
+/* --- cartões: cantos e sombra da academia, cores da casa --- */
+.ccard,.vcard,.res-card{box-shadow:0 6px 20px rgba(16,52,47,.09)}
+.ccard:hover,.vcard:hover{box-shadow:0 18px 40px rgba(16,52,47,.16)}
+
+@media(max-width:1000px){
+  .hero-in{grid-template-columns:minmax(0,1fr);padding:44px 0 34px;gap:30px}
+  .hero-visual{min-height:0}
+  .float.f1{left:0}
+  .float.f2{right:0}
+  .tb-in{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .promo-row{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:720px){
+  .hero{border-radius:0 0 24px 24px}
+  .float{position:static;margin-top:10px;box-shadow:none}
+  .hero-visual{gap:0}
+  .float.f1,.float.f2{display:none}
+  .band{padding:26px 18px;border-radius:20px}
+  .promo{padding:20px 18px}
+}
+
+/* ============================================================================
+   26. IMPRESSÃO — o plano de aula e a checklist vão para o papel.
    Quem ensina imprime na escola: o que sai é o plano, não a aplicação. Por isso
    tudo o que é controlo desaparece, qualquer tema imprime a preto sobre branco,
    e cada link externo ganha o URL escrito — numa folha não se clica.
@@ -2132,6 +2340,19 @@ html.emb #sg-pagina,html.emb #sg-aponta,html.emb #sg-aponta-aviso{display:none}
   .btn,.chip,.f-chip,.dic-badge,.mk-chip,.soon,.eyebrow,.pm-mode,.pm-num,.mod-n,.band,.vlink{
     background:#fff!important;color:#000!important;box-shadow:none!important}
   .band h2,.band p,.band li,.band a{color:#000!important}
+  /* a pele da academia põe superfícies escuras (herói, cartões, promoções) e os
+     passos em vidro. Em papel o fundo não é pintado e o `a{color:#000}` do topo
+     herdava para dentro dos cartões: preto sobre preto. Tudo volta a papel. */
+  .hero,.tile.is-dark,.promo-a,.promo-b,.band .step,.trust-band{
+    background:#fff!important;color:#000!important;border-color:#8A8A8A!important;box-shadow:none!important}
+  .hero-blobs{display:none!important}
+  .hero h1,.hero h1 .hl,.hero .lead,.hero-note,.hero-note a,.tb b,.tb span,
+  .tile b,.tile small,.tile-go,.tile.is-dark small,.tile.is-dark .tile-go,
+  .promo h3,.promo p,.promo .eyebrow-t,.band .step h3,.band .step p{color:#000!important}
+  .hero .eyebrow,.hero .btn-o{background:#fff!important;color:#000!important;
+    border-color:#8A8A8A!important;box-shadow:none!important}
+  .band .step::before{background:#fff!important;color:#000!important;box-shadow:none!important;
+    border:1.5px solid #000}
   .prof-bloco,.res-card,.cov-bloco,.ch-checks,.prof-avisos li{break-inside:avoid;page-break-inside:avoid}
   .prof-bloco,.res-card,.prof-avisos li,.prof-glosa li{box-shadow:none!important;background:#fff!important;
     border-color:#8A8A8A!important}
@@ -2154,6 +2375,26 @@ html.emb #sg-pagina,html.emb #sg-aponta,html.emb #sg-aponta-aviso{display:none}
   .alf-folha-pauta i{height:5mm;border-bottom:1px solid #8A8A8A}
   .alf-folha-nota{font-size:9pt;line-height:1.35;margin:0 0 6px}
   .alf-folha-rod{font-size:8.5pt;line-height:1.4;margin:8px 0 0}
+  /* #/cobertura: no papel sai só a folha de colheita. As contagens, os medidores e os
+     botões são de ecrã — quem imprime esta página quer a pergunta, não as estatísticas. */
+  main:has(.cov-folha) .page-head,
+  main:has(.cov-folha) .note-band,
+  main:has(.cov-folha) .cov-bloco:not(:has(.cov-folha)){display:none!important}
+  .cov-bloco:has(.cov-folha)>:not(.cov-folha){display:none!important}
+  .cov-folha{margin:0;padding:0;border:none;border-radius:0;background:#fff}
+  .cov-folha h2{font-size:13pt}
+  .cov-folha-nota{font-size:8.5pt;line-height:1.35;margin:0 0 4px}
+  .cov-folha .cov-tab-wrap{margin:0;overflow:visible}
+  table.cov-folha-tab{width:100%;min-width:0;table-layout:fixed}
+  .cov-folha-tab th,.cov-folha-tab td{border:1px solid #000;padding:0.8mm 1.2mm;color:#000!important}
+  .cov-folha-tab thead th{font-size:7.5pt;letter-spacing:0}
+  .cov-folha-tab tbody th{font-size:10pt;font-weight:700}
+  .cov-folha-est{font-size:7.5pt;letter-spacing:0;text-transform:none;font-weight:400;color:#000}
+  /* sete milímetros de altura para escrever: abaixo disso a coluna deixa de ser
+     uma resposta e passa a ser um rabisco. O limite de palavras vem desta medida. */
+  .cov-folha-escreve{height:7mm;background:#fff}
+  .cov-folha-tab tr{break-inside:avoid;page-break-inside:avoid}
+  .cov-folha-rod{font-size:8pt;line-height:1.35;margin:5px 0 0}
   h1{font-size:20pt}h2{font-size:15pt}h3{font-size:12.5pt}
   p,li,td{font-size:11pt;line-height:1.5}
 }
