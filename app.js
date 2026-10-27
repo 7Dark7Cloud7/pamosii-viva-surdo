@@ -1431,6 +1431,12 @@ const glosaTexto = (r) => r.itens
    decorativo (aria-hidden) e vem sempre acompanhado do vídeo.
 ---------------------------------------------------------------------------- */
 const PM_MAOS = '<path class="pm-mao" d="M32 86c-8-6-12-15-12-25V44a5 5 0 0110 0v9M30 52V27a5 5 0 0110 0v25M40 52V22a5 5 0 0110 0v30M50 52V27a5 5 0 0110 0v25M60 56v-8a5 5 0 0110 0v18c0 14-9 24-22 24-8 0-13-3-16-8"/>';
+/* duas camadas da mesma mão: a de trás deslocada e escura faz de espessura; a da
+   frente é a tinta. Não é uma pessoa nem uma mão fotografada — é o mesmo glifo
+   com profundidade, e por isso continua a não imitar nenhum sinalizador. */
+const PM_MAOS_3D = '<g class="pm-mao-sombra" transform="translate(3 3.5)">' + PM_MAOS + '</g>'
+  + '<g class="pm-mao-frente">' + PM_MAOS + '</g>'
+  + '<ellipse class="pm-chao" cx="42" cy="101" rx="29" ry="3.6"/>';
 const PM_MARCAS = {
   aceno: '<path class="pm-onda" d="M78 20c7 5 11 13 11 22M88 12c10 7 15 18 15 30"/>',
   acao: '<path class="pm-rumo" d="M14 46c8-12 20-19 34-19"/><path class="pm-rumo" d="M44 22l6 5-6 5"/>',
@@ -1453,7 +1459,7 @@ const pmGlifo = (tema, extra = '', letra = 'A') => {
   let marca = PM_MARCAS[mov] || PM_MARCAS.acao;
   /* o grafema mostra a letra pedida — senão a ilustração mentiria sobre o sinal */
   if (mov === 'grafema') marca = marca.replace('>A<', '>' + esc(letra) + '<');
-  return `<svg class="pm-glyph pm-mov-${mov}" viewBox="0 0 120 110" aria-hidden="true" focusable="false">${PM_MAOS}${marca}</svg>${extra}`;
+  return `<svg class="pm-glyph pm-mov-${mov}" viewBox="0 0 120 110" aria-hidden="true" focusable="false">${PM_MAOS_3D}${marca}</svg>${extra}`;
 };
 
 /* fala uma frase pontual (não interfere com a leitura da página inteira) */
@@ -1583,7 +1589,7 @@ const EM_IFRAME = window.parent !== window;
 function shell(content, active) {
   if (EMB) {
     return `<main id="conteudo" class="emb-main" tabindex="-1">
-  <p class="emb-aviso">Pamosii Signer — a preparar o painel de sinais… Se não aparecer nada,
+  <p class="emb-aviso">Agatha Signer — a preparar o painel de sinais… Se não aparecer nada,
     abre o site sem este modo e usa o botão do Signer: <a href="#/pamosii">Pamosii</a>.</p>
 </main>`;
   }
@@ -3582,24 +3588,46 @@ document.addEventListener('click', e => {
    ============================================================================ */
 
 /* --- 12.1 a figura: duas mãos levantadas + cara, porque os marcadores não
-          manuais fazem parte do sinal e não são enfeite --- */
-const SG_MAOS = `
-  <g class="sg-mao"><circle cx="47" cy="31" r="5"/><path d="M44 28v-6M47 27v-7M50 28v-6"/></g>
-  <g class="sg-mao"><circle cx="113" cy="31" r="5"/><path d="M110 28v-6M113 27v-7M116 28v-6"/></g>`;
+          manuais fazem parte do sinal e não são enfeite. As camadas, gradientes e
+          sombra dão PROFUNDIDADE à ilustração; continuam a ser um glifo de
+          movimento, sem cara nem mãos de nenhuma pessoa real. --- */
+function sgMaos(uid) {
+  const mao = x => `
+    <g class="sg-mao-sombra" transform="translate(2 3)"><circle cx="${x}" cy="31" r="7.6"/><path d="M${x - 3.6} 27.4v-6.6M${x} 26.4v-7.6M${x + 3.6} 27.4v-6.6"/></g>
+    <g class="sg-mao-frente"><circle cx="${x}" cy="31" r="7.6"/><path d="M${x - 3.6} 27.4v-6.6M${x} 26.4v-7.6M${x + 3.6} 27.4v-6.6"/><path class="sg-brilho-mao" d="M${x - 4.6} 30.2a4.4 4.4 0 0 1 4.6-4.6"/></g>`;
+  return `<g class="sg-mao" style="--sg-mao:url(#${uid}m)">${mao(47)}</g>
+    <g class="sg-mao" style="--sg-mao:url(#${uid}m)">${mao(113)}</g>`;
+}
+let sgSeq = 0;
 function sgFigura(tema, letra) {
   const mov = PM_MOVIMENTO[tema] || 'acao';
   const marca = (PM_MARCAS[mov] || PM_MARCAS.acao).replace('>A<', '>' + esc(letra || 'A') + '<');
+  const uid = 'sg' + (++sgSeq);
   return `<svg class="pm-glyph sg-fig sg-mov-${mov}" viewBox="0 0 160 104" aria-hidden="true" focusable="false">
+  <defs>
+    <radialGradient id="${uid}p" cx="50%" cy="34%" r="66%">
+      <stop class="sg-placa-a" offset="0"/><stop class="sg-placa-b" offset="1"/>
+    </radialGradient>
+    <linearGradient id="${uid}m" x1="0" y1="0" x2=".3" y2="1">
+      <stop class="sg-mao-a" offset="0"/><stop class="sg-mao-b" offset="1"/>
+    </linearGradient>
+    <radialGradient id="${uid}c" cx="36%" cy="30%" r="74%">
+      <stop class="sg-cabeca-a" offset="0"/><stop class="sg-cabeca-b" offset="1"/>
+    </radialGradient>
+  </defs>
+  <ellipse class="sg-placa" cx="80" cy="52" rx="63" ry="43" fill="url(#${uid}p)"/>
+  <ellipse class="sg-sombra-chao" cx="80" cy="95" rx="43" ry="5.4"/>
   <g class="sg-corpo">
-    <circle class="sg-cabeca" cx="80" cy="24" r="13"/>
+    <circle class="sg-cabeca" cx="80" cy="24" r="13" style="--sg-cabeca:url(#${uid}c)"/>
+    <path class="sg-brilho" d="M71.6 17.5a12 12 0 0 1 9.2-4.5"/>
     <path class="sg-feicao" d="M73 18h6M82 18h6"/>
     <path class="sg-feicao sg-ponto-o" d="M76 23h.4M84 23h.4"/>
     <path class="sg-feicao sg-boca" d="M76 30c2.6 2 5.4 2 8 0"/>
     <path class="sg-line" d="M80 37v30M64 46h32M64 46 50 35M96 46 110 35M80 67 71 90M80 67 89 90M67 90h8M85 90h8"/>
     <path class="sg-chao" d="M48 96h64"/>
   </g>
-  <g class="sg-maos">${SG_MAOS}</g>
-  <g class="sg-marca" transform="translate(24,2)">${marca}</g>
+  <g class="sg-marca" transform="translate(26,-7)">${marca}</g>
+  <g class="sg-maos">${sgMaos(uid)}</g>
 </svg>`;
 }
 
@@ -3748,13 +3776,13 @@ function montarSigner() {
   const raiz = document.createElement('div');
   raiz.innerHTML = `
 <button class="sg-fab" id="sg-fab" type="button" aria-expanded="false" aria-controls="sg-painel">
-  ${sgFigura('Diálogos', 'A')}<span>Pamosii Signer</span>
+  ${sgFigura('Diálogos', 'A')}<span>Agatha Signer</span>
 </button>
 <div class="sg-painel" id="sg-painel" role="dialog" aria-labelledby="sg-h" hidden>
   <div class="sg-topo">
-    <h2 id="sg-h">${I.access} Pamosii Signer</h2>
+    <h2 id="sg-h">${I.access} Agatha Signer</h2>
     <span class="sg-contador" id="sg-contador">—</span>
-    <button class="sg-x" id="sg-close" type="button" aria-label="Fechar o Pamosii Signer">${I.close}</button>
+    <button class="sg-x" id="sg-close" type="button" aria-label="Fechar o Agatha Signer">${I.close}</button>
   </div>
   <p class="sg-aviso">Bonecos animados a mostrar a <strong>família de movimento</strong> de cada sinal,
     com a palavra escrita por baixo. Não é a forma exacta do sinal — essa está nos vídeos das aulas — e
@@ -6915,6 +6943,7 @@ const OV_MAX_FRASES = 8;   /* o painel ao vivo mostra só as últimas frases: a 
 const ovEstado = {
   modo: 'mic', texto: '', interim: '', activo: false, idioma: 'pt-PT', auto: false, segundos: 0,
   cues: [], actual: -1, seguir: false, videoNome: '', legendaNome: '', url: '', resumo: null,
+  ficheiroVideo: null, pistas: null, embutida: null, ultimaEmbutida: '',
 };
 let ovRec = null, ovTick = 0, ovAgenda = 0, ovSilencios = 0;
 
@@ -7107,6 +7136,255 @@ function ovResumoCues(cues) {
   });
   return { falas: cues.length, vistas: vistas.length, comSinal, unidades, dati, lacunas: [...semSinal] };
 }
+
+/* --- 13.8.4b encontrar a legenda do filme sem a pessoa ter de a procurar ---
+   Três caminhos, todos no aparelho:
+   1. filme + legendas escolhidos no mesmo gesto (ou arrastados), emparelhados
+      pelo nome do ficheiro: «Filme.2019.mp4» ↔ «Filme.2019.pt-PT.srt»;
+   2. uma pasta inteira, onde o site procura o vídeo e a legenda;
+   3. a legenda vem dentro do contentor: lemos o índice do MP4/MOV (caixas
+      ISO-BMFF) para dizer se existe faixa de legendas, e usamos a faixa que o
+      browser expuser em `video.textTracks`, fala a fala, durante a reprodução.
+   O que continua a não existir: ler legendas QUEIMADAS na imagem (isso é OCR,
+   não uma faixa de texto) e transcrever som sem legendas nenhumas. */
+const OV_VIDEO_EXT = ['mp4', 'm4v', 'mov', 'webm', 'ogv', 'ogg', 'mkv', 'avi'];
+const OV_SUB_EXT = ['srt', 'vtt'];
+const ovExt = nome => (String(nome).match(/\.([a-z0-9]+)$/i) || ['', ''])[1].toLowerCase();
+const ovBaseNome = nome => String(nome).replace(/\.[^.]+$/, '').toLowerCase()
+  .replace(/[._+\-\[\]()]+/g, ' ')
+  .replace(/\b(pt|ptbr|por|portugues|português|en|eng|english|es|spa|spanish|fr|fre|french|de|ger|german|it|ita|forced|sdh|cc|hoh|full|legendas?|legenda|subs?|subtitles?|caption|captions|dublado|dual|480p|720p|1080p|2160p|4k|x264|x265|h264|h265|webrip|webdl|bluray|brrip|hdrip|dvdrip|aac|ac3)\b/g, ' ')
+  .replace(/\s+/g, ' ').trim();
+const ovIdiomaLegenda = nome => {
+  const n = String(nome).toLowerCase();
+  if (/(^|[^a-z])(pt[-_. ]?pt|ptbr|pt[-_. ]?br|por|portugu)/.test(n)) return 'pt';
+  if (/(^|[^a-z])(en|eng|english)(?![a-z])/.test(n)) return 'en';
+  if (/(^|[^a-z])(es|spa|spanish)(?![a-z])/.test(n)) return 'es';
+  if (/(^|[^a-z])(fr|fre|french)(?![a-z])/.test(n)) return 'fr';
+  return '';
+};
+function ovPontuarLegenda(sub, video) {
+  const bs = ovBaseNome(sub.name), bv = video ? ovBaseNome(video.name) : '';
+  let p = 0;
+  if (bv && bs && bs === bv) p += 100;
+  else if (bv && bs && (bs.includes(bv) || bv.includes(bs))) p += 40;
+  const idioma = ovIdiomaLegenda(sub.name);
+  if (idioma === 'pt') p += 25;
+  else if (idioma) p += 5;
+  if (/forced/i.test(sub.name)) p -= 25;
+  if (ovExt(sub.name) === 'vtt') p += 1;
+  return p;
+}
+const ovMelhorLegenda = (subs, video) => subs.slice()
+  .sort((a, b) => ovPontuarLegenda(b, video) - ovPontuarLegenda(a, video))[0] || null;
+function ovTamanho(n) {
+  if (n >= 1073741824) return (n / 1073741824).toFixed(1).replace('.', ',') + ' GB';
+  return Math.max(1, Math.round(n / 1048576)) + ' MB';
+}
+
+/* caixas ISO-BMFF: 4 bytes de tamanho + 4 de tipo; 1 = tamanho de 64 bits,
+   0 = até ao fim. Ler só as cabeças permite saltar um `mdat` de vários GB
+   sem o carregar para a memória. */
+async function ovCabecaCaixa(f, pos) {
+  if (pos + 8 > f.size) return null;
+  const dv = new DataView(await f.slice(pos, Math.min(pos + 16, f.size)).arrayBuffer());
+  let tam = dv.getUint32(0), cab = 8;
+  const tipo = String.fromCharCode(dv.getUint8(4), dv.getUint8(5), dv.getUint8(6), dv.getUint8(7));
+  if (tam === 1) {
+    if (dv.byteLength < 16) return null;
+    tam = Number(dv.getBigUint64(8)); cab = 16;
+  } else if (tam === 0) tam = f.size - pos;
+  if (!tam || tam < cab) return null;
+  return { tipo, ini: pos + cab, fim: Math.min(pos + tam, f.size) };
+}
+function ovAndarCaixas(dv, ini, fim, visita) {
+  let p = ini;
+  while (p + 8 <= fim) {
+    let tam = dv.getUint32(p), cab = 8;
+    const tipo = String.fromCharCode(dv.getUint8(p + 4), dv.getUint8(p + 5), dv.getUint8(p + 6), dv.getUint8(p + 7));
+    if (tam === 1) {
+      if (p + 16 > fim) break;
+      tam = Number(dv.getBigUint64(p + 8)); cab = 16;
+    } else if (tam === 0) tam = fim - p;
+    if (tam < cab || p + tam > fim) break;
+    if (visita(tipo, p + cab, p + tam) === false) break;
+    p += tam;
+  }
+}
+const OV_CODECS = {
+  avc1: 'H.264', avc3: 'H.264', hvc1: 'HEVC', hev1: 'HEVC', mp4v: 'MPEG-4', vp09: 'VP9', av01: 'AV1',
+  mp4a: 'AAC', opus: 'Opus', 'ac-3': 'AC-3', 'ec-3': 'E-AC-3', 'tx3g': '3GPP', text: 'QuickTime',
+  wvtt: 'WebVTT', 'c608': 'CEA-608', 'c708': 'CEA-708', stpp: 'TTML',
+};
+const OV_LEGENDA_HANDLER = ['sbtl', 'subt', 'text', 'clcp', 'subp'];
+/* tabelas de amostras: pequenas, e é com elas que se tiram as falas de uma
+   faixa tx3g (3GPP) sem depender do suporte do browser. Arrays vazios em vez de
+   null: um ficheiro estranho não deve rebentar a leitura. */
+function ovLerStts(dv, ini, fim) {
+  const n = dv.getUint32(ini + 4), out = [];
+  for (let i = 0; i < n; i++) {
+    const p = ini + 8 + i * 8;
+    if (p + 8 > fim) break;
+    out.push({ n: dv.getUint32(p), delta: dv.getUint32(p + 4) });
+  }
+  return out;
+}
+function ovLerStsz(dv, ini, fim) {
+  const fixo = dv.getUint32(ini + 4), n = dv.getUint32(ini + 8), out = [];
+  for (let i = 0; i < n; i++) {
+    if (fixo) { out.push(fixo); continue; }
+    const p = ini + 12 + i * 4;
+    if (p + 4 > fim) break;
+    out.push(dv.getUint32(p));
+  }
+  return out;
+}
+function ovLerStsc(dv, ini, fim) {
+  const n = dv.getUint32(ini + 4), out = [];
+  for (let i = 0; i < n; i++) {
+    const p = ini + 8 + i * 12;
+    if (p + 12 > fim) break;
+    out.push({ chunk: dv.getUint32(p), samples: dv.getUint32(p + 4) });
+  }
+  return out;
+}
+function ovLerStco(dv, ini, fim, largo) {
+  const n = dv.getUint32(ini + 4), passo = largo ? 8 : 4, out = [];
+  for (let i = 0; i < n; i++) {
+    const p = ini + 8 + i * passo;
+    if (p + passo > fim) break;
+    out.push(largo ? Number(dv.getBigUint64(p)) : dv.getUint32(p));
+  }
+  return out;
+}
+function ovLerMdhd(dv, ini, fim) {
+  if (ini + 4 > fim) return 0;
+  return dv.getUint8(ini) === 1
+    ? (ini + 24 <= fim ? dv.getUint32(ini + 20) : 0)
+    : (ini + 16 <= fim ? dv.getUint32(ini + 12) : 0);
+}
+/* uma amostra tx3g começa por 2 bytes de comprimento e o texto em UTF-8 */
+function ovTextoAmostra(b) {
+  if (!b || b.length < 2) return '';
+  const n = (b[0] << 8) | b[1];
+  if (!n || n + 2 > b.length) return '';
+  let txt = '';
+  try { txt = new TextDecoder('utf-8').decode(b.subarray(2, 2 + n)); } catch (e) { return ''; }
+  return txt.replace(/\{\\[^}]*\}/g, ' ').replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim();
+}
+async function ovCuesTx3g(f, tab) {
+  const { timescale, stts, stsz, stsc, stco } = tab;
+  if (!timescale || !stsz.length || !stsc.length || !stco.length) return [];
+  const dur = [];
+  stts.forEach(e => { for (let i = 0; i < e.n && dur.length < stsz.length; i++) dur.push(e.delta); });
+  while (dur.length < stsz.length) dur.push(dur.length ? dur[dur.length - 1] : 0);
+  const amostras = [];
+  let s = 0;
+  for (let r = 0; r < stsc.length; r++) {
+    const iniChunk = stsc[r].chunk - 1;
+    const fimChunk = r + 1 < stsc.length ? stsc[r + 1].chunk - 1 : stco.length;
+    for (let c = iniChunk; c < fimChunk; c++) {
+      let off = stco[c];
+      if (off == null) break;
+      for (let k = 0; k < stsc[r].samples && s < stsz.length; k++, s++) {
+        amostras.push({ off, tam: stsz[s] });
+        off += stsz[s];
+      }
+    }
+  }
+  if (!amostras.length) return [];
+  /* janelas de leitura: amostras vizinhas numa só fatia, sem carregar o mdat */
+  const janelas = [];
+  amostras.forEach(a => {
+    if (!a.tam) return;
+    const ult = janelas[janelas.length - 1];
+    if (ult && a.off >= ult.ini && a.off + a.tam <= ult.fim) return;
+    if (ult && a.off >= ult.fim && a.off - ult.fim < 262144) ult.fim = a.off + a.tam;
+    else janelas.push({ ini: a.off, fim: a.off + a.tam });
+  });
+  const buffers = [];
+  for (const j of janelas) {
+    if (j.ini >= f.size) continue;
+    buffers.push({ ini: j.ini, buf: new Uint8Array(await f.slice(j.ini, Math.min(j.fim, f.size)).arrayBuffer()) });
+  }
+  const ler = (off, tam) => {
+    for (const x of buffers) {
+      if (off >= x.ini && off + tam <= x.ini + x.buf.length) return x.buf.subarray(off - x.ini, off - x.ini + tam);
+    }
+    return null;
+  };
+  const cues = [];
+  let t = 0;
+  amostras.forEach((a, i) => {
+    const seg = dur[i] / timescale;
+    if (a.tam) {
+      const b = ler(a.off, a.tam);
+      const texto = b ? ovTextoAmostra(b) : '';
+      if (texto) cues.push({ ini: t, fim: t + Math.max(seg, 0.3), texto });
+    }
+    t += seg;
+  });
+  return cues;
+}
+async function ovPistasContentor(f) {
+  const ext = ovExt(f.name);
+  if (ext === 'webm' || ext === 'ogv' || ext === 'ogg') return { tipo: 'aberto', pistas: [] };
+  if (ext !== 'mp4' && ext !== 'm4v' && ext !== 'mov') return { tipo: 'outro', pistas: [] };
+  let pos = 0, moov = null;
+  for (let i = 0; i < 128 && pos + 8 <= f.size; i++) {
+    const c = await ovCabecaCaixa(f, pos);
+    if (!c) break;
+    if (c.tipo === 'moov') { moov = c; break; }
+    if (c.fim <= pos) break;
+    pos = c.fim;
+  }
+  if (!moov) return { tipo: 'mp4', pistas: [], aviso: 'sem índice moov' };
+  if (moov.fim - moov.ini > 24 * 1048576) return { tipo: 'mp4', pistas: [], aviso: 'índice demasiado grande' };
+  const dv = new DataView(await f.slice(moov.ini, moov.fim).arrayBuffer());
+  const pistas = [], porExtrair = [];
+  ovAndarCaixas(dv, 0, dv.byteLength, (tipo, ini, fim) => {
+    if (tipo !== 'trak') return;
+    let hdlr = '', formato = '', timescale = 0;
+    const tab = { stts: [], stsz: [], stsc: [], stco: [] };
+    ovAndarCaixas(dv, ini, fim, (t2, i2, f2) => {
+      if (t2 !== 'mdia') return;
+      ovAndarCaixas(dv, i2, f2, (t3, i3, f3) => {
+        if (t3 === 'hdlr' && i3 + 12 <= f3) {
+          hdlr = String.fromCharCode(dv.getUint8(i3 + 8), dv.getUint8(i3 + 9), dv.getUint8(i3 + 10), dv.getUint8(i3 + 11));
+        }
+        if (t3 === 'mdhd') timescale = ovLerMdhd(dv, i3, f3);
+        if (t3 !== 'minf') return;
+        ovAndarCaixas(dv, i3, f3, (t4, i4, f4) => {
+          if (t4 !== 'stbl') return;
+          ovAndarCaixas(dv, i4, f4, (t5, i5, f5) => {
+            if (t5 === 'stsd' && i5 + 16 <= f5) {
+              formato = String.fromCharCode(dv.getUint8(i5 + 12), dv.getUint8(i5 + 13), dv.getUint8(i5 + 14), dv.getUint8(i5 + 15));
+            } else if (t5 === 'stts') tab.stts = ovLerStts(dv, i5, f5);
+            else if (t5 === 'stsz') tab.stsz = ovLerStsz(dv, i5, f5);
+            else if (t5 === 'stsc') tab.stsc = ovLerStsc(dv, i5, f5);
+            else if (t5 === 'stco') tab.stco = ovLerStco(dv, i5, f5, false);
+            else if (t5 === 'co64') tab.stco = ovLerStco(dv, i5, f5, true);
+          });
+        });
+      });
+    });
+    if (!hdlr && !formato) return;
+    const legenda = OV_LEGENDA_HANDLER.includes(hdlr) || ['tx3g', 'wvtt', 'c608', 'c708', 'stpp'].includes(formato);
+    const nome = hdlr === 'vide' ? 'imagem' : hdlr === 'soun' ? 'som' : legenda ? 'legendas' : (hdlr || 'faixa');
+    const pista = { tipo: nome, legenda, codec: OV_CODECS[formato] || formato || '' };
+    pistas.push(pista);
+    if (legenda) porExtrair.push({ pista, tab: Object.assign({ timescale }, tab) });
+  });
+  /* o Chrome não expõe faixas tx3g em `video.textTracks`; mas o texto está no
+     ficheiro, e as tabelas de amostras dizem onde. Tirá-lo aqui é o que permite
+     «detectar as legendas de dentro do filme» sem servidor nem OCR. */
+  for (const x of porExtrair) {
+    if (x.pista.codec !== '3GPP') continue;
+    try { x.pista.cues = await ovCuesTx3g(f, x.tab); } catch (e) { x.pista.cues = []; }
+    if (!x.pista.cues.length) delete x.pista.cues;
+  }
+  return { tipo: 'mp4', pistas };
+}
+
 function ovPintarCues() {
   const lista = $('#ov-cues');
   if (!lista) return;
@@ -7191,6 +7469,7 @@ function ovSair() {
   ovEstado.cues = []; ovEstado.actual = -1; ovEstado.resumo = null;
   ovEstado.texto = ''; ovEstado.interim = ''; ovEstado.segundos = 0; ovEstado.seguir = false;
   ovEstado.videoNome = ''; ovEstado.legendaNome = '';
+  ovEstado.ficheiroVideo = null; ovEstado.pistas = null; ovEstado.embutida = null; ovEstado.ultimaEmbutida = '';
   if (ovEstado.url) { try { URL.revokeObjectURL(ovEstado.url); } catch (e) { /* já liberada */ } ovEstado.url = ''; }
   const player = $('#ov-player');
   if (player) { try { player.pause(); } catch (e) { /* já parado */ } player.removeAttribute('src'); player.load(); }
@@ -7248,17 +7527,34 @@ function ovHTML() {
 
     <div id="ov-p-leg" hidden>
       <h2>Vídeo ou filme com legendas</h2>
-      <p class="muted" style="max-width:66ch">Isto <strong>não é inteligência artificial a ver o vídeo</strong>: o site lê o ficheiro de legendas que já existe — texto escrito por pessoas — e mostra, para a fala que está a tocar, a sequência de sinais do dicionário. É instantâneo mesmo num filme inteiro, e não precisa de internet.</p>
-      <div class="ov-escolhas">
-        <label class="ov-file" for="ov-video">Vídeo ou filme (só neste aparelho)
-          <input type="file" id="ov-video" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.m4v,.mov">
+      <p class="muted" style="max-width:66ch">Isto <strong>não é inteligência artificial a ver o vídeo</strong>: o site lê o texto das legendas que já existem — escrito por pessoas — e mostra, para a fala que está a tocar, a sequência de sinais do dicionário. Podes escolher o filme e a legenda no mesmo gesto: ele emparelha os dois pelo nome. Se a legenda vier dentro do ficheiro (MP4, MOV ou WebM), ele detecta a faixa e usa-a durante a reprodução. É instantâneo mesmo num filme inteiro, e não precisa de internet.</p>
+      <div class="ov-fontes" id="ov-fontes">
+        <label class="btn btn-p btn-sm ov-atalho">${I.video} Escolher filme e legendas
+          <input type="file" id="ov-ficheiros" multiple accept="video/*,.mp4,.m4v,.mov,.webm,.ogv,.ogg,.mkv,.avi,.srt,.vtt,text/plain">
         </label>
-        <p class="muted ov-nome" id="ov-video-nome">Nenhum vídeo escolhido.</p>
-        <label class="ov-file" for="ov-legenda">Legendas em .srt ou .vtt
-          <input type="file" id="ov-legenda" accept=".srt,.vtt,text/plain">
+        <label class="btn btn-o btn-sm ov-atalho">${I.doc} Escolher a pasta do filme
+          <input type="file" id="ov-pasta" webkitdirectory directory multiple>
         </label>
-        <p class="muted ov-nome" id="ov-legenda-nome">Nenhuma legenda escolhida.</p>
+        <p class="ov-fonte" id="ov-fonte" role="status">Escolhe o filme; se o .srt ou .vtt estiver na mesma pasta, ele encontra-o. Também podes arrastar os ficheiros para aqui.</p>
       </div>
+      <p class="muted ov-nome" id="ov-video-nome">Nenhum vídeo escolhido.</p>
+      <p class="ov-pistas" id="ov-pistas" role="status" hidden></p>
+      <div class="ov-faixa" id="ov-faixa-linha" hidden>
+        <label for="ov-faixa">Faixa de legendas dentro do filme</label>
+        <select id="ov-faixa"></select>
+      </div>
+      <details class="ov-manual">
+        <summary>Escolher os ficheiros à mão</summary>
+        <div class="ov-escolhas">
+          <label class="ov-file" for="ov-video">Vídeo ou filme (só neste aparelho)
+            <input type="file" id="ov-video" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.m4v,.mov">
+          </label>
+          <label class="ov-file" for="ov-legenda">Legendas em .srt ou .vtt
+            <input type="file" id="ov-legenda" accept=".srt,.vtt,text/plain">
+          </label>
+          <p class="muted ov-nome" id="ov-legenda-nome">Nenhuma legenda escolhida.</p>
+        </div>
+      </details>
       <video id="ov-player" class="ov-player" controls playsinline preload="metadata" hidden aria-label="O teu vídeo"></video>
       <div class="pm-tools pm-tools-row">
         <button class="btn btn-o btn-sm" type="button" id="ov-ant">‹ Fala anterior</button>
@@ -7274,7 +7570,7 @@ function ovHTML() {
       </div>
       <p class="pm-cobertura" id="ov-leg-status" role="status"></p>
       <ul class="ov-cues" id="ov-cues" aria-label="Falas das legendas"></ul>
-      <p class="pm-hint"><strong>O vídeo não tem legendas?</strong> Põe o som a sair pelas colunas e usa o ditado no painel «Ditar e ver» — é aproximado e perde qualidade, mas funciona. Transcrever um ficheiro de vídeo aqui dentro não funciona: ver o painel «O que ainda não há».</p>
+      <p class="pm-hint"><strong>O vídeo não tem legendas?</strong> Põe o som a sair pelas colunas e usa o ditado no painel «Ditar e ver» — é aproximado e perde qualidade, mas funciona. Transcrever um ficheiro de vídeo aqui dentro não funciona, e legendas queimadas na imagem também não: ver o painel «O que ainda não há».</p>
     </div>
 
     <div id="ov-p-nao" hidden>
@@ -7284,6 +7580,11 @@ function ovHTML() {
           <h3>${I.clock} Transcrever o som de um vídeo sem legendas ${soonBadge()}</h3>
           <p>Dentro do browser não existe modelo para isso. É preciso um serviço de fala num servidor: custa dinheiro por minuto de áudio, demora, e faz sair do aparelho o som de pessoas que não deram consentimento. Sem servidor e sem orçamento aprovado, este site não finge que faz.</p>
           <p class="muted">Enquanto não há: as legendas do vídeo (painel anterior), ou ditar por cima do som pelas colunas.</p>
+        </li>
+        <li>
+          <h3>${I.clock} Legendas queimadas na imagem ${soonBadge()}</h3>
+          <p>Quando o texto já está dentro da imagem (as chamadas «legendas queimadas» ou hardsubs), não existe ficheiro de texto nenhum para ler: seria preciso reconhecimento óptico de caracteres (OCR) a analisar cada fotograma. O site não faz isso, e também não adivinha o que está escrito.</p>
+          <p class="muted">O que funciona: o .srt/.vtt que acompanha o filme, ou a faixa de legendas dentro do MP4/MOV/WebM. Os dois são detectados no painel anterior.</p>
         </li>
         <li>
           <h3>${I.clock} Filmares-te a sinalizar e o site escrever por ti ${soonBadge()}</h3>
@@ -7370,38 +7671,242 @@ function bindOuvir(state) {
       + (r.lacunas.length ? ` · ${r.lacunas.length} ${r.lacunas.length === 1 ? 'palavra sem sinal' : 'palavras sem sinal'}` : '')
       + (state.videoNome ? '' : ' · falta o ficheiro do vídeo para sincronizar — salta de fala em fala');
   }
-  $('#ov-video').addEventListener('change', e => {
-    const f = e.target.files && e.target.files[0];
-    if (!f) return;
+  /* --- escolher ficheiros: lote, pasta ou arrastar; a legenda procura-se sozinha --- */
+  const dizerFonte = msg => { const el = $('#ov-fonte'); if (el) el.textContent = msg; };
+  function pintarPistas(texto, aviso) {
+    const el = $('#ov-pistas');
+    if (!el) return;
+    el.hidden = !texto;
+    el.textContent = texto || '';
+    el.classList.toggle('is-aviso', !!aviso);
+  }
+  function desligarFaixas() {
+    if (!player.textTracks) return;
+    for (let i = 0; i < player.textTracks.length; i++) player.textTracks[i].mode = 'disabled';
+  }
+  function usarVideo(f, procurarDentro) {
     if (state.url) { try { URL.revokeObjectURL(state.url); } catch (err) { /* já liberada */ } }
     state.url = URL.createObjectURL(f);
     state.videoNome = f.name;
+    state.ficheiroVideo = f;
+    state.pistas = null;
+    state.embutida = null;
+    state.ultimaEmbutida = '';
+    state.cues = []; state.resumo = null; state.actual = -1; state.legendaNome = '';
+    desligarFaixas();
+    const legNome = $('#ov-legenda-nome');
+    if (legNome) legNome.textContent = 'Nenhuma legenda escolhida.';
+    ovPintarCues(); ovFala(-1);
+    player.pause();
     player.src = state.url;
     player.hidden = false;
-    $('#ov-video-nome').textContent = f.name + ' · ' + Math.round(f.size / 1048576 * 10) / 10 + ' MB · fica só neste separador';
+    player.load();
+    $('#ov-video-nome').textContent = f.name + ' · ' + ovTamanho(f.size) + ' · fica só neste separador';
+    $('#ov-faixa-linha').hidden = true;
+    pintarPistas('');
     pintaLegStatus();
+    if (procurarDentro) procurarLegendaDentro(f);
+  }
+  async function procurarLegendaDentro(f) {
+    let info = null;
+    try { info = await ovPistasContentor(f); } catch (e) { /* contentor invulgar */ }
+    if (state.ficheiroVideo !== f) return;   /* entretanto escolheu-se outro filme */
+    state.pistas = info;
+    const ext = ovExt(f.name);
+    if (ext === 'mkv') {
+      pintarPistas('O Chrome não reproduz MKV. Se este ficheiro tiver legendas embutidas, extrai-as com ffmpeg ou HandBrake (ou converte o vídeo para MP4) e escolhe o .srt/.vtt.', true);
+      return;
+    }
+    if (ext === 'avi') {
+      pintarPistas('O Chrome abre poucos AVIs. Se o vídeo não tocar, converte-o para MP4 com o HandBrake e traz também a legenda.', true);
+      return;
+    }
+    if (!info) { pintarPistas(''); return; }
+    if (info.aviso) {
+      pintarPistas('Não consegui ler o índice deste ficheiro (' + info.aviso + '). Se a legenda vier dentro dele, exporta-a com ffmpeg/HandBrake.', true);
+      return;
+    }
+    if (info.tipo === 'aberto') {
+      pintarPistas('WebM/Ogg pode trazer legendas WebVTT dentro do ficheiro. Se trouxer, a faixa aparece abaixo em «Faixa de legendas dentro do filme» assim que o vídeo carregar.');
+      return;
+    }
+    if (info.tipo !== 'mp4') { pintarPistas(''); return; }
+    const leg = info.pistas.filter(p => p.legenda);
+    if (!leg.length) {
+      const tipos = info.pistas.map(p => p.tipo).filter((v, i, a) => a.indexOf(v) === i).join(', ');
+      pintarPistas('Este filme não traz faixas de legendas dentro do ficheiro' + (tipos ? ' — só ' + tipos : '') + '. Escolhe o .srt ou .vtt que está ao lado dele.');
+      return;
+    }
+    const extraida = leg.find(p => p.cues && p.cues.length);
+    if (extraida) {
+      usarCues('Dentro do filme — ' + f.name, extraida.cues,
+        'As ' + extraida.cues.length + ' falas foram lidas de dentro do filme (faixa ' + (extraida.codec || 'embutida') + '). Não é preciso .srt.');
+      dizerFonte('Legendas lidas de dentro de «' + f.name + '» · ' + extraida.cues.length + ' falas.');
+      pintarPistas('Li ' + extraida.cues.length + ' ' + pl(extraida.cues.length, 'fala', 'falas')
+        + ' de dentro do filme (faixa ' + (extraida.codec || 'embutida') + '). Não precisas do .srt/.vtt.');
+      return;
+    }
+    const codecs = leg.map(x => x.codec).filter((v, i, a) => v && a.indexOf(v) === i).join(', ');
+    pintarPistas('Encontrei ' + leg.length + ' ' + pl(leg.length, 'faixa de legendas', 'faixas de legendas') + ' dentro do filme'
+      + (codecs ? ' (' + codecs + ')' : '') + '. Se o browser a conseguir abrir, escolhe-a em «Faixa de legendas dentro do filme».');
+  }
+  function pintarFaixas() {
+    const linha = $('#ov-faixa-linha'), sel = $('#ov-faixa');
+    if (!linha || !sel || !player.textTracks) return;
+    const faixas = [];
+    for (let i = 0; i < player.textTracks.length; i++) {
+      const t = player.textTracks[i];
+      if (t.kind === 'subtitles' || t.kind === 'captions') faixas.push({ i, t });
+    }
+    if (!faixas.length) { linha.hidden = true; sel.innerHTML = ''; return; }
+    linha.hidden = false;
+    sel.innerHTML = '<option value="">Não usar faixa embutida</option>' + faixas.map((f, n) =>
+      `<option value="${f.i}">Faixa ${n + 1}${f.t.label ? ' — ' + esc(f.t.label) : ''}${f.t.language ? ' (' + esc(f.t.language) + ')' : ''}</option>`).join('');
+    if (state.embutida != null) sel.value = String(state.embutida);
+  }
+  function cueEmbutida() {
+    if (state.embutida == null || !player.textTracks) return;
+    const t = player.textTracks[state.embutida];
+    const activas = t && t.activeCues ? Array.prototype.slice.call(t.activeCues) : [];
+    const texto = activas.map(c => String(c.text || '')).join(' ').replace(/\s+/g, ' ').trim();
+    if (!texto) return;
+    const ini = activas[0].startTime, fim = activas[activas.length - 1].endTime;
+    const chave = ini.toFixed(1) + '|' + texto;
+    if (chave === state.ultimaEmbutida) return;
+    state.ultimaEmbutida = chave;
+    const cue = { ini, fim: Math.max(fim, ini + 0.3), texto };
+    const i = state.cues.findIndex(c => Math.abs(c.ini - ini) < 0.3);
+    if (i >= 0) state.cues[i] = cue; else state.cues.push(cue);
+    state.cues.sort((a, b) => a.ini - b.ini);
+    state.resumo = null;
+    ovPintarCues();
+    ovFala(state.cues.indexOf(cue));
+  }
+  function usarLegenda(nome, texto, nota) { return usarCues(nome, ovParseLegendas(texto), nota); }
+  function usarCues(nome, cues, nota) {
+    state.legendaNome = nome;
+    const alvo = $('#ov-legenda-nome');
+    if (alvo) alvo.textContent = nome + ' · ' + cues.length + ' falas';
+    if (!cues.length) {
+      state.cues = []; state.resumo = null; state.actual = -1; state.embutida = null;
+      $('#ov-faixa-linha').hidden = true;
+      pintaLegStatus('O ficheiro «' + nome + '» não tem nenhuma linha com horas no formato .srt ou .vtt.');
+      ovPintarCues(); ovFala(-1);
+      return false;
+    }
+    desligarFaixas();
+    state.embutida = null;
+    state.ultimaEmbutida = '';
+    state.cues = cues;
+    state.resumo = ovResumoCues(cues);
+    $('#ov-faixa-linha').hidden = true;
+    pintaLegStatus(nota);
+    ovPintarCues();
+    /* antes de o vídeo arrancar mostra a primeira fala; durante a reprodução o
+       timeupdate manda, e aí um intervalo sem legendas mostra «sem fala». */
+    const t = player.hidden ? 0 : (player.currentTime || 0);
+    const i = ovProcuraCue(t);
+    ovFala(i >= 0 ? i : (t < (state.cues[0] ? state.cues[0].ini : 0) ? 0 : -1));
+    return true;
+  }
+  function receberFicheiros(lista) {
+    const ficheiros = Array.from(lista || []);
+    if (!ficheiros.length) return;
+    const videos = ficheiros.filter(f => OV_VIDEO_EXT.includes(ovExt(f.name)));
+    const subs = ficheiros.filter(f => OV_SUB_EXT.includes(ovExt(f.name)));
+    if (!videos.length && !subs.length) {
+      dizerFonte('Não reconheci nenhum vídeo nem nenhuma legenda nesses ficheiros. Formatos aceites: MP4, M4V, MOV, WebM, OGV, MKV, AVI e legendas .srt ou .vtt.');
+      return;
+    }
+    const video = videos.length ? videos.slice().sort((a, b) => b.size - a.size)[0] : null;
+    if (video) usarVideo(video, !subs.length);
+    if (!subs.length) {
+      dizerFonte(video
+        ? 'Escolhi «' + video.name + '»' + (videos.length > 1 ? ' (o maior de ' + videos.length + ' vídeos)' : '') + '. Não veio nenhuma legenda no lote — a procurar dentro do ficheiro…'
+        : 'Nenhuma legenda nesses ficheiros.');
+      return;
+    }
+    const sub = ovMelhorLegenda(subs, video);
+    dizerFonte('A ler «' + sub.name + '»…');
+    ovLerFicheiro(sub, txt => {
+      /* entretanto pode ter entrado outro filme: a legenda lida é do lote antigo */
+      if (video && state.ficheiroVideo !== video) return;
+      if (!usarLegenda(sub.name, txt)) return;
+      dizerFonte(video
+        ? 'Legenda «' + sub.name + '» emparelhada com «' + video.name + '» · ' + state.cues.length + ' falas.'
+          + (subs.length > 1 ? ' Havia ' + subs.length + ' legendas: escolhi esta pelo nome e pelo idioma.' : '')
+        : 'Legenda «' + sub.name + '» lida · ' + state.cues.length + ' falas. Sem vídeo a lista não avança sozinha — escolhe o filme para sincronizar.');
+    }, msg => dizerFonte(msg));
+  }
+  $('#ov-ficheiros').addEventListener('change', e => { receberFicheiros(e.target.files); e.target.value = ''; });
+  $('#ov-pasta').addEventListener('change', e => { receberFicheiros(e.target.files); e.target.value = ''; });
+  $('#ov-video').addEventListener('change', e => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    usarVideo(f, true);
+    dizerFonte('Vídeo «' + f.name + '» escolhido à mão. Falta a legenda — a não ser que ela venha dentro do ficheiro.');
+    e.target.value = '';
   });
   $('#ov-legenda').addEventListener('change', e => {
     const f = e.target.files && e.target.files[0];
     if (!f) return;
-    ovLerFicheiro(f, txt => {
-      const cues = ovParseLegendas(txt);
-      state.legendaNome = f.name;
-      $('#ov-legenda-nome').textContent = f.name + ' · ' + cues.length + ' falas';
-      if (!cues.length) {
-        state.cues = []; state.resumo = null;
-        pintaLegStatus('Não encontrei nenhuma linha com horas no formato de legenda (.srt ou .vtt).');
-        ovPintarCues();
-        ovFala(-1);
-        return;
-      }
-      state.cues = cues;
-      state.resumo = ovResumoCues(cues);
-      pintaLegStatus();
-      /* sem vídeo escolhido não há tempo a seguir: mostra logo a primeira fala */
-      ovFala(player.hidden ? Math.max(0, ovProcuraCue(0)) : ovProcuraCue(player.currentTime || 0));
-    }, mensagem => pintaLegStatus(mensagem));
+    ovLerFicheiro(f, txt => { usarLegenda(f.name, txt); }, mensagem => pintaLegStatus(mensagem));
+    e.target.value = '';
   });
+  $('#ov-faixa').addEventListener('change', e => {
+    const i = e.target.value === '' ? null : Number(e.target.value);
+    desligarFaixas();
+    state.cues = []; state.actual = -1; state.resumo = null; state.ultimaEmbutida = '';
+    state.embutida = i;
+    const nome = $('#ov-legenda-nome');
+    if (i == null) {
+      if (nome) nome.textContent = 'Nenhuma legenda escolhida.';
+      pintaLegStatus(); ovPintarCues(); ovFala(-1);
+      return;
+    }
+    const t = player.textTracks ? player.textTracks[i] : null;
+    if (!t) return;
+    t.mode = 'hidden';
+    t.addEventListener('cuechange', cueEmbutida);
+    if (nome) nome.textContent = 'Faixa embutida no filme' + (t.label ? ' — ' + t.label : '');
+    pintaLegStatus('A ler as legendas de dentro do filme: cada fala entra na lista quando o vídeo lá chega. Para a lista completa de uma vez, exporta a faixa com ffmpeg/HandBrake ou usa o .srt/.vtt.');
+    cueEmbutida();
+    ovPintarCues();
+    const p = player.play();
+    if (p && p.catch) p.catch(() => { /* o browser pode pedir outro toque */ });
+  });
+  let erroVideoMostrado = false;
+  player.addEventListener('error', () => {
+    /* as falas lidas de dentro do filme continuam válidas mesmo sem imagem */
+    if (!state.videoNome || state.cues.length || erroVideoMostrado) return;
+    const ext = ovExt(state.videoNome);
+    if (ext === 'mkv' || ext === 'avi') return;   /* já têm o seu próprio aviso */
+    erroVideoMostrado = true;
+    const el = $('#ov-pistas');
+    const antes = el && !el.hidden ? el.textContent.trim() + ' ' : '';
+    pintarPistas(antes + 'Além disso, o browser não conseguiu abrir «' + state.videoNome + '». Costuma ser o codec (HEVC/H.265 ou AC-3): converte para MP4 com H.264 e AAC, ou usa WebM.', true);
+  });
+  player.addEventListener('loadedmetadata', () => {
+    pintarFaixas();
+    const nome = $('#ov-video-nome');
+    if (nome && state.videoNome) {
+      const seg = Math.round(player.duration || 0);
+      const cauda = seg > 0 ? ' · ' + Math.floor(seg / 60) + ':' + String(seg % 60).padStart(2, '0') : '';
+      nome.textContent = state.videoNome + ' · ' + ovTamanho(state.ficheiroVideo ? state.ficheiroVideo.size : 0) + cauda + ' · fica só neste separador';
+    }
+  });
+  if (player.textTracks && player.textTracks.addEventListener) player.textTracks.addEventListener('addtrack', pintarFaixas);
+  const zona = $('#ov-p-leg');
+  if (zona) {
+    zona.addEventListener('dragover', e => { e.preventDefault(); zona.classList.add('ov-arrasta'); });
+    zona.addEventListener('dragleave', e => { if (!e.relatedTarget || !zona.contains(e.relatedTarget)) zona.classList.remove('ov-arrasta'); });
+    zona.addEventListener('drop', e => {
+      e.preventDefault();
+      zona.classList.remove('ov-arrasta');
+      mudarModo('leg');
+      if (e.dataTransfer) receberFicheiros(e.dataTransfer.files);
+    });
+  }
   player.addEventListener('timeupdate', () => {
     if (!state.cues.length) return;
     const i = ovProcuraCue(player.currentTime);
@@ -8182,13 +8687,13 @@ on('/marcar', vistaMarcacoes);
      - não há reconhecimento de imagem nem de voz: só texto já escrito. */
 on('/fora', () => {
   const base = location.origin + location.pathname.replace(/index\.html$/, '');
-  const iframe = `<iframe src="${base}?emb=1#/pamosii"\n        title="Pamosii Signer" width="430" height="620"\n        style="border:0"></iframe>`;
+  const iframe = `<iframe src="${base}?emb=1#/pamosii"\n        title="Agatha Signer" width="430" height="620"\n        style="border:0"></iframe>`;
   const post = `// quando a pessoa escolhe um texto no teu site\npostMessage({ tipo: 'pamosii-sinalizar', texto: trecho }, '${base.replace(/\/+$/, '')}');`;
   return {
     active: '/fora',
     h: shell(`
 <div class="wrap page-head">
-  <h1>Usar o Pamosii Signer fora deste site</h1>
+  <h1>Usar o Agatha Signer fora deste site</h1>
   <p class="lead">O painel de sinais não precisa de viver só aqui. Podes levá-lo para o telemóvel (Partilhar),
   para o computador (extensão do Chrome) ou para outro site (painel incorporado). Em nenhum dos casos
   o texto sai do teu aparelho para um servidor nosso — não temos servidores.</p>
@@ -8196,13 +8701,13 @@ on('/fora', () => {
 <section class="section tight">
   <div class="wrap fora-grid">
     <article class="fact-card rv">
-      <h2>${I.access} 1. No telemóvel — Partilhar para o Pamosii</h2>
+      <h2>${I.access} 1. No telemóvel — Partilhar para a Agatha</h2>
       <p>Funciona no Android (Chrome). Primeiro instala a app:</p>
       <ol class="fora-passos">
         <li>Abre este site no Chrome do telemóvel.</li>
         <li>Menu <span class="kbd">⋮</span> → <strong>Adicionar ao ecrã principal</strong>.</li>
-        <li>Noutro app (WhatsApp, navegador, PDF), selecciona o texto e toca em <strong>Partilhar → Pamosii</strong>.</li>
-        <li>O Pamosii abre já com a sequência de sinais desse texto. Sem reescrever nada.</li>
+        <li>Noutro app (WhatsApp, navegador, PDF), selecciona o texto e toca em <strong>Partilhar → Agatha</strong>.</li>
+        <li>A Agatha abre já no Pamosii, com a sequência de sinais desse texto. Sem reescrever nada.</li>
       </ol>
       <p class="muted" style="font-size:13.5px">No iPhone (Safari) o menu Partilhar ainda não aceita apps instaladas desta
         forma — nesse caso usa o campo do painel, ou o botão <strong>Sinalizar esta página</strong>.</p>
@@ -8211,7 +8716,7 @@ on('/fora', () => {
 
     <article class="fact-card rv">
       <h2>${I.spark} 2. No computador — extensão do Chrome</h2>
-      <p>A extensão põe um botão <strong>Pamosii</strong> em qualquer site. Ao carregar, abre o mesmo painel
+      <p>A extensão põe um botão <strong>Agatha</strong> em qualquer site. Ao carregar, abre o mesmo painel
       desta vez do teu lado do ecrã, e dá duas maneiras de escolher o texto:</p>
       <ul>
         <li><strong>Apontar a um texto</strong> — carregas numa frase ou parágrafo da página e só esse trecho é sinalizado.</li>
@@ -8225,12 +8730,12 @@ on('/fora', () => {
       <div class="fora-instalar">
         <h3>Instalar (2 minutos, sem loja)</h3>
         <ol class="fora-passos">
-          <li>Descarrega a extensão: <a href="extensao/pamosii-signer.zip" download><strong>pamosii-signer.zip</strong></a> (16 KB) e descompacta-a numa pasta.</li>
+          <li>Descarrega a extensão: <a href="extensao/agatha-signer.zip" download><strong>agatha-signer.zip</strong></a> (16 KB) e descompacta-a numa pasta.</li>
           <li>No Chrome, abre <span class="kbd">chrome://extensions</span>.</li>
           <li>Liga o <strong>Modo de programador</strong> (canto superior direito).</li>
           <li>Carrega em <strong>Carregar sem compactar</strong> e escolhe a pasta que acabaste de descompactar
             (tem de ser a pasta onde está o <code>manifest.json</code>).</li>
-          <li>Clica no ícone do Pamosii na barra do Chrome, em qualquer site.</li>
+          <li>Clica no ícone da Agatha na barra do Chrome, em qualquer site.</li>
         </ol>
         <p style="font-size:12.5px">Não é uma ligação da loja: é a mesma pasta, distribuída por nós. Por isso o Chrome
           mostra o aviso de extensão de programador — é esperado, e é também por isso que a extensão não pede permissão nenhuma.</p>
@@ -8268,8 +8773,8 @@ on('/fora', () => {
   </div>
 </section>`, '/fora'),
     meta: {
-      t: 'Usar o Pamosii Signer fora deste site — partilhar, extensão e painel incorporado',
-      d: 'Como levar o Pamosii Signer para fora deste site: partilhar texto no Android, instalar a extensão do Chrome (sem permissões) ou incorporar o painel num iframe. Nenhum texto sai do aparelho.',
+      t: 'Usar o Agatha Signer fora deste site — partilhar, extensão e painel incorporado',
+      d: 'Como levar o Agatha Signer para fora deste site: partilhar texto no Android, instalar a extensão do Chrome (sem permissões) ou incorporar o painel num iframe. Nenhum texto sai do aparelho.',
     },
   };
 });

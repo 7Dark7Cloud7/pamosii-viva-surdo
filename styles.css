@@ -278,6 +278,8 @@ summary:focus-visible,[tabindex]:focus-visible{
   .tab-sign .sg-fig{width:31px;height:20px;margin:0;color:inherit;flex:none}
   .tab-sign .sg-fig *{animation:none!important}
   .tab-sign .sg-fig .sg-cabeca{fill:rgba(255,255,255,.16)}
+  .tab-sign .sg-fig .sg-placa,.tab-sign .sg-fig .sg-sombra-chao,
+  .tab-sign .sg-fig .sg-brilho,.tab-sign .sg-fig .sg-mao-sombra{display:none}
   .tab:hover{color:#fff}
   .tab[aria-current="page"],.tab-mais.on{color:var(--amber)}
   /* o hambúrguer do cabeçalho é substituído pelo "Mais" — um interruptor, não dois */
@@ -879,6 +881,15 @@ select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 .pm-glyph .pm-ponto{fill:var(--amber-ink);stroke:none}
 .pm-glyph .pm-letra{fill:var(--amber-ink);stroke:none;font-family:var(--font-h);font-size:15px;font-weight:800}
 .pm-glyph .pm-mao{opacity:.92}
+/* profundidade: camada de trás = espessura, chão elíptico = apoio. Tudo em tinta,
+   nada de fotografias nem de caras de pessoas reais. */
+.pm-glyph .pm-mao-sombra{opacity:.2}
+.pm-glyph .pm-mao-sombra .pm-mao{stroke-width:6}
+.pm-glyph .pm-mao-frente .pm-mao{filter:drop-shadow(0 1.2px 0 rgba(16,52,47,.16))}
+.pm-glyph .pm-chao{fill:var(--teal-tint);opacity:.75}
+[data-contraste-alto] .pm-glyph .pm-mao-sombra,
+[data-contraste-alto] .pm-glyph .pm-chao{display:none}
+[data-contraste-alto] .pm-glyph .pm-mao-frente .pm-mao{stroke:#000;filter:none}
 @keyframes pm-aceno{0%,100%{transform:rotate(-10deg)}50%{transform:rotate(10deg)}}
 @keyframes pm-acao{0%,100%{transform:translate(-6px,4px)}50%{transform:translate(6px,-4px)}}
 @keyframes pm-grafema{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-4px) rotate(4deg)}}
@@ -1220,7 +1231,8 @@ select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
   background:var(--teal-dark);color:#fff;font:inherit;font-weight:800;font-size:14px;cursor:pointer;
   box-shadow:0 12px 30px rgba(16,52,47,.32);-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .sg-fab .sg-fig{width:44px;height:30px;flex:none;color:#fff}
-.sg-fab .sg-marca,.sg-fab .sg-chao{display:none}
+.sg-fab .sg-marca,.sg-fab .sg-chao,.sg-fab .sg-placa,.sg-fab .sg-sombra-chao,
+.sg-fab .sg-brilho,.sg-fab .sg-mao-sombra{display:none}
 .sg-fab:hover{background:var(--teal-deep);color:var(--teal-dark)}
 .sg-fab[aria-expanded="true"]{background:var(--amber);color:var(--teal-dark)}
 /* com o painel aberto o botao sai de cena: no telemovel ficava por cima do fecho */
@@ -1295,11 +1307,31 @@ html.sg-on .sg-fab{display:none}
 .sg-fig .sg-cabeca{fill:var(--teal-tint)}
 .sg-fig .sg-feicao{stroke-width:3}
 .sg-fig .sg-chao{stroke:var(--line);stroke-width:3}
-.sg-fig .sg-mao circle,.sg-fig .sg-mao path{stroke:var(--amber-ink);stroke-width:4;fill:none}
-.sg-fig .sg-mao circle{fill:var(--amber-soft)}
+.sg-fig .sg-mao circle,.sg-fig .sg-mao path{stroke:var(--amber-ink);stroke-width:3;fill:none}
+.sg-fig .sg-mao-frente circle{fill:var(--sg-mao,var(--amber-soft))}
+/* gradientes (stop-color vem do tema, por isso continuam a acompanhar claro/escuro) */
+.sg-fig .sg-placa-a{stop-color:var(--teal-tint);stop-opacity:.85}
+.sg-fig .sg-placa-b{stop-color:var(--teal-tint);stop-opacity:0}
+.sg-fig .sg-cabeca-a{stop-color:#fff;stop-opacity:.4}
+.sg-fig .sg-cabeca-b{stop-color:var(--teal-tint)}
+.sg-fig .sg-mao-a{stop-color:var(--amber-soft)}
+.sg-fig .sg-mao-b{stop-color:var(--amber);stop-opacity:1}
+.sg-fig .sg-cabeca{fill:var(--sg-cabeca,var(--teal-tint))}
+.sg-fig .sg-placa{opacity:.9}
+.sg-fig .sg-sombra-chao{fill:var(--teal-dark);opacity:.13}
+.sg-fig .sg-corpo,.sg-fig .sg-maos{filter:drop-shadow(0 2px 1.4px rgba(0,0,0,.18))}
+.sg-fig .sg-brilho{fill:none;stroke:#fff;stroke-opacity:.55;stroke-width:2;stroke-linecap:round}
+.sg-fig .sg-mao-sombra{opacity:.3}
+.sg-fig .sg-mao-sombra circle,.sg-fig .sg-mao-sombra path{stroke:var(--teal-deep);fill:var(--teal-deep);stroke-width:4}
+.sg-fig .sg-mao-sombra circle{fill:var(--teal-deep)}
+.sg-fig .sg-mao-frente{filter:drop-shadow(0 1px 1px rgba(0,0,0,.2))}
+.sg-fig .sg-mao-frente .sg-brilho-mao{stroke:#fff;stroke-opacity:.7;stroke-width:1.6}
 .sg-fig .sg-corpo{transform-box:fill-box;transform-origin:50% 92%}
 .sg-fig .sg-maos{transform-box:fill-box;transform-origin:50% 78%}
-.sg-fig .sg-marca{transform-box:fill-box;transform-origin:50% 50%}
+.sg-fig .sg-marca{transform-box:fill-box;transform-origin:50% 50%;opacity:.9}
+.sg-fig .sg-marca .pm-onda,.sg-fig .sg-marca .pm-rumo,.sg-fig .sg-marca .pm-caixa,
+.sg-fig .sg-marca .pm-base,.sg-fig .sg-marca .pm-nuvem,.sg-fig .sg-marca .pm-alvo,
+.sg-fig .sg-marca .pm-suporte,.sg-fig .sg-marca .pm-balao,.sg-fig .sg-marca .pm-circulo{stroke-width:3.4}
 @keyframes sg-aceno{0%,100%{transform:rotate(-13deg)}50%{transform:rotate(13deg)}}
 @keyframes sg-acao{0%,100%{transform:translate(-7px,5px)}50%{transform:translate(7px,-5px)}}
 @keyframes sg-grafema{0%,100%{transform:translate(-5px,2px) rotate(-5deg)}50%{transform:translate(5px,-3px) rotate(5deg)}}
@@ -1374,6 +1406,14 @@ html.sg-on .sg-fab{display:none}
 [data-contraste-alto] .sg-fig .sg-mao circle,[data-contraste-alto] .sg-fig .sg-mao path{stroke:#000;fill:none}
 [data-contraste-alto] .sg-fig .sg-cabeca{fill:none}
 [data-contraste-alto] .sg-fig .sg-chao{stroke:#000}
+[data-contraste-alto] .sg-fig .sg-placa,
+[data-contraste-alto] .sg-fig .sg-sombra-chao,
+[data-contraste-alto] .sg-fig .sg-brilho,
+[data-contraste-alto] .sg-fig .sg-mao-sombra,
+[data-contraste-alto] .sg-fig .sg-brilho-mao{display:none}
+[data-contraste-alto] .sg-fig .sg-corpo,
+[data-contraste-alto] .sg-fig .sg-maos,
+[data-contraste-alto] .sg-fig .sg-mao-frente{filter:none}
 [data-tema-escuro] .sg-palco{background:var(--surface)}
 [data-tema-escuro] .sg-fab{background:var(--amber);color:var(--teal-dark)}
 
@@ -2027,6 +2067,23 @@ html.emb #sg-pagina,html.emb #sg-aponta,html.emb #sg-aponta-aviso{display:none}
 .ov-file input[type="file"]{display:block;width:100%;min-width:0;margin-top:8px;font:inherit;font-size:13.5px;
   color:var(--muted)}
 .ov-nome{margin:0;font-size:13px;overflow-wrap:anywhere}
+.ov-fontes{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:16px 0 0}
+.ov-atalho{position:relative}
+.ov-atalho input[type="file"]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.ov-atalho:focus-within{outline:3px solid var(--teal-deep);outline-offset:3px}
+.ov-fonte{flex:1 1 280px;min-width:0;margin:0;font-size:13px;line-height:1.5;color:var(--muted)}
+.ov-pistas{margin:10px 0 0;padding:9px 12px;border-radius:10px;border-left:4px solid var(--teal);
+  background:var(--teal-tint);color:var(--ink-soft);font-size:13.5px;line-height:1.5;overflow-wrap:anywhere}
+.ov-pistas.is-aviso{border-left-color:var(--amber);background:var(--amber-soft);color:var(--amber-ink)}
+.ov-faixa{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:12px 0 0;padding:10px 12px;
+  border:1.5px solid var(--line);border-radius:12px;background:var(--cream);font-size:13.5px;font-weight:700}
+.ov-faixa select{max-width:100%;min-height:40px;font:inherit;font-weight:600;padding:7px 9px;border-radius:9px;
+  border:1.5px solid var(--line);background:var(--paper);color:var(--ink)}
+.ov-manual{margin:14px 0 0;font-size:13.5px}
+.ov-manual summary{cursor:pointer;font-weight:700;color:var(--teal-deep);padding:6px 0}
+.ov-manual summary:hover{text-decoration:underline}
+.ov-manual[open] summary{margin-bottom:4px}
+.ov-arrasta{outline:2px dashed var(--teal);outline-offset:6px;background:var(--teal-tint);border-radius:12px}
 .ov-player{display:block;width:100%;max-width:720px;margin:14px auto 0;border-radius:14px;background:var(--teal-dark)}
 .ov-agora{margin:16px 0 0;padding:16px 18px;border-radius:var(--radius);background:var(--paper);
   border:1.5px solid var(--line);box-shadow:var(--shadow)}
@@ -2060,8 +2117,10 @@ html.emb #sg-pagina,html.emb #sg-aponta,html.emb #sg-aponta-aviso{display:none}
   .ov-cues{max-height:320px}
 }
 [data-contraste-alto] .ov-modo,[data-contraste-alto] .ov-file,[data-contraste-alto] .ov-agora,
-[data-contraste-alto] .ov-cue,[data-contraste-alto] .ov-lista li,[data-contraste-alto] .ov-relogio{
+[data-contraste-alto] .ov-cue,[data-contraste-alto] .ov-lista li,[data-contraste-alto] .ov-relogio,
+[data-contraste-alto] .ov-pistas,[data-contraste-alto] .ov-faixa{
   background:#fff;border-color:#000;color:#000}
+[data-contraste-alto] .ov-faixa select{background:#fff;color:#000;border-color:#000}
 [data-contraste-alto] .ov-modo>.ic,[data-contraste-alto] .ov-cue-t{color:#000}
 [data-contraste-alto] .ov-modo em,[data-contraste-alto] .ov-file input[type="file"]{color:#111}
 [data-contraste-alto] .ov-modo[aria-pressed="true"],[data-contraste-alto] .ov-cue.on{
