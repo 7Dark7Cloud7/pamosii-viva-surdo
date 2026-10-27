@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Pamosii Signer — Língua Gestual Angolana",
-  "version": "0.1.0",
+  "name": "Agatha Signer — Língua Gestual Angolana",
+  "version": "0.2.0",
   "description": "Aponta para qualquer texto de uma página e vê a sequência de sinais de Língua Gestual Angolana (glosa de estudo a partir do glossário do Pamosii, ainda «A validar» pela comunidade surda angolana).",
   "homepage_url": "https://7dark7cloud7.github.io/pamosii-viva-surdo/",
   "minimum_chrome_version": "111",
@@ -10,7 +10,7 @@
     "512": "icon-512.png"
   },
   "action": {
-    "default_title": "Pamosii Signer — ligar/desligar o painel",
+    "default_title": "Agatha Signer — ligar/desligar o painel",
     "default_icon": { "192": "icon-192.png" }
   },
   "background": {

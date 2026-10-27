@@ -1,4 +1,4 @@
-/* Pamosii Signer — service worker da extensão (MV3)
+/* Agatha Signer — service worker da extensão (MV3)
 
    Só faz uma coisa: quando a pessoa carrega no ícone da barra do Chrome, diz à
    extensão da página para abrir/fechar o painel. Não lê, guarda nem envia nada —

@@ -2,7 +2,7 @@
 <html lang="pt-AO">
 <head>
 <meta charset="utf-8">
-<title>Teste — incorporar o Pamosii Signer</title>
+<title>Teste — incorporar o Agatha Signer</title>
 <style>
   body{font:16px/1.6 system-ui;margin:0;padding:20px;background:#f4f1ea;color:#122}
   h1{font-size:19px}
@@ -14,7 +14,7 @@
 </style>
 </head>
 <body>
-<h1>Teste local: incorporar o Pamosii Signer num iframe (o que a extensão Chrome faz)</h1>
+<h1>Teste local: incorporar o Agatha Signer num iframe (o que a extensão Chrome faz)</h1>
 <p>Abre o site com <code>?emb=1</code> (sem navegação) e envia texto por <code>postMessage</code>.
 Usa apenas <code>http://127.0.0.1:8123</code> — serve para provar o canal, não é parte do site.</p>
 <textarea id="tx">Obrigado. Bom dia! Onde fica a escola?</textarea>
@@ -27,7 +27,7 @@ const log = m => { document.getElementById('log').textContent = m; };
 let pronto = false, fila = '';
 const f = document.createElement('iframe');
 f.src = SITE + '/?emb=1#/pamosii';
-f.setAttribute('title', 'Pamosii Signer');
+f.setAttribute('title', 'Agatha Signer');
 document.getElementById('sitio').appendChild(f);
 
 window.addEventListener('message', ev => {

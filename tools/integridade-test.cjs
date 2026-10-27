@@ -36,7 +36,10 @@ const note = m => avisos.push(m);
 /* comentario de codigo nao e uma promessa a quem usa o site: a propria lista de
    regras vive em comentarios, e nao queremos que o teste chumbe por isso */
 function semComentarios(t) {
-  return t
+  return String(t)
+    /* "video/*" num atributo accept não é um comentário: sem isto, a expressão
+       seguinte abria um comentário falso e engolia o resto do ficheiro. */
+    .replace(/accept="[^"]*"/g, 'accept=""')
     .replace(/\/\*[\s\S]*?\*\//g, ' ')
     .replace(/(^|[^:'"\\])\/\/[^\n]*/g, '$1 ');
 }
@@ -368,7 +371,7 @@ if (blocoValidar) {
   if (!/validado_por:\s*r\.apelido/.test(blocoValidar)) falhas.push('A exportação deixou de levar a assinatura de quem validou.');
   if (!/role="status"/.test(blocoValidar)) falhas.push('#/validar deixou de anunciar os resultados a leitores de ecrã.');
   if (!/localStorage/.test(blocoValidar)) falhas.push('#/validar deixou de guardar os veredictos no aparelho (iriam perder-se ao mudar de página).');
-  const semComVA = blocoValidar.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  const semComVA = semComentarios(blocoValidar);
   if (/navigator\.sendBeacon|XMLHttpRequest|method:\s*['"]POST|fetch\(/.test(semComVA)) {
     falhas.push('O código da fila de validação faz rede: os veredictos têm de ficar no aparelho.');
   }
@@ -389,7 +392,7 @@ const blocoOuvir = (function () {
 })();
 if (!blocoOuvir) falhas.push('A página #/ouvir desapareceu do código.');
 if (blocoOuvir) {
-  const semComOV = blocoOuvir.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  const semComOV = semComentarios(blocoOuvir);
   /* 13.1 o áudio nunca é capturado por nós */
   if (/getUserMedia/.test(semComOV)) {
     falhas.push('#/ouvir passou a usar getUserMedia: o microfone é do ditado do browser, e o site promete não gravar som.');

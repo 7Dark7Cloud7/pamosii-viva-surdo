@@ -1,6 +1,6 @@
-/* Pamosii Signer — extensão Chrome (Manifest V3)
+/* Agatha Signer — extensão Chrome (Manifest V3)
 
-   O que faz: põe um botão em qualquer site; ao clicar, abre o painel do Pamosii Signer
+   O que faz: põe um botão em qualquer site; ao clicar, abre o painel do Agatha Signer
    (o mesmo painel do site, carregado dentro de um iframe) e dá duas formas de escolher
    o texto: «Apontar» (carregar numa frase ou parágrafo da página) ou «Sinalizar a
    selecção» (o texto que a pessoa marcou).
@@ -76,14 +76,14 @@
       <circle cx="9" cy="9.5" r="1.1" fill="currentColor" stroke="none"></circle>
       <circle cx="15" cy="9.5" r="1.1" fill="currentColor" stroke="none"></circle>
     </svg>
-    <span>Pamosii</span>
+    <span>Agatha</span>
   </button>
-  <div class="caixote" id="painel" role="region" aria-label="Pamosii Signer">
+  <div class="caixote" id="painel" role="region" aria-label="Agatha Signer">
     <div class="barra">
-      <strong>Pamosii Signer — apontar para sinalizar</strong>
+      <strong>Agatha Signer — apontar para sinalizar</strong>
       <button class="btn" type="button" id="aponta" aria-pressed="false">Apontar a um texto</button>
       <button class="btn" type="button" id="selec">Sinalizar a selecção</button>
-      <button class="btn x" type="button" id="fecha" aria-label="Fechar o painel do Pamosii">×</button>
+      <button class="btn x" type="button" id="fecha" aria-label="Fechar o painel do Agatha Signer">×</button>
     </div>
     <p class="recado" id="recado" hidden></p>
     <p class="recado">Glosa de estudo feita com o glossário do Pamosii, ainda <strong>A validar</strong> pela
@@ -128,7 +128,7 @@
 
   function carregarIframe() {
     iframe = document.createElement('iframe');
-    iframe.setAttribute('title', 'Pamosii Signer');
+    iframe.setAttribute('title', 'Agatha Signer');
     iframe.setAttribute('src', WIDGET + '#/pamosii');
     iframe.setAttribute('allow', 'fullscreen');
     iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');

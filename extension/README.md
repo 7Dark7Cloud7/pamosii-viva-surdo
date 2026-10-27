@@ -1,4 +1,4 @@
-# Pamosii Signer — extensão Chrome (Manifest V3)
+# Agatha Signer — extensão Chrome (Manifest V3)
 
 Põe o painel de sinais do Pamosii em **qualquer site**. Ao carregar no ícone, abre do
 lado direito do ecrã o mesmo painel do site, e a pessoa escolhe o texto de duas formas:
@@ -43,7 +43,7 @@ segundos, a própria extensão diz isso e sugere abrir o site numa janela.
 2. No Chrome, abre `chrome://extensions`.
 3. Liga o **Modo de programador** (canto superior direito).
 4. Carrega em **Carregar sem compactar** e escolhe a pasta `extension/`.
-5. Carrega no ícone **Pamosii** na barra do Chrome, em qualquer site.
+5. Carrega no ícone **Agatha** na barra do Chrome, em qualquer site.
 
 Para compactar num `.zip` distribuível: comprime o **conteúdo** desta pasta (não a pasta
 mãe), de forma que `manifest.json` fique na raiz do zip.
