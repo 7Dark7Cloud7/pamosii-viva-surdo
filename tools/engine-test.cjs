@@ -1,34 +1,55 @@
-/* Teste rápido do motor de glosa do Pamosii, sem browser:
-   corta as partes puras de app.js e corre-as em Node.
-   uso: node tools/engine-test.cjs [app.js] */
+/* Teste do glosador, sem browser: corre dados.js num vm e imprime a análise
+   de cada exemplo. Falha se uma frase deixar de produzir glosa, se o tempo
+   deixar de ir à frente ou se o «não» deixar de ir ao fim.
+   uso: node tools/engine-test.cjs [dados.js] */
 const fs = require('fs');
-const lines = fs.readFileSync(process.argv[2] || 'app/app.js', 'utf8').split('\n');
-const at = (prefix, from = 0) => { const i = lines.findIndex((l, n) => n >= from && l.startsWith(prefix)); if (i < 0) throw new Error('não encontrado: ' + prefix); return i; };
-const a1 = at('const ESTADO_GLOSSARIO');
-const a2 = at('const aulasDeTema');
-const a3 = at('const PAMOSSI_TIPOS');
-const a4 = at('const PM_MAOS');
-const code = lines.slice(a1, a2 + 1).join('\n') + '\n' + lines.slice(a3, a4).join('\n');
-const normKey = (w) => String(w).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-const api = new Function('LGA_AULAS', 'MESES', code + `
-  return { analisarTexto, glosaTexto, PM_EXEMPLOS, procurarSinal, PAMOSSI_INDICE, GLOSSARIO };`)(
-  [{ id: 'x', tema: 'Escola', titulo: 'aula' }],
-  ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']);
+const path = require('path');
+const vm = require('vm');
 
-console.log('temas no glossário:', api.GLOSSARIO.length);
+const ficheiro = path.resolve(process.argv[2] || path.join(__dirname, '..', 'app', 'dados.js'));
+const ctx = { console };
+vm.createContext(ctx);
+vm.runInContext(fs.readFileSync(ficheiro, 'utf8') + `
+;globalThis.__api = { analisarTexto, glosaTexto, procurarSinal, GLOSSARIO, PM_EXEMPLOS };`, ctx);
+const api = ctx.__api;
+
 let falhas = 0;
-for (const f of api.PM_EXEMPLOS) {
-  for (const r of api.analisarTexto(f, { soletrar: false })) {
-    console.log('\nFRASE: ' + r.frase);
-    console.log('  glosa: ' + api.glosaTexto(r));
-    console.log(`  sinais ${r.sinais.length}/${r.unidades} · alfabeto ${r.datilologias.length} · marcadores ${r.marcadores.length} · omitidas ${r.omitidas.length}`);
-    console.log('  itens: ' + r.itens.map(i => `${i.tipo}:${i.palavra}${i.origem ? '<-' + i.origem : ''}${i.expressao ? '(expr)' : ''}${i.plural ? '(pl)' : ''}`).join(' | '));
-    if (r.datilologias.some(d => !d.nome)) falhas++;
-  }
+const erro = m => { falhas++; console.error(' ✗ ' + m); };
+
+console.log('glossário: ' + api.GLOSSARIO.length + ' temas, ' +
+  api.GLOSSARIO.reduce((n, g) => n + g.termos.length, 0) + ' palavras\n');
+
+const frases = [
+  ...api.PM_EXEMPLOS,
+  'Amanhã eu não vou à escola.',
+  'O professor escreve a lição no caderno.',
+];
+
+for (const frase of frases) {
+  const textos = api.analisarTexto(frase, { soletrar: true });
+  if (!textos.length) { erro('sem análise para: ' + frase); continue; }
+  const r = textos[0];
+  const glosa = api.glosaTexto(r).trim();
+  console.log('FRASE: ' + r.frase);
+  console.log('  glosa: ' + glosa);
+  console.log('  sinais ' + r.sinais.length + '/' + r.contas.palavras +
+    ' · datilologia ' + r.datilologias.length + ' · omitidas ' + r.contas.omitidos +
+    ' · desconhecidas ' + r.desconhecidas.length);
+  console.log('  itens: ' + r.itens.map(i => `${i.tipo}:${i.palavra}${i.origem ? '<-' + i.origem : ''}` +
+    `${i.expressao ? '(expr)' : ''}${i.plural ? '(pl)' : ''}`).join(' | '));
+  if (!glosa) erro('glosa vazia: ' + frase);
+  if (r.datilologias.some(d => !d.nome)) erro('letra soletrada sem nome: ' + frase);
+  if (/^amanhã/i.test(r.frase.trim()) && !/^AMANHÃ/i.test(glosa)) erro('tempo não foi à frente: ' + frase);
+  if (/\bnão\b/i.test(r.frase) && !/NÃO\s*$/i.test(glosa)) erro('«não» não foi ao fim: ' + frase);
+  console.log('');
 }
-console.log('\nfrases com palavras sem sinal (esperado >0, é honesto):', falhas);
-console.log('\n--- procurarSinal: falsos positivos a vigiar ---');
-['compra', 'venda', 'preciso', 'trabalha', 'gosto', 'estuda', 'escreve', 'quanto', 'da', 'em', 'amigos', 'casas', 'cadeira', 'águas', 'casa', 'mesa', 'porta', 'mercado', 'telefone', 'sapato', 'obrigado', 'leio', 'bom', 'amigo', 'obrigada', 'ele', 'ela', 'sao', 'gostas', 'corres', 'bebe', 'dorme'].forEach(w => {
-  const r = api.procurarSinal(normKey(w));
-  console.log(' ', w, '→', r ? `${r.palavra}${r.lema ? ' (lema ' + r.lema + ')' : ''}${r.plural ? ' (plural)' : ''}` : 'null');
-});
+
+console.log('--- lemas e plurais ---');
+const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+for (const palavra of ['vou', 'vai', 'fui', 'casas', 'águas', 'professores', 'escreve', 'escreveu', 'amigo', 'amiga']) {
+  const r = api.procurarSinal(norm(palavra));
+  console.log(' ', palavra, '→', r ? r.palavra + (r.lema ? ' (lema ' + r.lema + ')' : '') + (r.plural ? ' (plural)' : '') : 'null');
+}
+
+if (falhas) { console.error('\n' + falhas + ' falha(s).'); process.exit(1); }
+console.log('\nOK — ' + frases.length + ' frases glosadas.');
