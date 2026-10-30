@@ -101,11 +101,15 @@ promessa no site, o teste falha.
 
 ## Publicação
 
-O site publicado em <https://7dark7cloud7.github.io/pamosii-viva-surdo/> é a
-versão anterior (18 rotas). Este branch (`simplify-soundfit`) ainda não está
-publicado. Para publicar: copiar `app/` para a branch `gh-pages`, mudar
-`const VERSAO` em `app/sw.js` **e** todos os `?v=` em `app/index.html` para o
-mesmo valor, e voltar a correr os dois testes.
+Publicado em <https://rafael-bulezi.github.io/pamosii-viva-surdo/> (fork, vs95).
+O repositório de origem <https://7dark7cloud7.github.io/pamosii-viva-surdo/>
+continua na versão anterior (18 rotas): a conta de publicação só tem leitura no
+repositório original, por isso as versões novas saem pelo fork.
+
+Para publicar: copiar `app/` para a branch `gh-pages`, mudar `const VERSAO` em
+`app/sw.js` **e** todos os `?v=` em `app/index.html` para o mesmo valor, correr
+os dois testes e enviar a `gh-pages`. A Pages do fork pode precisar de um build
+manual (`POST /repos/Rafael-bulezi/pamosii-viva-surdo/pages/builds`).
 
 ## Limites conhecidos
 
