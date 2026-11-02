@@ -43,6 +43,8 @@ const I = {
   book: ic('<path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>'),
   video: ic('<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>'),
   doc: ic('<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8"/>'),
+  copy: ic('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>'),
+  trash: ic('<path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/>'),
   print: ic('<path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="7"/>'),
   clock: ic('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>'),
   target: ic('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'),
@@ -1497,7 +1499,8 @@ const META = {
   '/validar': { t: 'Fila de validação de sinais LGA — Agatha Viva Surdo', d: 'Três veredictos para cada sinal recolhido — correcto, variante regional ou errado — assinados por um apelido, com região e data. Ficam neste browser e exportam-se em JSONL para a equipa promover o estado no dicionário.' },
   '/cobertura': { t: 'Cobertura do glossário LGA — Agatha Viva Surdo', d: 'Quantas palavras do dicionário têm sinal confirmado, quais continuam por validar, quais são demonstração e que palavras as pessoas procuraram e não encontraram. Contas honestas, sem prometer cobertura total da LGA.' },
   '/alfabeto': { t: 'Alfabeto manual LGA (datilologia) — Agatha Viva Surdo', d: 'As 26 letras usadas para soletrar nomes e palavras sem sinal em LGA: a aula real do Abecedário, o estado de cada letra e um treino da ordem das letras. O site não desenha formas de mão que não foram confirmadas por sinalizadores surdos.' },
-  '/ouvir': { t: 'Ouvir e ver → sinais LGA — Agatha Viva Surdo', d: 'Dita ao microfone e vê as frases em glosa de sinais, ou carrega um vídeo teu com legendas .srt/.vtt e acompanha a glosa sincronizada. O áudio não é gravado: usa o ditado do browser. Não é tradução automática de fala para LGA — um intérprete surdo continua a ser necessário.' },
+  '/ouvir': { t: 'Ouvir e ver → sinais LGA — Agatha Viva Surdo', d: 'Dita ao microfone e vê as frases em glosa de sinais, ou escolhe um filme teu: o site lê a faixa de legendas de dentro do MP4/MOV ou o .srt/.vtt/.ass ao lado, e mostra a glosa de cada fala. O áudio não é gravado: usa o ditado do browser. Não é tradução automática de fala para LGA — um intérprete surdo continua a ser necessário.' },
+  '/transcrever': { t: 'Transcrever voz em texto — Agatha Viva Surdo', d: 'Fala e o ditado do teu browser escreve, frase a frase, com a hora aproximada de cada fala. Revê, copia, descarrega .txt ou .srt e leva o texto à glosa de sinais. O site não grava áudio e não é tradução automática para LGA.' },
   '/contacto': { t: 'Contacto — Agatha Viva Surdo', d: 'Canais oficiais verificados da Viva Surdo: Facebook, Instagram e YouTube. Telefone e e-mail serão divulgados após confirmação.' },
 };
 
@@ -1555,6 +1558,7 @@ const NAV_ITENS = [
   { path: '/alfabeto', rotulo: 'Alfabeto' },
   { path: '/pamosii', rotulo: 'Pamosii' },
   { path: '/ouvir', rotulo: 'Ouvir' },
+  { path: '/transcrever', rotulo: 'Transcrever', extra: true },
   { path: '/dicionario', rotulo: 'Dicionário' },
   { path: '/professores', rotulo: 'Professores' },
   { path: '/biblioteca', rotulo: 'Biblioteca' },
@@ -1869,12 +1873,18 @@ on('/', () => {
         <a class="btn btn-p btn-sm" href="#/evangelismo">Ver o roteiro ${I.arrow}</a>
       </article>
     </div>
-    <div class="grid g-2" style="margin-top:22px">
+    <div class="grid g-3" style="margin-top:22px">
       <article class="aud-card rv">
         <span class="aud-ic t">${I.mic}</span>
         <h3>Ouvir, ver um filme e chegar aos sinais</h3>
         <p>Dita ao microfone e vê a sequência de sinais aparecer frase a frase, sem parar de falar. Ou escolhe um vídeo teu e o ficheiro das legendas (.srt ou .vtt): cada fala traz a sua glosa, sincronizada com o vídeo. O som não é gravado por este site — quem ditada é o ditado do teu browser.</p>
         <a class="btn btn-p btn-sm" href="#/ouvir">Abrir o Ouvir ${I.arrow}</a>
+      </article>
+      <article class="aud-card rv">
+        <span class="aud-ic t">${I.clock}</span>
+        <h3>Transcrever voz em texto</h3>
+        <p>Uma folha para falar e ficar com o texto: o ditado do browser escreve frase a frase, com a hora aproximada de cada fala. Revê, copia, descarrega .txt ou .srt e leva o texto à glosa de sinais.</p>
+        <a class="btn btn-p btn-sm" href="#/transcrever">Abrir a transcrição ${I.arrow}</a>
       </article>
       <article class="aud-card rv">
         <span class="aud-ic a">${I.grad}</span>
@@ -3483,6 +3493,7 @@ async function render() {
   desligarColheitaCam();
   pararSessao();       /* a sessão em curso vive só nesta página: mudar de rota apaga-a */
   desligarMarcacoes();   /* o leitor do YouTube vive dentro desta rota: sai com ela */
+  trSair();              /* a transcrição é da sessão: mudar de rota apaga-a */
   ovSair();              /* o microfone e o vídeo do #/ouvir não passam para a página seguinte */
   const m = matchRoute(hash);
   const resultado = m ? await m.view({ args: m.args }) : notFound();
@@ -7104,7 +7115,9 @@ function ovHora(t) {
 }
 const ovLimparLegenda = linha => String(linha).replace(/<[^>]*>/g, '').replace(/\{[^}]*\}/g, '').replace(/^\s*[-•]\s?/, '').trim();
 function ovParseLegendas(bruto) {
-  const blocos = String(bruto || '').replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').split(/\n{2,}/);
+  const texto = String(bruto || '').replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+  if (/^\s*\[(script info|events)\]/im.test(texto) || /^\s*dialogue\s*:/im.test(texto)) return ovParseAss(texto);
+  const blocos = texto.split(/\n{2,}/);
   const cues = [];
   blocos.forEach(bloco => {
     const linhas = bloco.split('\n').map(l => l.trim()).filter(Boolean);
@@ -7115,6 +7128,37 @@ function ovParseLegendas(bruto) {
     const ini = ovHora(partes[0]), fim = ovHora(partes[1]);
     if (ini == null || fim == null) return;
     const corpo = linhas.slice(i + 1).map(ovLimparLegenda).filter(Boolean).join(' ');
+    if (!corpo) return;
+    cues.push({ ini, fim: Math.max(fim, ini + 0.3), texto: corpo });
+  });
+  return cues.sort((a, b) => a.ini - b.ini);
+}
+
+/* .ass/.ssa: as falas vivem na secção [Events], uma linha Dialogue por fala.
+   O campo Text é o último e pode ter vírgulas, por isso junta-se de novo. */
+function ovParseAss(texto) {
+  let formato = ['Layer', 'Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text'];
+  const cues = [];
+  let emEventos = false;
+  texto.split('\n').forEach(linha => {
+    const t = linha.trim();
+    if (!t) return;
+    if (t.charAt(0) === '[') { emEventos = /^\[events\]/i.test(t); return; }
+    if (!emEventos) return;
+    if (/^format\s*:/i.test(t)) {
+      formato = t.slice(t.indexOf(':') + 1).split(',').map(x => x.trim());
+      return;
+    }
+    const m = t.match(/^dialogue\s*:\s*(.+)$/i);
+    if (!m) return;
+    const campos = m[1].split(',');
+    const iIni = formato.findIndex(x => /^start$/i.test(x));
+    const iFim = formato.findIndex(x => /^end$/i.test(x));
+    const iTxt = formato.findIndex(x => /^text$/i.test(x));
+    if (iIni < 0 || iFim < 0 || iTxt < 0 || campos.length <= Math.max(iIni, iFim, iTxt)) return;
+    const ini = ovHora(campos[iIni]), fim = ovHora(campos[iFim]);
+    if (ini == null || fim == null) return;
+    const corpo = ovLimparLegenda(campos.slice(iTxt).join(',').replace(/\\[Nnh]/g, ' '));
     if (!corpo) return;
     cues.push({ ini, fim: Math.max(fim, ini + 0.3), texto: corpo });
   });
@@ -7148,7 +7192,7 @@ function ovResumoCues(cues) {
    O que continua a não existir: ler legendas QUEIMADAS na imagem (isso é OCR,
    não uma faixa de texto) e transcrever som sem legendas nenhumas. */
 const OV_VIDEO_EXT = ['mp4', 'm4v', 'mov', 'webm', 'ogv', 'ogg', 'mkv', 'avi'];
-const OV_SUB_EXT = ['srt', 'vtt'];
+const OV_SUB_EXT = ['srt', 'vtt', 'ass', 'ssa'];
 const ovExt = nome => (String(nome).match(/\.([a-z0-9]+)$/i) || ['', ''])[1].toLowerCase();
 const ovBaseNome = nome => String(nome).replace(/\.[^.]+$/, '').toLowerCase()
   .replace(/[._+\-\[\]()]+/g, ' ')
@@ -7436,9 +7480,21 @@ function ovProcuraCue(seg) {
 }
 function ovLerFicheiro(ficheiro, aoTexto, aoErro) {
   const ler = new FileReader();
-  ler.onload = () => aoTexto(String(ler.result || ''));
+  ler.onload = () => {
+    let texto;
+    try { texto = ovDescodificar(ler.result); } catch (e) { aoErro('Não consegui ler esse ficheiro.'); return; }
+    aoTexto(texto);
+  };
   ler.onerror = () => aoErro('Não consegui ler esse ficheiro.');
-  ler.readAsText(ficheiro);
+  ler.readAsArrayBuffer(ficheiro);
+}
+/* .srt antigo de Portugal/Angola costuma vir em Windows-1252: se o UTF-8
+   deixar caracteres partidos, tenta-se essa codificação antes de mostrar «Ã£» */
+function ovDescodificar(buffer) {
+  const bytes = new Uint8Array(buffer || new ArrayBuffer(0));
+  const utf8 = new TextDecoder('utf-8').decode(bytes);
+  if (utf8.indexOf('\uFFFD') < 0) return utf8;
+  try { return new TextDecoder('windows-1252').decode(bytes); } catch (e) { return utf8; }
 }
 function ovBaixarLegendas() {
   if (!ovEstado.cues.length) { ovMensagem('Carrega primeiro o ficheiro de legendas.'); return; }
@@ -7479,7 +7535,7 @@ function ovHTML() {
   return `
 <div class="wrap page-head">
   <h1>Ouvir, ver um filme e chegar aos sinais</h1>
-  <p class="lead">Dita uma frase e vê a sequência de sinais à medida que falas. Ou escolhe um vídeo e o ficheiro das legendas, e o Pamosii mostra os sinais de cada fala, sincronizados com o que está a tocar.</p>
+  <p class="lead">Dita uma frase e vê a sequência de sinais à medida que falas. Ou escolhe um filme: ele procura legendas dentro do ficheiro e na pasta, e o Pamosii mostra os sinais de cada fala, sincronizados com o que está a tocar.</p>
 </div>
 <section class="section tight">
   <div class="wrap">
@@ -7494,7 +7550,7 @@ function ovHTML() {
 
     <div class="ov-modos" role="group" aria-label="O que queres fazer">
       <button class="ov-modo" type="button" data-modo="mic" aria-pressed="true">${I.mic}<span><strong>Ditar e ver</strong><em>Falo, o texto escreve-se, os sinais aparecem.</em></span></button>
-      <button class="ov-modo" type="button" data-modo="leg" aria-pressed="false">${I.video}<span><strong>Vídeo ou filme com legendas</strong><em>Escolhes o ficheiro e as legendas; cada fala tem a sua glosa.</em></span></button>
+      <button class="ov-modo" type="button" data-modo="leg" aria-pressed="false">${I.video}<span><strong>Vídeo ou filme com legendas</strong><em>Escolhes o filme; ele lê as legendas de dentro ou da pasta.</em></span></button>
       <button class="ov-modo" type="button" data-modo="nao" aria-pressed="false">${I.clock}<span><strong>O que ainda não há</strong><em>Porque é que não se transcreve o som de um vídeo sem legendas.</em></span></button>
     </div>
 
@@ -7519,6 +7575,7 @@ function ovHTML() {
         <button class="btn btn-o btn-sm" type="button" id="ov-copy">${I.doc} Copiar o texto</button>
         <button class="btn btn-o btn-sm" type="button" id="ov-baixar-txt">${I.doc} Descarregar o texto</button>
         <button class="btn btn-o btn-sm" type="button" id="ov-clear">Limpar</button>
+        <a class="btn btn-o btn-sm" href="#/transcrever">${I.clock} Folha de transcrição com horas</a>
       </div>
       <p class="pm-cobertura" id="ov-status" role="status">Ainda sem texto: fala, ou escreve no campo. A sequência de sinais aparece aqui.</p>
       <p class="pm-hint">As palavras que não estão no glossário ficam em <a href="#/alfabeto">alfabeto manual</a> e entram na lista de lacunas da Colheita — é assim que se sabe o que falta gravar.</p>
@@ -7527,15 +7584,15 @@ function ovHTML() {
 
     <div id="ov-p-leg" hidden>
       <h2>Vídeo ou filme com legendas</h2>
-      <p class="muted" style="max-width:66ch">Isto <strong>não é inteligência artificial a ver o vídeo</strong>: o site lê o texto das legendas que já existem — escrito por pessoas — e mostra, para a fala que está a tocar, a sequência de sinais do dicionário. Podes escolher o filme e a legenda no mesmo gesto: ele emparelha os dois pelo nome. Se a legenda vier dentro do ficheiro (MP4, MOV ou WebM), ele detecta a faixa e usa-a durante a reprodução. É instantâneo mesmo num filme inteiro, e não precisa de internet.</p>
+      <p class="muted" style="max-width:66ch">Isto <strong>não é inteligência artificial a ver o vídeo</strong>: o site lê o texto das legendas que já existem — escrito por pessoas — e mostra, para a fala que está a tocar, a sequência de sinais do dicionário. Podes escolher o filme e a legenda no mesmo gesto: ele emparelha os dois pelo nome. Se a legenda vier dentro do ficheiro (MP4 ou MOV), ele lê a faixa «tx3g» e as falas entram na lista sem precisares de mais nada; em WebM, usa a faixa que o browser abrir. É instantâneo mesmo num filme inteiro, e não precisa de internet.</p>
       <div class="ov-fontes" id="ov-fontes">
         <label class="btn btn-p btn-sm ov-atalho">${I.video} Escolher filme e legendas
-          <input type="file" id="ov-ficheiros" multiple accept="video/*,.mp4,.m4v,.mov,.webm,.ogv,.ogg,.mkv,.avi,.srt,.vtt,text/plain">
+          <input type="file" id="ov-ficheiros" multiple accept="video/*,.mp4,.m4v,.mov,.webm,.ogv,.ogg,.mkv,.avi,.srt,.vtt,.ass,.ssa,text/plain">
         </label>
         <label class="btn btn-o btn-sm ov-atalho">${I.doc} Escolher a pasta do filme
           <input type="file" id="ov-pasta" webkitdirectory directory multiple>
         </label>
-        <p class="ov-fonte" id="ov-fonte" role="status">Escolhe o filme; se o .srt ou .vtt estiver na mesma pasta, ele encontra-o. Também podes arrastar os ficheiros para aqui.</p>
+        <p class="ov-fonte" id="ov-fonte" role="status">Escolhe o filme. Ele procura legendas dentro do ficheiro e, na pasta, um .srt, .vtt ou .ass com o mesmo nome. Também podes arrastar os ficheiros para aqui.</p>
       </div>
       <p class="muted ov-nome" id="ov-video-nome">Nenhum vídeo escolhido.</p>
       <p class="ov-pistas" id="ov-pistas" role="status" hidden></p>
@@ -7549,8 +7606,8 @@ function ovHTML() {
           <label class="ov-file" for="ov-video">Vídeo ou filme (só neste aparelho)
             <input type="file" id="ov-video" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.m4v,.mov">
           </label>
-          <label class="ov-file" for="ov-legenda">Legendas em .srt ou .vtt
-            <input type="file" id="ov-legenda" accept=".srt,.vtt,text/plain">
+          <label class="ov-file" for="ov-legenda">Legendas em .srt, .vtt, .ass ou .ssa
+            <input type="file" id="ov-legenda" accept=".srt,.vtt,.ass,.ssa,text/plain">
           </label>
           <p class="muted ov-nome" id="ov-legenda-nome">Nenhuma legenda escolhida.</p>
         </div>
@@ -7562,6 +7619,7 @@ function ovHTML() {
         <button class="btn btn-o btn-sm" type="button" data-signer id="ov-sg-fala" disabled>Sinalizar esta fala</button>
         <label class="pm-check"><input type="checkbox" id="ov-seguir"> Acompanhar: o Signer segue o vídeo</label>
         <button class="btn btn-o btn-sm" type="button" id="ov-exportar">${I.doc} Descarregar todas as glosas</button>
+        <button class="btn btn-o btn-sm" type="button" id="ov-esquecer">Esquecer os ficheiros</button>
       </div>
       <div class="ov-agora">
         <p class="ov-agora-t" id="ov-agora-t">Sem fala</p>
@@ -7584,7 +7642,7 @@ function ovHTML() {
         <li>
           <h3>${I.clock} Legendas queimadas na imagem ${soonBadge()}</h3>
           <p>Quando o texto já está dentro da imagem (as chamadas «legendas queimadas» ou hardsubs), não existe ficheiro de texto nenhum para ler: seria preciso reconhecimento óptico de caracteres (OCR) a analisar cada fotograma. O site não faz isso, e também não adivinha o que está escrito.</p>
-          <p class="muted">O que funciona: o .srt/.vtt que acompanha o filme, ou a faixa de legendas dentro do MP4/MOV/WebM. Os dois são detectados no painel anterior.</p>
+          <p class="muted">O que funciona: o .srt, .vtt ou .ass que acompanha o filme, ou a faixa de legendas dentro do MP4/MOV/WebM. Os dois são detectados no painel anterior.</p>
         </li>
         <li>
           <h3>${I.clock} Filmares-te a sinalizar e o site escrever por ti ${soonBadge()}</h3>
@@ -7612,6 +7670,12 @@ function bindOuvir(state) {
     $('#ov-p-nao').hidden = modo !== 'nao';
   };
   $$('.ov-modo').forEach(b => b.addEventListener('click', () => mudarModo(b.dataset.modo)));
+
+  /* texto chegado da folha de transcrição (#/transcrever): entra na glosa e a
+     chave de sessão é apagada; não fica nada guardado para a próxima visita */
+  let chegado = '';
+  try { chegado = sessionStorage.getItem(TR_CHAVE) || ''; if (chegado) sessionStorage.removeItem(TR_CHAVE); } catch (e) { /* sem sessão */ }
+  if (chegado) { state.texto = chegado; state.modo = 'mic'; }
 
   const campo = $('#ov-texto'), player = $('#ov-player');
   campo.value = state.texto;
@@ -7734,7 +7798,7 @@ function bindOuvir(state) {
     const leg = info.pistas.filter(p => p.legenda);
     if (!leg.length) {
       const tipos = info.pistas.map(p => p.tipo).filter((v, i, a) => a.indexOf(v) === i).join(', ');
-      pintarPistas('Este filme não traz faixas de legendas dentro do ficheiro' + (tipos ? ' — só ' + tipos : '') + '. Escolhe o .srt ou .vtt que está ao lado dele.');
+      pintarPistas('Este filme não traz faixas de legendas dentro do ficheiro' + (tipos ? ' — só ' + tipos : '') + '. Escolhe o .srt, .vtt ou .ass que está ao lado dele.');
       return;
     }
     const extraida = leg.find(p => p.cues && p.cues.length);
@@ -7790,7 +7854,7 @@ function bindOuvir(state) {
     if (!cues.length) {
       state.cues = []; state.resumo = null; state.actual = -1; state.embutida = null;
       $('#ov-faixa-linha').hidden = true;
-      pintaLegStatus('O ficheiro «' + nome + '» não tem nenhuma linha com horas no formato .srt ou .vtt.');
+      pintaLegStatus('O ficheiro «' + nome + '» não tem nenhuma fala com horas no formato .srt, .vtt ou .ass.');
       ovPintarCues(); ovFala(-1);
       return false;
     }
@@ -7815,7 +7879,7 @@ function bindOuvir(state) {
     const videos = ficheiros.filter(f => OV_VIDEO_EXT.includes(ovExt(f.name)));
     const subs = ficheiros.filter(f => OV_SUB_EXT.includes(ovExt(f.name)));
     if (!videos.length && !subs.length) {
-      dizerFonte('Não reconheci nenhum vídeo nem nenhuma legenda nesses ficheiros. Formatos aceites: MP4, M4V, MOV, WebM, OGV, MKV, AVI e legendas .srt ou .vtt.');
+      dizerFonte('Não reconheci nenhum vídeo nem nenhuma legenda nesses ficheiros. Formatos aceites: MP4, M4V, MOV, WebM, OGV, MKV, AVI e legendas .srt, .vtt, .ass ou .ssa.');
       return;
     }
     const video = videos.length ? videos.slice().sort((a, b) => b.size - a.size)[0] : null;
@@ -7896,6 +7960,34 @@ function bindOuvir(state) {
     }
   });
   if (player.textTracks && player.textTracks.addEventListener) player.textTracks.addEventListener('addtrack', pintarFaixas);
+  /* tirar o filme da memória do separador sem escolher outro: quem se engana
+     no ficheiro não deve ficar preso a ele, e a promessa de privacidade cumpre-se */
+  function esquecerFicheiros() {
+    if (!state.videoNome && !state.legendaNome && !state.cues.length) {
+      dizerFonte('Ainda não há filme nem legendas neste separador para esquecer.');
+      return;
+    }
+    player.pause();
+    player.removeAttribute('src');
+    player.load();
+    player.hidden = true;
+    if (state.url) { try { URL.revokeObjectURL(state.url); } catch (e) { /* já libertado */ } }
+    state.url = ''; state.videoNome = ''; state.ficheiroVideo = null;
+    state.pistas = null; state.embutida = null; state.ultimaEmbutida = '';
+    state.cues = []; state.resumo = null; state.actual = -1; state.legendaNome = '';
+    erroVideoMostrado = false;
+    desligarFaixas();
+    const sel = $('#ov-faixa');
+    if (sel) sel.innerHTML = '';
+    $('#ov-video-nome').textContent = 'Nenhum vídeo escolhido.';
+    $('#ov-legenda-nome').textContent = 'Nenhuma legenda escolhida.';
+    $('#ov-faixa-linha').hidden = true;
+    pintarPistas('');
+    pintaLegStatus();
+    ovPintarCues(); ovFala(-1);
+    dizerFonte('Filme e legendas esquecidos — já não estão na memória deste separador. Escolhe outros quando quiseres.');
+  }
+  $('#ov-esquecer').addEventListener('click', esquecerFicheiros);
   const zona = $('#ov-p-leg');
   if (zona) {
     zona.addEventListener('dragover', e => { e.preventDefault(); zona.classList.add('ov-arrasta'); });
@@ -7936,6 +8028,7 @@ function bindOuvir(state) {
   pintaLegStatus();
   if (state.cues.length) { ovPintarCues(); ovFala(Math.max(state.actual, 0)); }
   mudarModo(state.modo);
+  if (chegado) ovMensagem('Texto chegado da transcrição — já está na glosa. Revê as palavras e usa «Sinais animados deste texto».');
 }
 
 on('/ouvir', () => ({
@@ -7944,6 +8037,344 @@ on('/ouvir', () => ({
   bind: bindOuvir,
   state: ovEstado,
   meta: META['/ouvir'],
+}));
+
+/* ============================================================================
+   13.9 TRANSCREVER — `#/transcrever`
+   ----------------------------------------------------------------------------
+   Uma folha de transcrição, não um tradutor. O microfone é o ditado do
+   PRÓPRIO BROWSER (SpeechRecognition) e devolve texto; este site não grava,
+   não tem servidor e não recebe áudio. Cada frase final fica com a hora
+   aproximada da sessão, e a folha exporta .txt ou .srt.
+
+   O que continua a não existir (e não se simula):
+     - transcrever um ficheiro de áudio já gravado: o ditado do browser só
+       ouve o microfone;
+     - LGA → texto: não há dados de gestos validados em número suficiente;
+     - tradução automática para LGA: o texto segue para a GLOSA do dicionário,
+       que é material de estudo e tem de ser revisto por um sinalizador surdo.
+   ============================================================================ */
+const TR_IDIOMAS = [['pt-PT', 'Português europeu (pt-PT)'], ['pt-BR', 'Português do Brasil (pt-BR)'], ['en-US', 'Inglês (en-US)']];
+const TR_CHAVE = 'agatha.transcrever';
+const TR_SILENCIOS = 4;
+const trEstado = { activo: false, idioma: 'pt-PT', segundos: 0, marca: 0, interim: '', segs: [], texto: '' };
+let trRec = null, trTick = 0, trSilencios = 0;
+
+const trHora = s => Math.floor(Math.max(0, s) / 60) + ':' + String(Math.floor(Math.max(0, s)) % 60).padStart(2, '0');
+const trSrtHora = s => {
+  const t = Math.max(0, s);
+  const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), seg = Math.floor(t % 60);
+  const ms = Math.round((t - Math.floor(t)) * 1000);
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(seg).padStart(2, '0') + ',' + String(ms).padStart(3, '0');
+};
+const trPalavras = t => (String(t || '').match(/[\p{L}\p{M}\p{N}]+/gu) || []).length;
+function trMensagem(texto) { const alvo = $('#tr-msg'); if (alvo) alvo.textContent = texto; }
+
+function trTextoAtual() {
+  const campo = $('#tr-texto');
+  return String(campo && campo.value != null ? campo.value : trEstado.texto);
+}
+
+function trPintar() {
+  const vivo = $('#tr-live');
+  if (vivo) {
+    vivo.dataset.on = trEstado.activo ? 'true' : 'false';
+    vivo.textContent = trEstado.activo ? 'A ouvir' : (trEstado.segs.length ? 'Parado' : 'Pronto para ouvir');
+  }
+  const botao = $('#tr-mic');
+  if (botao) {
+    botao.setAttribute('aria-pressed', trEstado.activo ? 'true' : 'false');
+    botao.innerHTML = trEstado.activo ? I.close + ' Parar de transcrever' : I.mic + ' Começar a transcrever';
+  }
+  const relogio = $('#tr-relogio');
+  if (relogio) relogio.innerHTML = trHora(trEstado.segundos) + '<small>duração da sessão</small>';
+  const interino = $('#tr-interim');
+  if (interino) interino.textContent = trEstado.interim ? '… ' + trEstado.interim : '';
+
+  const lista = $('#tr-segs');
+  if (lista) {
+    lista.innerHTML = trEstado.segs.map((s, i) =>
+      `<li class="tr-seg"><time datetime="PT${Math.round(s.ini)}S">${trHora(s.ini)}</time>`
+      + `<p>${esc(s.texto)}</p>`
+      + `<button class="tr-del" type="button" data-tr-del="${i}" aria-label="Apagar a fala de ${trHora(s.ini)}">${I.trash}</button></li>`
+    ).join('');
+  }
+  const vazio = $('#tr-vazio');
+  if (vazio) vazio.hidden = trEstado.segs.length > 0;
+
+  const campos = $('#tr-texto');
+  if (campos && document.activeElement !== campos && campos.value !== trEstado.texto) campos.value = trEstado.texto;
+
+  const contagem = $('#tr-count');
+  if (contagem) {
+    const n = trEstado.segs.length;
+    contagem.textContent = n + (n === 1 ? ' fala' : ' falas') + ' · ' + trPalavras(trTextoAtual()) + (trPalavras(trTextoAtual()) === 1 ? ' palavra' : ' palavras');
+  }
+  const tem = !!trTextoAtual().trim();
+  $$('#tr-copy,#tr-txt,#tr-srt').forEach(b => { b.disabled = !tem; });
+  const sinais = $('#tr-sinais');
+  if (sinais) sinais.disabled = !tem;
+}
+
+function trJuntar(frase) {
+  const campo = $('#tr-texto');
+  const aEditar = !!campo && document.activeElement === campo;
+  const base = String(aEditar ? campo.value : trEstado.texto).trim();
+  trEstado.texto = base ? base + ' ' + frase : frase;
+  if (aEditar) {
+    campo.value = trEstado.texto;
+    try { campo.setSelectionRange(campo.value.length, campo.value.length); } catch (e) { /* sem selecção */ }
+  }
+}
+
+function trParar(porQue) {
+  trEstado.activo = false;
+  if (trRec) { try { trRec.onend = null; trRec.stop(); } catch (e) { /* já parado */ } trRec = null; }
+  if (trTick) { clearInterval(trTick); trTick = 0; }
+  trEstado.interim = '';
+  trPintar();
+  if (porQue) trMensagem(porQue);
+}
+
+function trIniciar() {
+  if (!SR) {
+    trMensagem('Este browser não tem ditado por voz. Escreve no campo à direita — a transcrição e os ficheiros funcionam na mesma — ou abre a página em Chrome ou Edge.');
+    return;
+  }
+  if (trEstado.activo) { trParar('Paraste. O texto ficou nesta página para reveres.'); return; }
+  trEstado.activo = true;
+  trSilencios = 0;
+  const rec = new SR();
+  rec.lang = trEstado.idioma;
+  rec.continuous = true;
+  rec.interimResults = true;
+  rec.maxAlternatives = 1;
+  rec.onresult = ev => {
+    let parcial = '', final = '';
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      const r = ev.results[i];
+      if (r.isFinal) final += r[0].transcript; else parcial += r[0].transcript;
+    }
+    if (final.trim()) {
+      const frase = final.trim();
+      const ini = trEstado.marca;
+      const fim = Math.max(trEstado.segundos, ini + 0.6);
+      trEstado.segs.push({ ini, fim, texto: frase });
+      trEstado.marca = fim;
+      trJuntar(frase);
+      trEstado.interim = '';
+      trSilencios = 0;
+      trMensagem('Ouvi: «' + frase + '». A hora é aproximada — confirma o texto antes de o usares.');
+      trPintar();
+    } else {
+      trEstado.interim = parcial.trim();
+      trPintar();
+    }
+  };
+  rec.onerror = ev => {
+    const erro = String(ev.error || '');
+    trMensagem(OV_ERROS[erro] || 'O ditado interrompeu — podes continuar a escrever no campo.');
+    if (['not-allowed', 'service-not-allowed', 'audio-capture', 'network', 'speech-not-allowed'].includes(erro)) {
+      trParar(OV_ERROS[erro] || 'O ditado parou.');
+    }
+  };
+  rec.onend = () => {
+    trRec = null;
+    if (!trEstado.activo) return;
+    /* o browser corta o ditado num silêncio: volta a ligar enquanto a pessoa quiser,
+       com travão para não ficar a rodar sozinho */
+    if (++trSilencios > TR_SILENCIOS) {
+      trParar('Parei de ouvir: vieram vários silêncios seguidos. Carrega outra vez se quiseres continuar.');
+      return;
+    }
+    trRec = rec;
+    setTimeout(() => {
+      if (trEstado.activo && trRec === rec) {
+        try { rec.start(); } catch (e) { trParar(OV_ERROS['nao-arrancou']); }
+      }
+    }, 300);
+  };
+  try {
+    rec.start();
+    trRec = rec;
+    if (trTick) clearInterval(trTick);
+    trTick = setInterval(() => {
+      trEstado.segundos++;
+      const r = $('#tr-relogio');
+      if (r) r.innerHTML = trHora(trEstado.segundos) + '<small>duração da sessão</small>';
+    }, 1000);
+    trMensagem('A ouvir. Fala normalmente; cada pausa fecha uma fala com a sua hora. O áudio vai para o serviço de ditado do teu browser — não para este site.');
+    trPintar();
+  } catch (e) {
+    trParar(OV_ERROS['nao-arrancou']);
+  }
+}
+
+function trLimpar() {
+  trParar('');
+  trEstado.segundos = 0; trEstado.marca = 0; trEstado.interim = '';
+  trEstado.segs = []; trEstado.texto = '';
+  const campo = $('#tr-texto'); if (campo) campo.value = '';
+  trPintar();
+  trMensagem('Sessão limpa. Carrega no microfone para começar outra vez.');
+}
+
+/* sair da rota: o microfone cala e a folha não fica à espera na memória */
+function trSair() {
+  document.documentElement.classList.remove('tr-rota');
+  if (trRec) { try { trRec.onend = null; trRec.stop(); } catch (e) { /* já parado */ } trRec = null; }
+  if (trTick) { clearInterval(trTick); trTick = 0; }
+  trEstado.activo = false; trEstado.segundos = 0; trEstado.marca = 0; trEstado.interim = '';
+  trEstado.segs = []; trEstado.texto = '';
+}
+
+function trBaixarTxt() {
+  const texto = trTextoAtual().trim();
+  if (!texto) { trMensagem('Ainda não há texto para descarregar.'); return; }
+  const linhas = [
+    'AGATHA VIVA SURDO — TRANSCRIÇÃO DE VOZ',
+    'Gerado em ' + new Date().toISOString() + ' · idioma do ditado: ' + trEstado.idioma,
+    'Duração da sessão: ' + trHora(trEstado.segundos),
+    '',
+    'Transcrição automática do ditado do browser: erra nomes, números e palavras raras.',
+    'Não é uma tradução para Língua Gestual Angolana (LGA); é texto em português para rever.',
+    '',
+    texto,
+    '',
+    '— FALAS COM HORA (aproximada) —',
+  ];
+  trEstado.segs.forEach((s, i) => linhas.push(String(i + 1).padStart(3, '0') + ' [' + trHora(s.ini) + ' → ' + trHora(s.fim) + '] ' + s.texto));
+  descarregarFicheiro('agatha-transcricao.txt', linhas.join('\n') + '\n', 'text/plain;charset=utf-8');
+}
+
+function trBaixarSrt() {
+  if (!trEstado.segs.length) { trMensagem('Ainda não há falas com hora para fazer um .srt. Dita algumas frases primeiro.'); return; }
+  const corpo = trEstado.segs.map((s, i) =>
+    String(i + 1) + '\n' + trSrtHora(s.ini) + ' --> ' + trSrtHora(s.fim) + '\n' + s.texto + '\n'
+  ).join('\n');
+  descarregarFicheiro('agatha-transcricao.srt', corpo, 'application/x-subrip;charset=utf-8');
+}
+
+function trIrParaSinais() {
+  const texto = trTextoAtual().trim();
+  if (!texto) { trMensagem('Ainda não há texto para levar aos sinais.'); return; }
+  try { sessionStorage.setItem(TR_CHAVE, texto); } catch (e) { /* sem sessão: a página seguinte abre vazia */ }
+  go('/ouvir');
+}
+
+function transcreverHTML() {
+  return `
+<div class="wrap page-head">
+  <h1>Transcrever voz em texto</h1>
+  <p class="lead">Fala ao microfone e vê o texto a crescer, frase a frase, com a hora de cada fala. No fim, revê, copia, descarrega .txt ou .srt, ou leva o texto à glosa de sinais. A transcrição é automática e erra — a revisão é tua.</p>
+</div>
+<section class="section tight">
+  <div class="wrap">
+    <div class="note-band">
+      ${I.shield}
+      <p><strong>Quem ouve o quê.</strong> Quem ouve é o serviço de ditado do <em>teu browser</em> (Chrome ou Edge, com internet) — este site não grava som, não tem servidor e não recebe áudio. As falas e horas ficam só nesta página e somem ao sair; nada é enviado para nós. Em telemóvel ou noutro computador, o microfone só abre no endereço publicado (HTTPS) ou em <strong>127.0.0.1</strong>.</p>
+    </div>
+    <div class="tr-layout">
+      <div class="tr-rec">
+        <section class="tr-card" aria-labelledby="tr-titulo-rec">
+          <p class="tr-live" id="tr-live" data-on="false">Pronto para ouvir</p>
+          <h2 id="tr-titulo-rec">Microfone</h2>
+          <button class="btn btn-p tr-mic" type="button" id="tr-mic" aria-pressed="false">${I.mic} Começar a transcrever</button>
+          <p class="tr-relogio" id="tr-relogio">0:00<small>duração da sessão</small></p>
+          <div class="tr-form">
+            <div class="f-field">
+              <label for="tr-idioma">Ditado em</label>
+              <select id="tr-idioma">${TR_IDIOMAS.map(([v, r]) => `<option value="${v}">${esc(r)}</option>`).join('')}</select>
+            </div>
+          </div>
+          <p class="tr-status" id="tr-msg" role="status">Carrega no microfone e fala. O texto aparece na folha ao lado.</p>
+          <p class="tr-hint"><strong>Não é tradução.</strong> O browser transcreve o que ouve para português; o site não transforma isso em LGA. A LGA tem gramática própria (espaço, ordem, expressão facial) e precisa de um sinalizador surdo. Aqui ficas com a base escrita para estudar, legendar ou entregar a um intérprete.</p>
+        </section>
+      </div>
+      <div class="tr-painel">
+        <section class="tr-card" aria-labelledby="tr-titulo-trans">
+          <div class="tr-barra">
+            <h2 id="tr-titulo-trans">Transcrição</h2>
+            <span class="tr-count" id="tr-count">0 falas · 0 palavras</span>
+          </div>
+          <div class="tr-acoes" style="margin:0 0 12px">
+            <button class="btn btn-o btn-sm" type="button" id="tr-copy">${I.copy} Copiar</button>
+            <button class="btn btn-o btn-sm" type="button" id="tr-txt">${I.doc} .txt</button>
+            <button class="btn btn-o btn-sm" type="button" id="tr-srt">${I.clock} .srt</button>
+            <button class="btn btn-o btn-sm" type="button" id="tr-clear">${I.trash} Limpar</button>
+          </div>
+          <ul class="tr-segs" id="tr-segs" aria-label="Falas transcritas com a hora aproximada"></ul>
+          <div class="tr-empty" id="tr-vazio">${I.mic}<strong>Ainda sem falas.</strong><br>Carrega no microfone e diz a primeira frase; cada pausa fecha uma fala com a sua hora.</div>
+          <p class="tr-interim" id="tr-interim" aria-hidden="true"></p>
+          <div class="f-field" style="margin-top:14px">
+            <label for="tr-texto">Texto corrido — revê e corrige sem pressa</label>
+            <textarea class="tr-texto" id="tr-texto" rows="8" autocomplete="off" spellcheck="false" placeholder="As frases ditadas aparecem aqui. Também podes escrever ou colar texto."></textarea>
+          </div>
+          <div class="tr-acoes">
+            <button class="btn btn-a btn-sm" type="button" id="tr-sinais">${I.chat} Levar aos sinais</button>
+            <a class="btn btn-o btn-sm" href="#/pamosii">${I.doc} Abrir no Pamosii</a>
+          </div>
+          <p class="tr-nota">«Levar aos sinais» abre <a href="#/ouvir">Ouvir e ver</a> com este texto já na glosa. A glosa é a sequência de sinais do dicionário — material de estudo, não uma frase correcta em LGA.</p>
+        </section>
+        <section class="tr-card tr-folha" aria-labelledby="tr-titulo-limites">
+          <h2 id="tr-titulo-limites">Limites, ditos sem rodeios</h2>
+          <ul class="ov-lista">
+            <li><strong>Um ficheiro de áudio já gravado:</strong> não. O ditado do browser só ouve o microfone; transcrever um ficheiro exigiria um modelo de fala aqui dentro ou num servidor. Não há servidor neste site.</li>
+            <li><strong>Língua Gestual Angolana → texto:</strong> não. Não há amostras de LGA validadas em número suficiente; é o que a <a href="#/colher">Colheita</a> tenta construir. O caminho manual é escolher sinais no <a href="#/pamosii">Pamosii</a>.</li>
+            <li><strong>Tradução automática para LGA:</strong> não. O texto em português é a entrada da glosa; quem decide a ordem e a expressão é uma pessoa. Um intérprete surdo continua a ser necessário.</li>
+          </ul>
+          <p class="src">A transcrição usa a API de ditado do browser; a qualidade depende do microfone, do ruído, do sotaque e da ligação. Os ficheiros exportados são teus e ficam no teu aparelho.</p>
+        </section>
+      </div>
+    </div>
+  </div>
+</section>`;
+}
+
+function bindTranscrever() {
+  document.documentElement.classList.add('tr-rota');
+  const campo = $('#tr-texto');
+  campo.value = trEstado.texto;
+  $('#tr-idioma').value = trEstado.idioma;
+  $('#tr-idioma').addEventListener('change', e => {
+    trEstado.idioma = e.target.value;
+    if (trEstado.activo) trParar('Mudei o idioma do ditado. Carrega outra vez para continuar em ' + e.target.selectedOptions[0].textContent + '.');
+    else trMensagem('Idioma do ditado: ' + e.target.selectedOptions[0].textContent + '.');
+  });
+  $('#tr-mic').addEventListener('click', trIniciar);
+  campo.addEventListener('input', () => { trEstado.texto = campo.value; trPintar(); });
+  $('#tr-segs').addEventListener('click', e => {
+    const b = e.target.closest('[data-tr-del]');
+    if (!b) return;
+    const i = Number(b.dataset.trDel);
+    if (!trEstado.segs[i]) return;
+    const fala = trEstado.segs.splice(i, 1)[0];
+    const at = trEstado.texto.indexOf(fala.texto);
+    if (at >= 0) {
+      trEstado.texto = (trEstado.texto.slice(0, at) + trEstado.texto.slice(at + fala.texto.length)).replace(/\s{2,}/g, ' ').trim();
+    }
+    trPintar();
+    trMensagem('Fala apagada. O texto corrido foi ajustado; se o tinhas editado, confirma-o.');
+  });
+  $('#tr-copy').addEventListener('click', e => {
+    const texto = trTextoAtual().trim();
+    if (texto) copiarTexto(texto, e.currentTarget);
+  });
+  $('#tr-txt').addEventListener('click', trBaixarTxt);
+  $('#tr-srt').addEventListener('click', trBaixarSrt);
+  $('#tr-clear').addEventListener('click', () => {
+    if (!trEstado.segs.length && !trTextoAtual().trim()) { trMensagem('A folha já está vazia.'); return; }
+    if (window.confirm('Apagar a transcrição desta sessão? Os ficheiros que já descarregaste não são afectados.')) trLimpar();
+  });
+  $('#tr-sinais').addEventListener('click', trIrParaSinais);
+  trPintar();
+}
+
+on('/transcrever', () => ({
+  active: '/transcrever',
+  h: shell(transcreverHTML(), '/transcrever'),
+  bind: bindTranscrever,
+  meta: META['/transcrever'],
 }));
 
 /* ============================================================================
