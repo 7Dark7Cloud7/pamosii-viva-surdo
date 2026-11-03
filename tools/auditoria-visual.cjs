@@ -39,7 +39,7 @@ const MEDIA = flag('media', '');
 const PAPEL = MEDIA === 'print';
 
 const ROTAS_PADRAO = [
-  '/', '/cursos', '/aprender-lga', '/pamosii', '/ouvir', '/dicionario', '/professores',
+  '/', '/cursos', '/aprender-lga', '/pamosii', '/ouvir', '/transcrever', '/dicionario', '/professores',
   '/biblioteca', '/biblia', '/biblia/genesis-1', '/evangelismo', '/colher', '/validar',
   '/cobertura', '/alfabeto', '/marcar', '/fora', '/sobre', '/contacto',
 ];
@@ -145,7 +145,9 @@ const SONDA = `function (cfg) {
   const areaDe = el => {
     if (el.tagName === 'LABEL' && el.htmlFor) {
       const c = document.getElementById(el.htmlFor);
-      if (c) return { el, r: c.getBoundingClientRect(), alvo: c };
+      /* quando o controlo vive DENTRO do label (ex.: escolher ficheiro), clicar em
+         qualquer ponto do label abre o seletor: o alvo é o label, não a caixinha */
+      if (c) return { el, r: (el.contains(c) ? el : c).getBoundingClientRect(), alvo: c };
     }
     if (/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) {
       const l = el.closest('label');

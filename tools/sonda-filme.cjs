@@ -149,6 +149,22 @@ const SRT = '1\n00:00:01,000 --> 00:00:02,500\nBom dia!\n\n'
   + '2\n00:00:03,000 --> 00:00:04,200\n<i>Onde fica</i> a escola?\n\n'
   + '3\n00:00:05,000 --> 00:00:06,000\n{\\an8}Eu quero água.\n';
 
+const ASS = [
+  '[Script Info]',
+  'Title: Teste',
+  'ScriptType: v4.00+',
+  '',
+  '[V4+ Styles]',
+  'Format: Name, Fontname, Fontsize, PrimaryColour',
+  'Style: Default,Arial,20,&H00FFFFFF',
+  '',
+  '[Events]',
+  'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
+  'Comment: 0,0:00:07.00,0:00:08.00,Default,,0,0,0,,nao entra',
+  'Dialogue: 0,0:00:01.00,0:00:03.50,Default,,0,0,0,,{\\an8}Bom dia, sogra!',
+  'Dialogue: 0,0:00:04.00,0:00:06.00,Default,,0,0,0,,Onde fica a escola?\\NÉ já ali.',
+].join('\n');
+
 (async () => {
   const perfil = fs.mkdtempSync(path.join(os.tmpdir(), 'pamosii-filme-'));
   const chrome = spawn(CHROME, [
@@ -234,6 +250,30 @@ const SRT = '1\n00:00:01,000 --> 00:00:02,500\nBom dia!\n\n'
       && cues.textos[1] === 'Onde fica a escola?' && cues.textos[2] === 'Eu quero água.'
       && cues.ini[0] === 1 && cues.ini[2] === 5, cues.textos.join(' | '));
     tem('o .vtt também é lido', cues.vtt === 1 && cues.vttT === 'Oi', cues.vtt + ' ' + cues.vttT);
+
+    /* --- .ass/.ssa: a secção [Events], com tags de estilo e \N --- */
+    const ass = JSON.parse(await avaliar(`(function(){
+      var c = ovParseLegendas(${JSON.stringify(ASS)});
+      return JSON.stringify({n:c.length, t:c.map(function(x){return x.texto;}), ini:c.map(function(x){return x.ini;})});
+    })()`));
+    tem('o .ass é lido na secção [Events] e as tags de estilo saem', ass.n === 2
+      && ass.t[0] === 'Bom dia, sogra!' && ass.t[1] === 'Onde fica a escola? É já ali.'
+      && ass.ini[0] === 1 && ass.ini[1] === 4, JSON.stringify(ass));
+
+    /* --- .srt antigo em Windows-1252: Água e café. com bytes Latin-1 --- */
+    const antigo = await avaliar(`new Promise(function(res){
+      var bytes = new Uint8Array([49,10,48,48,58,48,48,58,48,49,44,48,48,48,32,45,45,62,32,48,48,58,48,48,58,48,50,44,48,48,48,10,193,103,117,97,32,101,32,99,97,102,233,46,10]);
+      ovLerFicheiro(new File([bytes], 'antigo.srt', {type:'text/plain'}),
+        function(t){ res(t); }, function(e){ res('ERRO ' + e); });
+    })`);
+    const antigoCues = JSON.parse(await avaliar(`JSON.stringify(ovParseLegendas(${JSON.stringify(antigo)}))`));
+    tem('um .srt em Windows-1252 lê-se com os acentos certos',
+      /Água e café\./.test(antigo) && antigoCues.length === 1, antigo);
+    tem('os campos de legenda aceitam .ass e .ssa',
+      await avaliar(`/\\.ass/.test(document.querySelector('#ov-ficheiros').getAttribute('accept'))
+        && /\\.ass/.test(document.querySelector('#ov-legenda').getAttribute('accept'))`));
+    tem('a abertura já diz que as legendas podem vir dentro do filme',
+      await avaliar(`/dentro do ficheiro/.test(document.querySelector('#ov-fonte').textContent)`));
 
     /* --- a estrutura do MP4 --- */
     const detectado = JSON.parse(await avaliar(`${CAIXAS}
@@ -369,6 +409,28 @@ const SRT = '1\n00:00:01,000 --> 00:00:02,500\nBom dia!\n\n'
       await avaliar(`/Legendas queimadas na imagem/.test(document.body.textContent)`));
     tem('e explica porquê (OCR, sem adivinhar)',
       await avaliar(`/reconhecimento óptico de caracteres/.test(document.body.textContent)`));
+
+    /* --- «Esquecer os ficheiros»: o vídeo sai da memória do separador --- */
+    await avaliar(`document.querySelector('#ov-esquecer').click()`);
+    await dormir(400);
+    const limpo = JSON.parse(await avaliar(`JSON.stringify({
+      cues: ovEstado.cues.length,
+      v: document.querySelector('#ov-video-nome').textContent,
+      l: document.querySelector('#ov-legenda-nome').textContent,
+      escondido: document.querySelector('#ov-player').hidden,
+      src: document.querySelector('#ov-player').getAttribute('src'),
+      fonte: document.querySelector('#ov-fonte').textContent,
+      pistas: document.querySelector('#ov-pistas').hidden,
+      faixa: document.querySelector('#ov-faixa-linha').hidden,
+    })`));
+    tem('«Esquecer os ficheiros» tira o vídeo e as falas do separador',
+      limpo.cues === 0 && limpo.src === null && limpo.escondido
+      && limpo.v === 'Nenhum vídeo escolhido.' && limpo.l === 'Nenhuma legenda escolhida.'
+      && limpo.pistas && limpo.faixa && /esquecidos/.test(limpo.fonte), JSON.stringify(limpo));
+    await avaliar(`document.querySelector('#ov-esquecer').click()`);
+    await dormir(200);
+    tem('sem ficheiros, o botão diz que não há nada para esquecer',
+      /Ainda não há filme nem legendas/.test(await avaliar(`document.querySelector('#ov-fonte').textContent`)));
 
     /* --- nenhum erro de consola durante tudo isto --- */
     tem('a sonda não deixou erros de consola', erros.length === 0, erros.slice(0, 3).join(' | '));

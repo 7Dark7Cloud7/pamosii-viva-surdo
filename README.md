@@ -160,6 +160,23 @@ Limite desta publicação: o leitor de legendas dentro do filme cobre MP4/MOV (I
 
 Limites honestos: a emulação "Offline" do DevTools **não bloqueia pedidos neste ambiente** (`navigator.onLine` fica `true` e os JPEGs do YouTube continuam a carregar), portanto a queda para o cache sem rede foi comprovada (a) matando o servidor local com o mesmo `sw.js` e (b) lendo as entradas do cache no host ao vivo — não por emulação. A sessão de gravação **nunca foi corrida com uma pessoa real nem com uma câmara real neste ambiente**: o que está medido acima é o cano completo com uma fonte de imagem sintética, mais o caminho de falha (câmara pendurada) no host publicado. O reconhecimento de gestos continua inexistente: depende do corpus descrito em `docs/colheita-sinais-lga.md`.
 
+**Publicação `vs86` (2026-11-02)** — o site passa a ter a pele tátil em todas as páginas, as goteiras laterais voltam ao telemóvel e nasce a folha **Transcrever voz em texto**:
+
+| Verificação | Resultado no host publicado |
+| --- | --- |
+| 14 ficheiros publicados vs. `app/` | **byte a byte iguais** (SHA-256 de cada um, depois de normalizar o fim de linha: o repo guarda LF e o Windows escreve CRLF na cópia de trabalho), incluindo os PNGs, os JSON e o ZIP da extensão — 14/14 |
+| `sw.js` e `index.html` ao vivo | `const VERSAO = 'vs86'` no `sw.js` servido e os dois `?v=vs86` no `index.html` servido; os `href`/`src` lidos no browser são exactamente `styles.css?v=vs86` e `app.js?v=vs86` |
+| `#/transcrever` no host | `node tools/sonda-transcrever.cjs --base=https://…` corrido **contra o site publicado**: **24 casos, 0 falhas, 0 erros de consola** — hora por fala, texto corrido corrigível, `.txt`/`.srt` com `00:00:00,000 --> 00:00:03,400`, «Levar aos sinais» a entregar o texto ao `#/ouvir` (com a glosa desenhada) e a chave de sessão apagada, nada da transcrição guardado ao sair, 320 px sem scroll lateral, e o atalho do Signer **escondido nesta rota** para não tapar o microfone (volta a aparecer nas outras páginas) |
+| `#/ouvir` no host (regressão) | `node tools/sonda-filme.cjs --base=https://…`: **38 casos, 0 falhas** — faixas `tx3g`/`mov_text` lidas de dentro do filme, `.ass`/`.ssa`, pasta/lote e «esquecer os ficheiros» continuam a funcionar |
+| 20 rotas no host | `node tools/auditoria-visual.cjs --base=https://…` corrido **contra o site publicado**, nas duas larguras: **320×640 → 20 rotas, 0 com problemas** e **1366×900 → 20 rotas, 0 com problemas**. A verificação da goteira lateral de 22 px é a desta publicação, porque o `padding` em *shorthand* do `.page-head` apagava-a no telemóvel (o `<h1>` encostava-se à borda em todas as páginas) |
+| Service worker | `activo` e `controlado` com scope `…/pamosii-viva-surdo/`; caches **só** `casulo-vs86` (as da publicação anterior já não existem) |
+| Casulo sem rede no host | **13 entradas / 721.598 B** — as chaves lidas na `Cache API` (`/`, `index.html`, `styles.css?v=vs86`, `app.js?v=vs86`, `manifest.webmanifest` e 8 `assets/`) com os bytes servidos por cada uma (`vs83` tinha 690.328 B; os **+31.270 B** são a folha de transcrição e a pele tátil) |
+| Instalável no host | `manifest.webmanifest` servido: nome «Agatha Viva Surdo — Língua Gestual Angolana», `display: standalone`, `start_url: ./`, 3 ícones (192, 512 e *maskable* 512) |
+| `<title>` no host | «Agatha Viva Surdo — Aprender, ensinar e comunicar em Língua Gestual Angolana» |
+| Consola no host publicado | **zero** mensagens nas duas sondas acima (24 + 38 casos corridos no host, cada carga a vigiar a consola) |
+
+Incidente desta publicação, registado para a equipa não repetir o diagnóstico: depois do `git push` (commit `cd4bf15`), o GitHub Pages respondeu durante ~7 h **«There isn't a GitHub Pages site here»** em todos os caminhos, apesar de o `deploy` da Action estar `success`, o *deployment* `7486982852` apontar para o commit certo, `raw.githubusercontent.com` a servir o `sw.js` de `vs86` e o outro site do mesmo ecrã (o de referência) a responder `200`. Não era cache intermédia: os `404` passaram de `x-origin-cache: HIT` com `Age` alto a `MISS` com `Age: 0` e continuaram `404`. Um `commit --allow-empty` para forçar rebuild (`1c7c5b8`) também não o resolveu de imediato; **o site voltou a responder `200` sozinho**, e é o estado acima medido depois de voltar. Nada de credenciais foi tocado neste processo (a identidade do commit vai sempre `-c user.name=`/`-c user.email=` **no comando**; nunca se corre `git config` neste projecto).
+
 ### Actualizar o site publicado
 
 ```bash
@@ -253,7 +270,8 @@ Fora do repositório de trabalho: `.deploy-gh/` é o clone ligado ao repo public
 | `#/dicionario`    | Dicionário LGA                | Glossário pesquisável português → tema → aula onde o sinal é ensinado; estado de validação em cada entrada |
 | `#/alfabeto`      | Alfabeto manual (datilologia) | As 26 letras com o estado de cada uma (confirmada / a validar / sem registo), a aula real do Abecedário, soletração com controlo de velocidade e treino da ordem, e **folha A–Z imprimível** numa só página de A4 com linhas pautadas para apontar a forma |
 | `#/pamosii`       | Pamosii (português ↔ LGA)     | As quatro direcções em atalhos + frases de exemplo; glosa de uma ou várias frases com vídeo e glifo animado por sinal, barra de cobertura e alfabeto manual para o que não tem sinal; ditado por voz; construção de sequência de sinais → frase escrita e falada; módulo de câmara para gravar e rever o próprio sinal |
-| `#/ouvir`         | Ouvir e ver → sinais           | Ditar ao microfone (ditado por voz do browser) e ver a glosa contínua, ou escolher um vídeo/filme local + legendas `.srt`/`.vtt` e acompanhar a glosa da fala que está a tocar; painel explícito do que ainda não há |
+| `#/ouvir`         | Ouvir e ver → sinais           | Ditar ao microfone (ditado por voz do browser) e ver a glosa contínua, ou escolher um filme e deixar o site ler as legendas de dentro do MP4/MOV ou o `.srt`/`.vtt`/`.ass` ao lado, com a glosa da fala que está a tocar; painel explícito do que ainda não há, e «Esquecer os ficheiros» para limpar a memória do separador |
+| `#/transcrever`   | Transcrever voz em texto      | Folha de ditado com hora por fala: o serviço de ditado do browser escreve, o site guarda cada frase com o minuto em que começou, deixa editar, apagar falas uma a uma, copiar e descarregar `.txt` e `.srt` (com a lista de falas e horas), e enviar o texto para a glosa do `#/ouvir`. Não grava áudio, não tem servidor e diz na página que a transcrição automática erra e não é tradução para LGA |
 | `#/professores`   | Professores — planeador de aula | Monta um plano de 30/45/60/90 min a partir das 17 aulas reais e do dicionário, com o estado de cada sinal à vista; checklist de preparação, copiar, descarregar e **imprimir** o plano numa folha A4 sem interface à volta. Recursos que ainda não há ficam "Em breve" |
 | `#/biblioteca`    | Biblioteca                    | Pesquisável; itens reais (vídeos) + itens planeados "Em breve" |
 | `#/biblia`        | Bíblia                        | Passagens reais (Almeida, domínio público) em texto, leitura em voz alta e **glosa de sinais versículo a versículo**; `#/biblia/:chave` abre uma passagem (`genesis-1`, `joao-3-16`, `salmos-23`, `marcos-7-31`) |
@@ -267,7 +285,7 @@ Fora do repositório de trabalho: `.deploy-gh/` é o clone ligado ao repo public
 | `#/sobre`         | Sobre                         | Missão, modelo (fontes públicas), reconhecimento com atribuição de fonte, valores |
 | `#/contacto`      | Contacto                      | Apenas canais verificados: Facebook, Instagram, YouTube + playlist |
 
-A rota antiga `#/catalogo` redirecciona para `#/cursos`. Além destas 21 vistas registadas, há dois widgets que não são rotas: o **Agatha Signer** (botão flutuante presente em todas as páginas) e o **painel de acessibilidade**.
+A rota antiga `#/catalogo` redirecciona para `#/cursos`. Além destas 22 vistas registadas, há dois widgets que não são rotas: o **Agatha Signer** (botão flutuante presente em todas as páginas, menos na folha de transcrição, onde tapava o microfone) e o **painel de acessibilidade**.
 
 ---
 
@@ -541,7 +559,9 @@ A resposta honesta ao pedido «falo, escreve e mostra-me os sinais» e «tenho u
 
 **Modo 1 — ditado contínuo.** Quem transcreve o áudio é o **ditado por voz do próprio browser** (`SpeechRecognition`: Chrome/Edge, e com internet, porque é o serviço do browser que transcreve). O site **não grava som, não tem `getUserMedia` nesta página, não envia nada a lado nenhum e não guarda o texto ditado em `localStorage`**. O microfone liga com um toque e desliga-se ao sair da rota (`ovSair()` no `render()`), há contador de segundos, e o ditado aparece sempre **editável**, com o aviso de que a transcrição automática erra (nomes, números, sotaque). Cada frase final vai para o mesmo motor de glosa do Pamosii e entra no painel ao vivo (últimas 8 frases), com atalho para o Signer. Se o cursor estiver dentro do campo de texto, a frase ditada é **juntada ao que a pessoa escreveu** (`ovJuntarFrase()`) em vez de a substituir — perder ditado por causa do foco seria a pior avaria possível aqui.
 
-**Modo 2 — vídeo ou filme com legendas.** A pessoa escolhe, no próprio aparelho, o filme e as legendas — no mesmo gesto (`multipart`, aceita filmes e `.srt`/`.vtt` juntos), por uma pasta inteira, ou arrastando os ficheiros para o painel. O site emparelha a legenda com o filme **pelo nome** (título, ano, idioma: entre `Filme.2019.pt-PT.srt` e `Filme.2019.en.srt` escolhe a portuguesa) e avisa qual escolheu. O parser lê as cues, mostra a fala que está a tocar e faz a glosa dela com o glossário; há navegação de fala em fala, saltar para a cue seguinte em paralelo com o vídeo, e o resumo de cobertura.
+**Modo 2 — vídeo ou filme com legendas.** A pessoa escolhe, no próprio aparelho, o filme e as legendas — no mesmo gesto (`multipart`, aceita filmes e `.srt`/`.vtt`/`.ass`/`.ssa` juntos), por uma pasta inteira, ou arrastando os ficheiros para o painel. O site emparelha a legenda com o filme **pelo nome** (título, ano, idioma: entre `Filme.2019.pt-PT.srt` e `Filme.2019.en.srt` escolhe a portuguesa) e avisa qual escolheu. O parser lê as cues, mostra a fala que está a tocar e faz a glosa dela com o glossário; há navegação de fala em fala, saltar para a cue seguinte em paralelo com o vídeo, e o resumo de cobertura.
+
+**Formatos e codificações que não se vêem.** O `.ass`/`.ssa` é lido pela secção `[Events]` (uma linha `Dialogue` por fala; `Comment` fica de fora; as tags `{\an8}`/estilo saem e `\N` vira espaço). Um `.srt` antigo gravado em **Windows-1252** — o que acontece com muitas legendas portuguesas — é descodificado em UTF-8 e, se aparecerem caracteres partidos, relido nessa codificação, para os acentos não saírem como `Ã©`. Tudo continua a acontecer no aparelho, sem servidor. O botão **«Esquecer os ficheiros»** tira o vídeo e as falas da memória do separador sem obrigar a escolher outro; é a mesma promessa de privacidade, com uma saída à mão.
 
 **A legenda pode vir de dentro do filme.** Para MP4 e MOV, o site lê o índice do contentor (ISO-BMFF: `moov`/`trak`/`stbl`, tabelas `stts`/`stsz`/`stsc`/`stco`) e extrai as amostras `tx3g` (legendas mov_text) — o Chrome **não expõe essa faixa** em `video.textTracks` (medido: `length === 0` num ficheiro com faixa de legendas), por isso é o site que a lê e a escreve na lista, com as horas de cada fala; não é preciso `.srt`. Em WebM/Ogg a faixa aparece em «Faixa de legendas dentro do filme» quando o browser a expõe. Ficheiros MKV e AVI têm aviso próprio (o Chrome não os reproduz / abre poucos) e, quando há uma faixa de legendas mas o filme não abre, o painel diz que o problema costuma ser o codec (HEVC/H.265, AC-3). Legendas **queimadas na imagem** não são lidas: exigem OCR fotograma a fotograma e isso está no painel «O que ainda não há». É instantâneo mesmo num filme de duas horas e funciona sem internet, porque **as legendas já são texto transcrito por pessoas** — o site só traduz para glosa, não ouve som. Os ficheiros ficam na memória do separador e desaparecem ao sair.
 
@@ -554,6 +574,20 @@ A resposta honesta ao pedido «falo, escreve e mostra-me os sinais» e «tenho u
 | Avatar que faça LGA fluida | os glifos são ilustrações de estudo; nenhum avatar imita a cara, voz ou estilo de uma pessoa real sem autorização escrita prévia, e as pessoas que sinalizam têm de ser pagas. |
 
 Regras verificadas por `tools/integridade-test.cjs`: nenhuma frase desta página pode afirmar que o site traduz fala para LGA; a página tem de manter «não grava som», o aviso de transcrição errável, os `role="status"`, o `type="file"`, as mensagens de erro do microfone (`OV_ERROS`) e os estados «Em breve»; e `ovSair();` tem de continuar no `render()`, para o microfone e o vídeo não passarem para a página seguinte.
+
+---
+
+## Transcrever voz em texto (`#/transcrever`)
+
+A folha de ditado que faltava para quem usa o `#/ouvir` como bloco de notas. Usa o **mesmo ditado do browser** (`SpeechRecognition`, Chrome/Edge com internet) e não acrescenta nenhum serviço: o site não grava áudio, não tem servidor e não guarda o texto em `localStorage`. A diferença está no que faz com o texto — em vez de o deitar fora ao mudar de rota, organiza-o como uma transcrição de trabalho.
+
+**O que a folha faz.** Cada frase final entra na lista com a **hora aproximada em que começou** (relógio da sessão, `m:ss`), e o texto corrido ao lado recebe a mesma frase, editável. O ditado **continua depois de uma pausa** (volta a ligar até quatro silêncios seguidos; ao quinto para e diz porquê), o botão muda de «Começar a transcrever» para «Parar» e o tempo da sessão corre no ecrã. Uma fala pode ser **apagada** da lista — e a frase correspondente sai também do texto corrido, com o aviso de que a revisão manual continua a ser necessária se o texto foi editado.
+
+**O que sai.** «Copiar» leva o texto corrido; «.txt» descarrega `agatha-transcricao.txt` com o texto, a lista numerada de falas com horas e os dois avisos (transcrição automática erra; não é tradução para LGA); «.srt» descarrega `agatha-transcricao.srt` com as falas em `hh:mm:ss,mmm`, pronto para legendar um vídeo. **«Levar aos sinais»** entrega o texto ao `#/ouvir` por `sessionStorage`, uma só vez (a chave `agatha.transcrever` é lida e apagada), onde a glosa já aparece desenhada — o passo seguinte do mesmo fluxo, sem copiar e colar.
+
+**Limites ditos na página.** Um ficheiro de áudio ou de vídeo não é transcrito (só o microfone); LGA → texto pela câmara não existe; e a transcrição **não é tradução automática** para LGA — é texto em português para rever. O microfone só abre em `https://` ou em `127.0.0.1`, e em telemóvel o dito vai para o serviço do browser, não para a Viva Surdo.
+
+**Regressão.** `tools/sonda-transcrever.cjs` injeta duas falas, confere horas, contagem, estado vazio, exportações .txt/.srt, apagar uma fala, limpar, a passagem ao `#/ouvir` (hash, campo preenchido, glosa desenhada, chave de sessão apagada, estado da transcrição limpo ao sair), e que a 320 px não há scroll lateral. Confirma também que o atalho flutuante do Signer **não** aparece nesta rota (tapava o botão do microfone) e volta nas outras.
 
 ---
 
@@ -656,7 +690,31 @@ Ajustar, se necessário, o bloco `.brand` em `styles.css`. Nada mais precisa de 
 
 ---
 
-## O que funciona de verdade vs. o que está deliberadamente pendente
+## Pele tátil — a mesma linguagem visual em todas as páginas
+
+O site tinha a fachada pública (herói, faixas, cartões) num registo e as páginas de trabalho (Pamosii, Ouvir, Colheita, Professores, Transcrever…) noutro: botões sem relevo, caixas de contorno fino, cartões que não se distinguiam do fundo. A **secção 26 de `styles.css` («PELE TÁTIL»)** unifica os dois com dois tokens e uma regra de espessura:
+
+```css
+:root{--depth:0 4px 0 var(--line); --depth-sm:0 2px 0 var(--line-soft)}
+[data-tema-escuro]{--depth:0 4px 0 #06110D;--depth-sm:0 2px 0 #06110D}
+[data-contraste-alto]{--depth:none;--depth-sm:none}
+```
+
+- **Fio de 2 px** (`border-width:2px`) em cartões, filtros, etiquetas, campos e `select`/`textarea`, em `--line`, em vez do contorno fino de antes;
+- **Sombra sólida deslocada para baixo, sem desfoque** (`0 2px 0`, `0 4px 0`): é o que dá o aspeto de autocolante/peça física, e vem da mesma mão dos botões da secção 25 (`.btn{box-shadow:0 3px 0 …}`, `.btn:active{transform:translateY(3px);box-shadow:none}` — o botão **afunda** ao toque, por isso o toque se vê e não só se sente);
+- **Escolhido = assente**: o filtro com `aria-pressed="true"` e a aba com `aria-current="page"` passam a `0 1px 0 var(--teal-deep)` com `translateY(1px)`;
+- **Anel de foco igual em toda a parte**: `border-color:var(--teal)` mais `outline:3px solid var(--focus)` com `outline-offset:2px` em todos os campos de texto, `textarea` e `select` do site — procura, colheita, marcação, velocidade do Alfabeto e da Bíblia, faixa de legendas;
+- **Mesmo ritmo nos títulos**: `.page-head h1{letter-spacing:-.3px}` e o chumbo do `.lead`, para as 20 rotas abrirem da mesma maneira.
+
+Três decisões que não são cosméticas:
+
+1. **O relevo desliga-se no contraste alto** (`--depth:none`). Ali a sombra seria decoração a mais sobre fundos preto/branco puros e baixaria o contraste dos contornos; o fio de 2 px mantém-se. Escuro e claro herdam-no com a cor de cada tema.
+2. **Tudo dentro de `@media screen`.** No papel (`@media print`, secção 25) nada disto se imprime — a sombra sólida sairia como mancha cinzenta por cima do preto sobre branco a que o plano de aula e as folhas A–Z/colheita são convertidos.
+3. **Nenhum estado depende só do relevo.** O chip escolhido também muda de cor e de `aria-pressed`, o botão afundado mantém o rótulo, a sombra é reforço, não código (WCAG 1.4.1). E o relevo não anima sozinho: a opção «movimento reduzido» do painel corta `animation`/`transition` em todos os elementos (`[data-movimento-reduzido] *`, linhas 108–110 de `styles.css`), por isso o pulso do microfone em `#/transcrever`, os `translateY` dos cartões e o afundar dos botões ficam estáticos quando pedidos — o fio de 2 px e a sombra continuam visíveis, que é o que importa para reconhecer a família.
+
+Ficam de fora, de propósito: o texto corrido, os quadros de vídeo do YouTube e as folhas de impressão. A verificação continua a ser a auditoria de layout nas 20 rotas nos dois tamanhos de janela, mais as sondas por página — nenhuma delas aceita overflow, alvos abaixo do mínimo ou quebra de contraste.
+
+---
 
 ### Implementado e funcional
 - Navegação completa entre as 18 páginas do menu: no telemóvel os quatro destinos principais vivem numa **barra fixa no fundo do ecrã** (tipo app) e o 5.º botão, "Mais", abre o mesmo menu completo; em tablet/desktop a barra de topo mostra os **12 rótulos não-`extra`** (Início, Cursos, Aprender, Alfabeto, Pamosii, Ouvir, Dicionário, Professores, Biblioteca, Bíblia, Sobre, Contacto — medidos a 1281/1366/1440px: 1 linha, 68px, 22px de folga), e os seis itens de trabalho (`extra`: Evangelismo, Colheita, Validação, Cobertura, Marcação, Fora deste site) ficam no painel "Mais"/hambúrguer, onde continuam acessíveis em qualquer largura. `styles.css` esconde os `.nav-extra` **só** acima de 1280px — nada fica inacessível no telemóvel. Tudo operável por teclado. O item "Pamosii" da barra inferior usa o **boneco do Signer** em vez de um ícone genérico, parado (um ícone em movimento na navegação distraía do próprio Signer).
@@ -710,7 +768,7 @@ node tools/integridade-test.cjs      # lê app.js/index.html/sw.js/extension e f
 node tools/ingerir-colheita.cjs tools/exemplos/sessoes-exemplo.jsonl --dry-run
 node tools/ingerir-validacoes.cjs tools/exemplos/validacoes-exemplo.jsonl --dry-run
 node tools/auditoria-visual.cjs      # abre o Chrome instalado em headless (CDP, sem dependências)
-                              # e mede as 19 rotas: scroll horizontal, alvos <24px e contraste
+                              # e mede as 20 rotas: scroll horizontal, alvos <24px e contraste
                               # (<4,5:1, ou 3:1 em texto grande). Flags: --rotas=/validar,/colher,
                               # --largura=, --altura=, --escala=150, --tema=claro|escuro|alto,
                               # --pre=<expressão JS> (abre um painel escondido antes de medir),
@@ -739,6 +797,11 @@ node tools/sonda-cobertura.cjs --porta=5309
                               # lacunas, impressão a chamar window.print() uma vez, mudança de tema a
                               # redesenhar a folha e a região viva, e no papel: cabe numa A4, texto
                               # preto, células de escrita ≥20px, e o zoom a 150% não a estoura)
+node tools/sonda-transcrever.cjs --porta=5310
+                              # a folha do #/transcrever no Chrome por CDP: 24 casos
+                              # (duas falas injetadas com horas, texto corrido, contagem, estado
+                              # vazio, .txt/.srt, apagar uma fala, limpar, a entrega ao #/ouvir com
+                              # a chave de sessão apagada, o Signer fora desta rota, e 320px)
 node tools/serve.cjs        # http://127.0.0.1:8123 — URL estável usado nestes testes
 ```
 

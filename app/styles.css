@@ -405,7 +405,9 @@ select{font-family:var(--font-b);font-size:14.5px;min-height:44px;min-width:0;pa
 select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 
 /* ---------- página genérica de conteúdo ---------- */
-.page-head{padding:46px 0 10px}
+/* top/bottom em longhand: o .page-head partilha o elemento com o .wrap, e um shorthand
+   aqui apagava as goteiras laterais de 22px em todas as páginas */
+.page-head{padding-top:46px;padding-bottom:10px}
 .page-head h1{margin-bottom:10px}
 .page-head .lead{font-size:17px;color:var(--muted);max-width:64ch}
 .crumbs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13.5px;font-weight:600;color:var(--muted);
@@ -1159,7 +1161,7 @@ select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
   .hero-in{gap:18px;padding:30px 0 40px}
   .hero-art svg{width:min(210px,58%)}
   .section{padding:34px 0}
-  .page-head{padding:30px 0 8px}
+  .page-head{padding-top:30px;padding-bottom:8px}
   .foot-bottom{font-size:13.5px}
   /* os links do rodapé são o mapa do site no telemóvel: 44px de área de toque */
   .foot-list a{min-height:44px;min-width:44px}
@@ -1237,6 +1239,9 @@ select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 .sg-fab[aria-expanded="true"]{background:var(--amber);color:var(--teal-dark)}
 /* com o painel aberto o botao sai de cena: no telemovel ficava por cima do fecho */
 html.sg-on .sg-fab{display:none}
+/* na folha de transcrição o microfone ocupa o mesmo canto no telemóvel: o atalho do
+   Signer tapava o «Começar a transcrever». A página tem o seu próprio envio para sinais. */
+html.tr-rota .sg-fab{display:none}
 .sg-painel{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:170;
   width:min(430px,calc(100vw - 32px));max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);
   overflow-y:auto;overscroll-behavior:contain;background:var(--paper);color:var(--ink);
@@ -2062,8 +2067,8 @@ html.emb #sg-pagina,html.emb #sg-aponta,html.emb #sg-aponta-aviso{display:none}
 .ov-interim{margin:6px 0 0;min-height:22px;font-size:14.5px;font-style:italic;line-height:1.5;color:var(--teal-deep);
   overflow-wrap:anywhere}
 .ov-escolhas{display:grid;gap:8px;margin:14px 0 0}
-.ov-file{display:block;font-weight:700;font-size:13.5px;color:var(--ink-soft);border:1.5px dashed var(--line);
-  border-radius:12px;padding:10px 12px;background:var(--cream)}
+.ov-file{display:flex;flex-direction:column;justify-content:center;min-height:44px;font-weight:700;font-size:13.5px;
+  color:var(--ink-soft);border:1.5px dashed var(--line);border-radius:12px;padding:10px 12px;background:var(--cream)}
 .ov-file input[type="file"]{display:block;width:100%;min-width:0;margin-top:8px;font:inherit;font-size:13.5px;
   color:var(--muted)}
 .ov-nome{margin:0;font-size:13px;overflow-wrap:anywhere}
@@ -2370,6 +2375,141 @@ html.emb #sg-pagina,html.emb #sg-aponta,html.emb #sg-aponta-aviso{display:none}
    e cada link externo ganha o URL escrito — numa folha não se clica.
    ============================================================================ */
 @page{margin:14mm}
+/* ============================================================================
+   26. PELE TÁTIL — a mesma linguagem em todas as páginas.
+   Fio de 2 px, sombra sólida curta e botões que descem ao toque (como um
+   autocolante). As cores continuam a ser as da Viva Surdo; muda só a espessura
+   e o relevo, para que cartões, campos e filtros se reconheçam como a mesma
+   família em qualquer rota — e nos três temas.
+   ============================================================================ */
+:root{
+  --depth:0 4px 0 var(--line);
+  --depth-sm:0 2px 0 var(--line-soft);
+}
+[data-tema-escuro]{--depth:0 4px 0 #06110D;--depth-sm:0 2px 0 #06110D}
+[data-contraste-alto]{--depth:none;--depth-sm:none}
+
+@media screen{
+  /* --- cartões: o mesmo fio em todos os painéis --- */
+  .aud-card,.ccard,.vcard,.res-card,.lib-item,.fact-card,.val-card,.chan-card,.side-box,.step,
+  .dic-grupo,.pm-sent,.pm-card,.pm-col,.pm-cam,.bib-leitor,.bib-vlibras,.bib-stats,.bib-dia,
+  .prof-bloco,.ov-modo,.ov-cue,.ov-agora,.cov-cards li,.ev-card,.ev-verso-card,.tr-card{
+    border-width:2px;border-color:var(--line);box-shadow:var(--depth-sm);
+  }
+  .aud-card,.ccard,.lib-item,.res-card,.ev-card,.cov-cards li{
+    transition:transform .15s,box-shadow .15s,border-color .15s;
+  }
+  .aud-card:hover,.ccard:hover,.lib-item:hover,.res-card:hover,.ev-card:hover{
+    transform:translateY(-2px);box-shadow:var(--depth);border-color:var(--line-strong,var(--line));
+  }
+
+  /* --- filtros e etiquetas: o mesmo fio, e o escolhido fica assente --- */
+  .chip,.f-chip,.theme-nav a,.soon,.see-all,.tab{border-width:2px}
+  .f-chip,.theme-nav a{box-shadow:var(--depth-sm)}
+  .f-chip[aria-pressed="true"],.theme-nav a[aria-current="page"]{
+    box-shadow:0 1px 0 var(--teal-deep);transform:translateY(1px);
+  }
+  .chip{box-shadow:none}
+
+  /* --- campos: fundo de papel, fio de 2 px e anel de foco igual em toda a parte --- */
+  .f-field input[type="search"],.f-field input[type="text"],.f-field textarea,
+  .ch-campo input,.ch-campo textarea,.ch-campo select,
+  .mk-campo input,.mk-campo select,.cov-ac select,.alf-vel select,.bib-vel select,
+  .ov-faixa select,select,textarea{
+    border-width:2px;border-color:var(--line);background:var(--surface);
+  }
+  .f-field input[type="search"]:hover,.f-field input[type="text"]:hover,.f-field textarea:hover,
+  .ch-campo input:hover,.ch-campo textarea:hover,.ch-campo select:hover,
+  .mk-campo input:hover,.mk-campo select:hover,select:hover,textarea:hover{border-color:var(--line-strong,var(--teal))}
+  .f-field input[type="search"]:focus-visible,.f-field input[type="text"]:focus-visible,
+  .f-field textarea:focus-visible,.ch-campo input:focus-visible,.ch-campo textarea:focus-visible,
+  .ch-campo select:focus-visible,.mk-campo input:focus-visible,.mk-campo select:focus-visible,
+  textarea:focus-visible,select:focus-visible{
+    border-color:var(--teal);outline:3px solid var(--focus);outline-offset:2px;
+  }
+
+  /* --- títulos de página: o mesmo ritmo em todas as rotas --- */
+  .page-head h1{letter-spacing:-.3px}
+  .page-head .lead{color:var(--ink-soft)}
+  .sec-head h2{letter-spacing:-.2px}
+
+  /* ==========================================================================
+     TRANSCRIÇÃO — `#/transcrever`
+     ========================================================================== */
+  .tr-layout{display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);gap:22px;align-items:start;margin-top:22px}
+  .tr-rec{position:sticky;top:calc(var(--head-h) + 18px)}
+  .tr-card{background:var(--paper);border-radius:var(--radius-lg);padding:22px 22px 20px}
+  .tr-card h2{font-size:19px;margin:0 0 4px}
+  .tr-card .muted{margin:0}
+  .tr-live{display:inline-flex;align-items:center;gap:8px;font-size:11.5px;font-weight:800;
+    letter-spacing:1.3px;text-transform:uppercase;color:var(--muted);margin:0}
+  .tr-live::before{content:"";width:10px;height:10px;border-radius:99px;background:var(--line);flex:none}
+  .tr-live[data-on="true"]{color:var(--teal-deep)}
+  .tr-live[data-on="true"]::before{background:var(--teal);animation:trPulso 1.35s ease-out infinite}
+  @keyframes trPulso{
+    0%{box-shadow:0 0 0 0 rgba(14,117,107,.45)}
+    70%{box-shadow:0 0 0 9px rgba(14,117,107,0)}
+    100%{box-shadow:0 0 0 0 rgba(14,117,107,0)}
+  }
+  @media (prefers-reduced-motion:reduce){.tr-live[data-on="true"]::before{animation:none}}
+  .tr-mic{width:100%;min-height:60px;font-size:16px;margin:14px 0 4px}
+  .tr-relogio{display:block;margin:10px 0 0;font-family:var(--font-h);font-size:38px;line-height:1;
+    letter-spacing:-1px;color:var(--ink);font-variant-numeric:tabular-nums}
+  .tr-relogio small{display:block;font-family:var(--font-b);font-size:12.5px;font-weight:700;
+    letter-spacing:.4px;color:var(--muted);margin-top:5px}
+  .tr-form{display:grid;gap:12px;margin-top:16px}
+  .tr-form .f-field{flex:none}
+  .tr-hint{font-size:13.5px;line-height:1.55;color:var(--ink-soft);margin:14px 0 0;
+    border-top:1.5px dashed var(--line);padding-top:12px}
+  .tr-hint strong{color:var(--ink)}
+  .tr-painel{min-width:0}
+  .tr-barra{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 12px}
+  .tr-barra .tr-count{margin-left:auto;font-size:13px;font-weight:700;color:var(--muted)}
+  .tr-segs{list-style:none;margin:0;padding:0;display:grid;gap:8px;min-height:70px}
+  .tr-seg{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:start;
+    padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--surface);
+    box-shadow:var(--depth-sm)}
+  .tr-seg time{font-family:var(--font-b);font-size:12px;font-weight:800;color:var(--teal-deep);
+    background:var(--teal-tint);border-radius:7px;padding:3px 7px;white-space:nowrap;margin-top:2px}
+  .tr-seg p{margin:0;font-size:15px;line-height:1.55;overflow-wrap:anywhere}
+  .tr-del{width:38px;height:38px;min-height:38px;padding:0;border:2px solid var(--line);border-radius:10px;
+    background:var(--surface);color:var(--muted);display:grid;place-items:center;cursor:pointer}
+  .tr-del:hover{border-color:var(--teal);color:var(--teal-deep);background:var(--teal-tint)}
+  .tr-del .ic{width:16px;height:16px}
+  .tr-empty{border:2px dashed var(--line);border-radius:14px;padding:26px 18px;text-align:center;
+    color:var(--muted);font-size:14px;line-height:1.6;background:var(--surface-soft)}
+  .tr-empty .ic{width:26px;height:26px;display:block;margin:0 auto 8px;color:var(--teal)}
+  .tr-interim{min-height:24px;margin:10px 2px 0;font-size:14.5px;line-height:1.5;color:var(--muted);
+    font-style:italic;overflow-wrap:anywhere}
+  .tr-interim:empty{display:none}
+  .tr-texto{width:100%;font:inherit;font-size:16px;line-height:1.6;padding:13px 15px;min-height:150px;
+    border:2px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);resize:vertical}
+  .tr-acoes{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}
+  .tr-nota{margin:12px 0 0;font-size:13px;line-height:1.55;color:var(--muted)}
+  .tr-status{min-height:22px;margin:10px 0 0;font-size:13.5px;line-height:1.5;color:var(--ink-soft)}
+  .tr-fallback{margin:12px 0 0;padding:13px 14px;border:2px dashed var(--amber-line);border-radius:12px;
+    background:var(--amber-soft);color:var(--ink-soft);font-size:13.5px;line-height:1.55}
+  .tr-fallback strong{color:var(--amber-ink)}
+  .tr-folha{margin-top:18px}
+  .tr-folha h2{font-size:18px;margin:0 0 6px}
+  .tr-folha .src{margin-top:10px}
+  @media (max-width:900px){
+    .tr-layout{grid-template-columns:minmax(0,1fr)}
+    .tr-rec{position:static}
+    .tr-relogio{font-size:32px}
+  }
+  @media (max-width:420px){
+    .tr-card{padding:18px 16px}
+    .tr-seg{grid-template-columns:auto minmax(0,1fr);}
+    .tr-del{grid-column:2;justify-self:end;width:36px;height:36px}
+  }
+  [data-contraste-alto] .tr-card,[data-contraste-alto] .tr-seg,[data-contraste-alto] .tr-texto,
+  [data-contraste-alto] .tr-del{background:#fff;color:#000;border-color:#000}
+  [data-contraste-alto] .tr-seg time{background:#000;color:#fff}
+  [data-contraste-alto] .tr-live[data-on="true"]{color:#000}
+  [data-contraste-alto] .tr-fallback{background:#fff;color:#000;border-color:#000}
+}
+
 @media print{
   :root,[data-tema-escuro],[data-contraste-alto]{
     --ink:#000;--ink-soft:#111;--muted:#333;--teal:#0B5D55;--teal-deep:#08423D;--teal-dark:#000;
