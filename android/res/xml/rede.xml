@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Tráfego: https a qualquer alojamento; http só em loopback, para a equipa poder
+  apontar o painel para o servidor local do site durante um ensaio. Nada mais —
+  o texto que a pessoa partilha nunca passa por um canal em claro para a rede.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>

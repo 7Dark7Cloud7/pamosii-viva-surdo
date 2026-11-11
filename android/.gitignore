@@ -1,0 +1,4 @@
+# Nada disto é código: são produtos de compilação e a chave de ENSAIO.
+# A keystore gerada por build.sh serve só para testar em aparelho; não é
+# credencial de release e não entra no repositório.
+.build/

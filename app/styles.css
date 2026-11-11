@@ -2453,6 +2453,11 @@ html.emb #sg-pagina,html.emb #sg-aponta,html.emb #sg-aponta-aviso{display:none}
   }
   @media (prefers-reduced-motion:reduce){.tr-live[data-on="true"]::before{animation:none}}
   .tr-mic{width:100%;min-height:60px;font-size:16px;margin:14px 0 4px}
+  /* O painel de acessibilidade vive no canto inferior direito (60 px de largura,
+     a 12 px da borda). A 390×844 o microfone, que é colado ao topo do cartão
+     seguinte, ficava com 40×47 px desse canto por baixo do botão: carregava o
+     painel em vez de ligar o microfone. Reserva-se a coluna do botão. */
+  @media (max-width:760px){.tr-mic{width:calc(100% - 64px)}}
   .tr-relogio{display:block;margin:10px 0 0;font-family:var(--font-h);font-size:38px;line-height:1;
     letter-spacing:-1px;color:var(--ink);font-variant-numeric:tabular-nums}
   .tr-relogio small{display:block;font-family:var(--font-b);font-size:12.5px;font-weight:700;

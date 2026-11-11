@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- As mesmas cores do site (app/styles.css, :root). Nada de novo. -->
+    <color name="tinta">#22332E</color>
+    <color name="teal">#0E756B</color>
+    <color name="teal_fundo">#0A4F49</color>
+    <color name="ambar">#F7C948</color>
+    <color name="creme">#FAF6EE</color>
+    <color name="papel">#FFFFFF</color>
+    <color name="linha">#E4DCCB</color>
+</resources>

@@ -177,6 +177,24 @@ Limites honestos: a emulação "Offline" do DevTools **não bloqueia pedidos nes
 
 Incidente desta publicação, registado para a equipa não repetir o diagnóstico: depois do `git push` (commit `cd4bf15`), o GitHub Pages respondeu durante ~7 h **«There isn't a GitHub Pages site here»** em todos os caminhos, apesar de o `deploy` da Action estar `success`, o *deployment* `7486982852` apontar para o commit certo, `raw.githubusercontent.com` a servir o `sw.js` de `vs86` e o outro site do mesmo ecrã (o de referência) a responder `200`. Não era cache intermédia: os `404` passaram de `x-origin-cache: HIT` com `Age` alto a `MISS` com `Age: 0` e continuaram `404`. Um `commit --allow-empty` para forçar rebuild (`1c7c5b8`) também não o resolveu de imediato; **o site voltou a responder `200` sozinho**, e é o estado acima medido depois de voltar. Nada de credenciais foi tocado neste processo (a identidade do commit vai sempre `-c user.name=`/`-c user.email=` **no comando**; nunca se corre `git config` neste projecto).
 
+**Publicação `vs87` (2026-11-10)** — o microfone de `#/transcrever` deixa de encostar no botão do painel de acessibilidade, e a entrega passa a ter duas ferramentas novas: uma **varredura de colisões** e um **auditor de publicação** (o casulo, o worker e o manifest lidos dentro do browser em vez de afirmados):
+
+| Verificação | Resultado medido |
+| --- | --- |
+| Ficheiros alterados | **3**: `app/styles.css` (uma regra `@media`), `app/index.html` (os dois `?v=`) e `app/sw.js` (`const VERSAO`). Nada mais — nem JS de página, nem conteúdo |
+| O defeito, medido antes e depois (390×844, `#/transcrever` com a página no fim do scroll) | sem a regra o microfone media **326×60 px** e o `.a11y-btn` **60×48 px** a `x=318, y=720`; a intersecção era **40×47 px = 1 894 px²** na faixa direita do microfone. Com `@media (max-width:760px){.tr-mic{width:calc(100% - 64px)}}` o microfone passa a **262×60 px**, a intersecção é **0 px²** e sobram **24 px** de folga (a direita do microfone acaba em 294, o botão começa em 318) |
+| O que o contrafactual **não** mostra | o **centro** do microfone nunca ficou tapado (`centroTapado: false` nas duas medidas) — por isso a varredura de colisões nunca assinalou esta folha. Perdia-se o toque **no canto direito** do botão, que abria o painel em vez de ligar o microfone. A medição foi feita a reinjectar `#tr-mic{width:100%!important}` na página viva e a retirar o estilo no fim |
+| Varredura de colisões no host | `node tools/sonda-colisoes.cjs --base=https://…` em **4 configurações × 20 rotas** (390×844 claro, 320×640, 390×844 escuro, 390×844 com texto a 150%): **0 alvos com o centro tapado, 0 encostos, 0 erros de consola** em todas as 80 rotas medidas (cada rota lida duas vezes — topo e fim do scroll) |
+| Varredura de colisões local | as mesmas 4 configurações × 20 rotas em `http://127.0.0.1:8123/`: **0 / 0 / 0**, com `contentores ignorados: 20` por configuração (ver a nota abaixo) |
+| `#/transcrever` no host | `node tools/sonda-transcrever.cjs --base=https://…`: **26 casos, 0 falhas**, com a asserção da intersecção microfone/botão a ler **0 px²** |
+| Service worker e casulo no host | `activo` e `controlado`, scope `…/pamosii-viva-surdo/`, `versão do CSS bate com a do worker [vs87]`, **só** `casulo-vs87` com **13 entradas / 721 978 B**; nenhum casulo de versão anterior sobreviveu |
+| Service worker e casulo local | `casulo-vs87` **13 entradas / 733 828 B** + `externo-vs87` **3 entradas / 81 444 B**. A diferença para o host são **11 850 B**, que batem certo ao byte com `styles.css` (+2 604) e `app.js` (+9 246): o repo guarda LF e a cópia de trabalho do Windows escreve CRLF — um byte por linha, tal como já estava registado na publicação `vs86` |
+| Instalável e consola no host | `manifest.webmanifest` com nome «Agatha Viva Surdo — Língua Gestual Angolana», `display: standalone`, 3 ícones, `share_target` e 4 atalhos; título correcto; **0 erros de consola** em todas as sondas desta tabela |
+| Ficheiros publicados vs. `app/` | `index.html`, `app.js`, `styles.css`, `sw.js`, `manifest.webmanifest` servidos pelo host **byte a byte iguais** ao `app/` (SHA-256 normalizado o fim de linha): 5/5 |
+| Verificações de sempre | `node --check app/app.js` e `app/sw.js`, `tools/engine-test.cjs` e `tools/integridade-test.cjs` → **0 falhas, 0 avisos** (`22 rotas · 16 links · 5 ficheiros · versão offline vs87 · 12 claims`) |
+
+A ferramenta de colisões passou a contar *o que é* um alvo: na primeira corrida marcou 40 falhas em 20 rotas por dois falsos positivos — `#conteudo`, que tem `tabindex` e ~9 000 px de altura (o centro dele atravessa o atalho do Signer sem que alguém o vá carregar), e o `.skip`, que vive a `top:10px` com `translateY(-160%)` até receber foco, ou seja **inteiramente fora do ecrã**. Agora tudo é recortado pelo viewport, um alvo maior que o ecrã conta como contentor e um fixo recortado abaixo de 4 px não participa — e os dois casos são **impressos** (`contentores ignorados`, `fora do ecrã`), não escondidos. O auditor de publicação (`tools/sonda-casulo.cjs`) existe porque «o casulo está certo» era até agora uma frase: ele lê `getRegistration()`, `navigator.serviceWorker.controller`, o `scope`, cada cache com entradas e bytes, e compara a versão do `styles.css` servido com a do worker.
+
 ### Actualizar o site publicado
 
 ```bash
@@ -587,7 +605,7 @@ A folha de ditado que faltava para quem usa o `#/ouvir` como bloco de notas. Usa
 
 **Limites ditos na página.** Um ficheiro de áudio ou de vídeo não é transcrito (só o microfone); LGA → texto pela câmara não existe; e a transcrição **não é tradução automática** para LGA — é texto em português para rever. O microfone só abre em `https://` ou em `127.0.0.1`, e em telemóvel o dito vai para o serviço do browser, não para a Viva Surdo.
 
-**Regressão.** `tools/sonda-transcrever.cjs` injeta duas falas, confere horas, contagem, estado vazio, exportações .txt/.srt, apagar uma fala, limpar, a passagem ao `#/ouvir` (hash, campo preenchido, glosa desenhada, chave de sessão apagada, estado da transcrição limpo ao sair), e que a 320 px não há scroll lateral. Confirma também que o atalho flutuante do Signer **não** aparece nesta rota (tapava o botão do microfone) e volta nas outras.
+**Regressão.** `tools/sonda-transcrever.cjs` (26 casos) injeta duas falas, confere horas, contagem, estado vazio, exportações .txt/.srt, apagar uma fala, limpar, a passagem ao `#/ouvir` (hash, campo preenchido, glosa desenhada, chave de sessão apagada, estado da transcrição limpo ao sair), e que a 320 px não há scroll lateral. Confirma também que o atalho flutuante do Signer **não** aparece nesta rota (tapava o botão do microfone) e volta nas outras, e que a 390×844 a intersecção entre `.a11y-btn` e `#tr-mic` é **0 px²** com o microfone ainda com ≥ 60 px de alto — ver «Pele tátil», ponto 4.
 
 ---
 
@@ -711,6 +729,7 @@ Três decisões que não são cosméticas:
 1. **O relevo desliga-se no contraste alto** (`--depth:none`). Ali a sombra seria decoração a mais sobre fundos preto/branco puros e baixaria o contraste dos contornos; o fio de 2 px mantém-se. Escuro e claro herdam-no com a cor de cada tema.
 2. **Tudo dentro de `@media screen`.** No papel (`@media print`, secção 25) nada disto se imprime — a sombra sólida sairia como mancha cinzenta por cima do preto sobre branco a que o plano de aula e as folhas A–Z/colheita são convertidos.
 3. **Nenhum estado depende só do relevo.** O chip escolhido também muda de cor e de `aria-pressed`, o botão afundado mantém o rótulo, a sombra é reforço, não código (WCAG 1.4.1). E o relevo não anima sozinho: a opção «movimento reduzido» do painel corta `animation`/`transition` em todos os elementos (`[data-movimento-reduzido] *`, linhas 108–110 de `styles.css`), por isso o pulso do microfone em `#/transcrever`, os `translateY` dos cartões e o afundar dos botões ficam estáticos quando pedidos — o fio de 2 px e a sombra continuam visíveis, que é o que importa para reconhecer a família.
+4. **O que vive em cima de um alvo de toque sai da frente.** Dois casos medidos, não supostos: o atalho do Agatha Signer esconde-se em `#/transcrever` (`html.tr-rota .sg-fab{display:none}`), porque ficava por cima do «Começar a transcrever»; e o painel de acessibilidade — que tem de estar em todas as páginas, por isso não se esconde — perde 64 px de coluna nessa rota (`@media (max-width:760px){.tr-mic{width:calc(100% - 64px)}}`). A 390×844, antes da regra, a intersecção entre os dois era **40×47 px = 1 894 px²**: quem carregasse na ponta direita do microfone abria o painel em vez de ligar o ditado. Agora é **0 px²** e o microfone fica em 262×60 (ainda acima do mínimo de 24 px); a 320 px a etiqueta passa a duas linhas, o que é preferível a um alvo tapado. Os dois números são casos fixos em `tools/sonda-transcrever.cjs`.
 
 Ficam de fora, de propósito: o texto corrido, os quadros de vídeo do YouTube e as folhas de impressão. A verificação continua a ser a auditoria de layout nas 20 rotas nos dois tamanhos de janela, mais as sondas por página — nenhuma delas aceita overflow, alvos abaixo do mínimo ou quebra de contraste.
 
@@ -798,10 +817,28 @@ node tools/sonda-cobertura.cjs --porta=5309
                               # redesenhar a folha e a região viva, e no papel: cabe numa A4, texto
                               # preto, células de escrita ≥20px, e o zoom a 150% não a estoura)
 node tools/sonda-transcrever.cjs --porta=5310
-                              # a folha do #/transcrever no Chrome por CDP: 24 casos
+                              # a folha do #/transcrever no Chrome por CDP: 26 casos
                               # (duas falas injetadas com horas, texto corrido, contagem, estado
                               # vazio, .txt/.srt, apagar uma fala, limpar, a entrega ao #/ouvir com
-                              # a chave de sessão apagada, o Signer fora desta rota, e 320px)
+                              # a chave de sessão apagada, o Signer fora desta rota, 320px sem
+                              # scroll lateral, e 0 px² de intersecção entre o botão do painel de
+                              # acessibilidade e o microfone a 390×844)
+node tools/sonda-colisoes.cjs --porta=5311
+                              # varre as 20 rotas à procura de alvos de toque tapados por
+                              # elementos fixos (painel de acessibilidade, atalho do Signer,
+                              # barra inferior): mede a intersecção no topo e no fundo do scroll
+                              # e falha se o CENTRO de um alvo ficar por baixo de outro elemento.
+                              # Intersecção sem centro tapado é aviso, com os píxeis.
+                              # Flags: --largura= --altura= --tema= --escala= --rotas= --base=
+node tools/sonda-casulo.cjs --porta=5312
+                              # auditor de publicação: lê DENTRO do browser o que o service
+                              # worker realmente fez — getRegistration()/controller/scope, a
+                              # versão do styles.css servido comparada com a do worker, cada
+                              # cache com entradas e bytes, e falha se sobreviver um casulo de
+                              # versão anterior. Verifica também o manifest (nome, standalone,
+                              # ícones, share_target, atalhos), o <title> e a consola.
+                              # Corre duas cargas (?cb / ?cb2) para o worker apanhar o controlo.
+                              # Flags: --base= (funciona no host publicado) --porta=
 node tools/serve.cjs        # http://127.0.0.1:8123 — URL estável usado nestes testes
 ```
 

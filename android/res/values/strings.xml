@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nome_app">Agatha Signer</string>
+
+    <string name="titulo">Agatha Signer — sinais de Língua Gestual Angolana por cima de qualquer app</string>
+    <string name="explicacao">Este app não tem glossário próprio. Abre, numa janela flutuante, o painel do Agatha Signer que já existe no site do Pamosii — os mesmos sinais, o mesmo estado «A validar» e os mesmos limites. Assim só há uma fonte de verdade para os sinais, e o que se corrige no site se corrige aqui.</string>
+
+    <string name="sem_permissao">Ainda não podes ver a janela flutuante: o Android exige que autorizes «Mostrar sobre outras apps».</string>
+    <string name="a_mostrar">O painel está em cima do ecrã.</string>
+    <string name="a_parar">O painel está fechado.</string>
+
+    <string name="botao_autorizar">Autorizar a sobreposição</string>
+    <string name="botao_mostrar">Mostrar o Signer</string>
+    <string name="botao_esconder">Esconder o Signer</string>
+    <string name="botao_guardar">Guardar o endereço</string>
+
+    <string name="rotulo_base">Endereço do site</string>
+    <string name="ajuda_base">Por omissão é o site publicado do Pamosii. Uma equipa com alojamento próprio pode apontar para lá; o painel é o mesmo. Só https — ou http://127.0.0.1 e http://localhost para ensaios na mesma máquina.</string>
+
+    <string name="notifier_titulo">Agatha Signer activo</string>
+    <string name="notifier_texto">O painel de sinais está por cima das outras apps.</string>
+    <string name="notifier_canal">Painel sempre visível</string>
+    <string name="notifier_fechar">Fechar o painel</string>
+
+    <string name="tile_sem_autorizacao">Autoriza a sobreposição primeiro</string>
+    <string name="tile_a_mostrar">A mostrar sinais</string>
+    <string name="tile_ligar">Ligar o painel</string>
+
+    <string name="arrastrar">Puxa aqui para mover o painel</string>
+    <string name="fechar">Fechar</string>
+    <string name="tamanho">Tamanho</string>
+    <string name="botao_escrever">Escrever</string>
+    <string name="recarregar">Tentar de novo</string>
+
+    <string name="sem_rede">O painel não carregou. Este app só mostra sinais quando há rede e o site do Pamosii está acessível: não há glossário guardado no telemóvel, por isso preferimos não mostrar nada a mostrar sinais inventados.</string>
+    <string name="a_carregar">A abrir o painel do Pamosii…</string>
+
+    <string name="creditos">Aplicação criada pela equipa Horizonte Futuro em conjunto com a equipa Viva Surdo.</string>
+    <string name="honestidade">O que este painel faz: transforma texto escrito numa sequência de sinais a partir do glossário do Pamosii. É glosa de estudo, não tradução automática, e as entradas estão «A validar» pela comunidade surda angolana. Não há reconhecimento de voz nem de leitura de ecrã: o texto entra por ti — a escrever no painel, a partilhar de outra app ou a assinalar um trecho.</string>
+    <string name="privacidade">Privacidade: o texto que partilhas não vai no endereço do site nem para nenhum servidor — é entregue ao painel já aberto, aqui dentro do telemóvel. O que sai do aparelho é apenas o que o browser precisa de carregar (a página e o glossário do site). Nada fica guardado no telemóvel além do endereço do site. Este painel não pede microfone nem câmara, e recusa pedidos de gravação que a página faça.</string>
+
+    <string name="sem_texto">Partilhaste algo sem texto escrito. O Pamosii só trabalha com palavras: copia a frase para o painel.</string>
+</resources>
