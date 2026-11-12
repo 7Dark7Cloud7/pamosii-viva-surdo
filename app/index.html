@@ -3,43 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Agatha — texto em, sinais out</title>
-<meta name="description" content="Cola texto, legendas ou um PDF e vê a glosa em sinais com mãos animadas. Dicionário de sinais de estudo em Língua Gestual Angolana, por validar por sinalizadores surdos. Sem conta, sem recolha de dados.">
-<meta name="theme-color" content="#10342F">
+<title>Agatha Viva Surdo — Sinalizar</title>
+<meta name="description" content="Explora uma glosa de estudo com mãos animadas e um dicionário de sinais em Língua Gestual Angolana. Por validar por sinalizadores surdos. Sem conta, sem recolha de texto.">
+<meta name="theme-color" content="#2155a3">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/vivasurdo-logo-icon-512.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Agatha">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="pt_AO">
 <meta property="og:site_name" content="Agatha Viva Surdo">
-<meta property="og:title" content="Agatha — texto em, sinais out">
-<meta property="og:description" content="Cola texto, legendas ou um PDF e vê a glosa em sinais com mãos animadas. Glosa de estudo, não tradução automática.">
-<link rel="icon" type="image/svg+xml" href="assets/logo-mark.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=vs95">
-<script>
-/* Aplicar as opções de acessibilidade antes do primeiro paint. */
-(function () {
-  try {
-    var p = JSON.parse(localStorage.getItem('vs.a11y') || '{}');
-    var h = document.documentElement;
-    if (p.temaEscuro) h.setAttribute('data-tema-escuro', '');
-    if (p.contraste) h.setAttribute('data-contraste-alto', '');
-    if (p.movimento) h.setAttribute('data-movimento-reduzido', '');
-    h.style.setProperty('--escala', ([100, 115, 130, 150].indexOf(p.escala) >= 0 ? p.escala : 100) / 100);
-  } catch (e) { /* sem localStorage: usar valores padrão */ }
-})();
-</script>
+<meta property="og:title" content="Agatha Viva Surdo — Explora os sinais">
+<meta property="og:description" content="Texto e mãos animadas. Glosa de estudo, por validar — não tradução automática.">
+<link rel="icon" type="image/png" href="assets/vivasurdo-logo-icon-512.png">
+<link rel="stylesheet" href="styles.css?v=vs97">
+<script src="theme.js?v=vs97"></script>
 </head>
 <body>
 <a class="skip" href="#conteudo">Saltar para o conteúdo principal</a>
 <div id="app"></div>
 <span id="route-live" class="sr-only" aria-live="polite"></span>
-<script src="dados.js?v=vs95"></script>
-<script src="maos.js?v=vs95"></script>
-<script src="app.js?v=vs95"></script>
+<script src="dados.js?v=vs97"></script>
+<script src="maos.js?v=vs97"></script>
+<script src="app.js?v=vs97"></script>
 </body>
 </html>

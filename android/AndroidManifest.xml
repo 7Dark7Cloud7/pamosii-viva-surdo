@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Agatha Viva Surdo.
+
+  Não é um app novo com conteúdo novo: é o mesmo app de duas páginas do fork
+  (Sinalizar + Dicionário), empacotado dentro do APK e servido a um WebView por
+  uma origem virtual (SiteLocal). O glossário, a glosa, o estado «por validar» e
+  os créditos são os do site — mudar aqui não muda nada lá.
+
+  Sem permissão de Internet: a página vem toda dos assets. Sem Gradle, sem
+  AndroidX, sem dependências: só framework. Compila com `android/build.sh`.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="ao.vivasurdo.agathasigner"
+    android:versionCode="3"
+    android:versionName="0.3">
+
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="36" />
+
+    <!-- A pessoa autoriza isto em Definições > Apps > Agatha Viva Surdo > Mostrar
+         sobre outras apps. Sem esta autorização a janela não existe e o app diz-no. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- A janela tem de continuar de pé quando a pessoa sai do app: isso é um
+         serviço em primeiro plano, e o Android obriga a declarar para quê. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <application
+        android:label="@string/nome_app"
+        android:icon="@drawable/ic_launcher"
+        android:allowBackup="false"
+        android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar">
+
+        <activity
+            android:name=".Principal"
+            android:exported="true"
+            android:label="@string/nome_app"
+            android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- «Partilhar → Agatha Viva Surdo»: texto de qualquer app entra no painel. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <!-- «Assinalar texto → » no menu de selecção de texto. -->
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".ServicoSigner"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="janela flutuante do Agatha Viva Surdo sobre outra app" />
+        </service>
+
+        <!-- Azulejo nos ajustes rápidos: ligar o painel sem sair do que se está a ler. -->
+        <service
+            android:name=".PainelRapid"
+            android:label="@string/nome_app"
+            android:icon="@drawable/ic_sinal"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

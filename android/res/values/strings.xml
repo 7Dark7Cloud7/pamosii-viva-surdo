@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nome_app">Agatha Viva Surdo</string>
+
+    <string name="janela_flutuante">Janela flutuante</string>
+    <string name="fechar_janela">Fechar a janela</string>
+
+    <string name="pedir_sobreposicao">Para veres os sinais por cima de outras apps, autoriza «Mostrar sobre outras apps». Sem isso, o painel abre dentro desta aplicação.</string>
+    <string name="continuar_no_app">Continuar no app</string>
+    <string name="botao_autorizar">Autorizar</string>
+    <string name="sem_definicoes">Este aparelho não abriu as definições de sobreposição. Podes fazê-lo em Definições > Apps > Agatha Viva Surdo.</string>
+    <string name="painel_falhou">Não foi possível abrir a janela flutuante.</string>
+    <string name="texto_no_app">O texto já está no app. Para o veres por cima de outras apps, autoriza «Mostrar sobre outras apps».</string>
+
+    <string name="a_carregar">A abrir o painel local…</string>
+    <string name="app_indisponivel">O painel local não abriu. Carrega em «Tentar de novo».</string>
+    <string name="sem_rede">O painel local não ficou disponível. Carrega em «Tentar de novo»; se continuar, reinstala a aplicação. Não substituímos os sinais em falta por sinais inventados.</string>
+    <string name="recarregar">Tentar de novo</string>
+    <string name="recarregar_app">Recarregar o app</string>
+    <string name="entrega_falhou">O painel não recebeu o texto. A frase continua em memória enquanto o painel estiver aberto; carrega em «Tentar de novo».</string>
+    <string name="sem_texto">Partilhaste algo sem texto escrito. Esta aplicação só trabalha com palavras: copia a frase para o painel.</string>
+
+    <string name="arrastrar">Puxa aqui para mover o painel</string>
+    <string name="mover_ajuda">Puxa para mover o painel ou toca para escolher uma posição</string>
+    <string name="mover_cima">Mover para cima</string>
+    <string name="mover_baixo">Mover para baixo</string>
+    <string name="mover_esquerda">Mover para a esquerda</string>
+    <string name="mover_direita">Mover para a direita</string>
+    <string name="centrar">Centrar no ecrã</string>
+    <string name="fechar">Fechar</string>
+    <string name="tamanho">Tamanho</string>
+    <string name="reduzir">Reduzir</string>
+    <string name="botao_escrever">Escrever</string>
+    <string name="botao_concluir">Concluir</string>
+
+    <string name="opcoes">Sobre esta aplicação</string>
+    <string name="concluido">Concluído</string>
+    <string name="permissao_sim">Sobreposição: autorizada.</string>
+    <string name="permissao_nao">Sobreposição: não autorizada.</string>
+
+    <string name="notifier_titulo">Agatha Viva Surdo activo</string>
+    <string name="notifier_texto">O painel de sinais está por cima das outras apps.</string>
+    <string name="notifier_canal">Painel sempre visível</string>
+    <string name="notifier_fechar">Fechar o painel</string>
+
+    <string name="tile_sem_autorizacao">Autoriza a sobreposição primeiro</string>
+    <string name="tile_a_mostrar">A mostrar sinais</string>
+    <string name="tile_ligar">Ligar o painel</string>
+
+    <string name="sem_seletor">Não há nenhuma app neste aparelho para escolher o ficheiro.</string>
+    <string name="sem_browser">Não há nenhuma app de navegação para abrir este link.</string>
+    <string name="download_recusado">Esta aplicação não descarrega ficheiros.</string>
+
+    <string name="honestidade">O que esta aplicação faz: transforma texto escrito numa sequência de sinais a partir do glossário do Agatha Viva Surdo. É glosa de estudo, não tradução automática, e as entradas estão «por validar» pela comunidade surda angolana. Não há reconhecimento de voz nem leitura de ecrã: o texto entra por ti — a escrever no painel, a partilhar de outra app ou a assinalar um trecho.</string>
+    <string name="privacidade">Privacidade: a aplicação abre um ficheiro do próprio pacote. Não pede acesso à Internet, à câmara, ao microfone, ao ecrã ou a outras apps. O texto que escreves ou partilhas fica só em memória no telemóvel e desaparece ao fechar o painel; não é guardado nem enviado. As preferências guardadas são apenas o tema e o tamanho do texto.</string>
+</resources>

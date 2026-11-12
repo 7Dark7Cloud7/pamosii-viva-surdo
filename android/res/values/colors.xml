@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- As mesmas cores do site (app/styles.css, :root). Nada de novo. -->
+    <color name="tinta">#14253D</color>
+    <color name="primaria">#2155A3</color>
+    <color name="primaria_forte">#12356A</color>
+    <color name="primaria_clara">#EEF4FC</color>
+    <color name="sobre_primaria">#FFFFFF</color>
+    <color name="creme">#F3F6FB</color>
+    <color name="papel">#FFFFFF</color>
+    <color name="linha">#CBD7E8</color>
+</resources>

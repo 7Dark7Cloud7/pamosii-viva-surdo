@@ -1,21 +1,11 @@
-/* Agatha Signer — extensão Chrome (Manifest V3)
+/* Viva Surdo — extensão Chrome (Manifest V3)
 
-   O que faz: põe um botão em qualquer site; ao clicar, abre o painel do Agatha Signer
-   (o mesmo painel do site, carregado dentro de um iframe) e dá duas formas de escolher
-   o texto: «Apontar» (carregar numa frase ou parágrafo da página) ou «Sinalizar a
-   selecção» (o texto que a pessoa marcou).
-
-   Regras de integridade — lê antes de mexer:
-     - A extensão NÃO tem permissões: nem "storage", nem "tabs", nem host permissions.
-       Não lê o conteúdo da página para lado nenhum: o único texto que sai daqui é o
-       trecho que a pessoa escolheu, enviado por postMessage para o iframe do Pamosii,
-       que por sua vez não envia nada a servidores (o glossário está dentro de app.js).
-     - Não há reconhecimento de imagem nem de voz: a extensão só mostra texto escrito.
-     - O resultado é glosa de estudo, não tradução automática, e o glossário está
-       "A validar" pela comunidade surda angolana. A wording aparece no painel.
-     - Se o painel não carregar (sem rede, site em baixo), diz isso mesmo — nunca finge.
-
-   Mudar de alojamento: basta trocar SITE abaixo (e o exclude_matches no manifest.json). */
+   Usa o mesmo código web do Pamosii, empacotado em widget/, para renderização local.
+   Os content_scripts em sites HTTP/HTTPS exigem acesso de instalação a esses sites,
+   mesmo sem permissions ou host_permissions adicionais. Não lê campos de formulário,
+   não acompanha alterações de texto, não guarda nem envia texto a servidores.
+   A glosa e o rig (dados.js + maos.js) são materiais de estudo por validar, não tradução.
+   Texto pendente fica só em memória, até confirmação do iframe ou nova escolha. */
 
 (() => {
   'use strict';
@@ -24,167 +14,328 @@
   if (window.top !== window) return;
   if (document.getElementById('pamosii-signer-host')) return;
 
-  const SITE = 'https://7dark7cloud7.github.io/pamosii-viva-surdo';
-  const WIDGET = SITE + '/?emb=1';
+  const WIDGET = chrome.runtime.getURL('widget/index.html?emb=1');
+  const URL_WIDGET = new URL(WIDGET);
+  const DESTINO = `${URL_WIDGET.protocol}//${URL_WIDGET.host}`;
+  /* Chrome serializa esta origem; outros parsers URL podem devolver "null". */
+  const ORIGEM = URL_WIDGET.origin === 'null' ? DESTINO : URL_WIDGET.origin;
+  const LOGO = chrome.runtime.getURL('icon-192.png');
   const MAX_TEXTO = 6000;
+  const PRAZO_PRONTO = 12000;
+  const PRAZO_ACK = 3000;
+  const MAX_ENVIOS = 3;
   const BLOCOS = 'p,li,h1,h2,h3,h4,h5,h6,figcaption,blockquote,td,summary';
-  const INTERACTIVO = 'a[href],button,summary,input,select,textarea,label,[role="button"],[contenteditable]';
+  const CAMPOS = 'input,select,textarea,[contenteditable],[role="textbox"],[role="searchbox"],[role="combobox"],[role="spinbutton"]';
+  const INTERACTIVO = `${CAMPOS},a[href],button,summary,label,audio,video,[tabindex],[role="button"],[role="link"],[role="checkbox"],[role="radio"],[role="switch"],[role="slider"],[role="menuitem"],[role="tab"],[role="listbox"],[role="option"]`;
+  const IGNORAR_TEXTO = `${CAMPOS},script,style,noscript,template,[hidden],[inert],[aria-hidden="true"],#pamosii-signer-host`;
 
-  const estado = { aberto: false, aponta: false, pronto: false, espera: '', alvo: null };
+  const estado = { aberto: false, aponta: false, pronto: false, falhaPronto: false, espera: null, alvo: null };
   let host, sombra, painel, caixote, botao, iframe;
+  let prazoPronto = null, prazoAck = null, sequencia = 0;
+  const sessao = Date.now().toString(36);
 
-  /* ---------- 1. o painel (shadow DOM fechado: a página não nos vê por dentro) ---------- */
+  /* ---------- 1. o painel (shadow DOM fechado: isolamento de estilos, não segurança) ---------- */
   function montar() {
     host = document.createElement('div');
     host.id = 'pamosii-signer-host';
     sombra = host.attachShadow({ mode: 'closed' });
     sombra.innerHTML = `
 <style>
-  :host{all:initial;position:fixed;z-index:2147483646;right:0;top:0;bottom:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+  :host{all:initial;position:fixed;z-index:2147483646;right:0;top:0;bottom:0;pointer-events:none;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+  [hidden]{display:none!important}
   .col{display:flex;flex-direction:column;align-items:flex-end;gap:10px;padding:12px 12px calc(12px + env(safe-area-inset-bottom));height:100%;box-sizing:border-box}
-  .fab{display:inline-flex;align-items:center;gap:9px;min-height:48px;padding:0 16px 0 12px;border:0;border-radius:999px;
-    background:#10342F;color:#fff;font:inherit;font-weight:700;font-size:15px;cursor:pointer;box-shadow:0 8px 26px rgba(0,0,0,.28)}
-  .fab:hover{background:#1B5147}
-  .fab svg{width:22px;height:22px;flex:none}
-  .fab[aria-expanded="true"]{background:#F7C948;color:#10342F}
-  .caixote{display:none;flex:1 1 auto;width:min(430px,calc(100vw - 24px));min-height:0;flex-direction:column;
-    background:#FFFDF7;border-radius:16px;box-shadow:0 18px 54px rgba(0,0,0,.34);overflow:hidden}
+  .fab,.caixote{pointer-events:auto}
+  .fab{display:inline-flex;flex:none;align-items:center;gap:9px;min-height:48px;padding:0 16px 0 12px;border:0;border-radius:999px;
+    background:#2155a3;color:#fff;font:inherit;font-weight:700;font-size:15px;cursor:pointer;box-shadow:0 8px 26px rgba(18,53,106,.22)}
+  .fab:hover{background:#12356a}
+  .fab img{width:36px;height:36px;flex:none;border-radius:50%;object-fit:contain}
+  .fab[aria-expanded="true"]{background:#eef4fc;color:#12356a;box-shadow:0 0 0 1px #2155a3,0 8px 26px rgba(18,53,106,.18)}
+  .caixote{display:none;flex:1 1 auto;width:min(430px,calc(100vw - 24px));min-height:0;max-height:760px;flex-direction:column;
+    background:#fff;border:1px solid #d4e1f4;border-radius:16px;box-shadow:0 18px 54px rgba(18,53,106,.24);overflow:auto;overscroll-behavior:contain}
   .caixote.on{display:flex}
-  .barra{display:flex;flex-wrap:wrap;gap:7px;padding:10px 12px;background:#10342F;color:#fff}
+  .barra{display:flex;flex:none;flex-wrap:wrap;gap:7px;padding:10px 12px;background:#fff;color:#12356a;border-bottom:1px solid #d4e1f4}
   .barra strong{flex:1 1 100%;font-size:13.5px;font-weight:700;letter-spacing:.2px}
-  .btn{min-height:40px;padding:0 13px;border-radius:11px;border:1.5px solid rgba(255,255,255,.45);
-    background:transparent;color:#fff;font:inherit;font-size:13.5px;font-weight:700;cursor:pointer}
-  .btn:hover{border-color:#F7C948;color:#F7C948}
-  .btn[aria-pressed="true"]{background:#F7C948;border-color:#F7C948;color:#10342F}
-  .btn.x{margin-left:auto}
-  .recado{margin:0;padding:9px 12px;font-size:12.5px;line-height:1.5;background:#FBEFD4;color:#8A5600}
-  .recado a{color:#8A5600}
-  .leito{flex:1 1 auto;min-height:0;position:relative;background:#FFFDF7}
-  iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#FFFDF7}
-  @media (prefers-reduced-motion:reduce){.fab,.btn{transition:none}}
+  .btn{min-height:44px;padding:0 13px;border-radius:11px;border:1.5px solid #2155a3;
+    background:#fff;color:#2155a3;font:inherit;font-size:13.5px;font-weight:700;cursor:pointer}
+  .btn:hover{background:#eef4fc;color:#12356a}
+  .btn[aria-pressed="true"]{background:#2155a3;border-color:#2155a3;color:#fff}
+  .btn.x{margin-left:auto;min-width:44px}
+  button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #2155a3;outline-offset:2px}
+  .status,.nota,.privacidade{flex:none;background:#eef4fc;color:#12356a;font-size:12px;line-height:1.4}
+  .recado,.nota{margin:0;padding:6px 12px}
+  .privacidade{padding:0 12px 6px}
+  .privacidade summary{width:fit-content;min-height:24px;cursor:pointer;font-weight:700}
+  .privacidade p{margin:4px 0}
+  .ajuda{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:0 12px 9px}
+  .ajuda a{display:inline-flex;align-items:center;min-height:44px;color:#2155a3}
+  .leito{flex:1 0 240px;min-height:240px;position:relative;background:#fff}
+  iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff}
   @media (max-width:520px){
     :host{left:0;right:0;top:auto;bottom:0}
-    .col{padding:8px}
-    .caixote{width:100%}
-    .caixote.on{max-height:min(78vh,620px)}
+    .col{height:auto;padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
+    .caixote{flex:none;width:100%;height:min(78vh,620px);height:min(78dvh,620px);
+      max-height:calc(100vh - 74px - env(safe-area-inset-bottom));max-height:calc(100dvh - 74px - env(safe-area-inset-bottom))}
   }
 </style>
 <div class="col">
   <button class="fab" type="button" aria-expanded="false" aria-controls="painel">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="9"></circle><path d="M8.5 14.5c1.2-3.4 5.8-3.4 7 0"></path>
-      <circle cx="9" cy="9.5" r="1.1" fill="currentColor" stroke="none"></circle>
-      <circle cx="15" cy="9.5" r="1.1" fill="currentColor" stroke="none"></circle>
-    </svg>
-    <span>Agatha</span>
+    <img src="${LOGO}" alt="" width="36" height="36">
+    <span>Viva Surdo</span>
   </button>
-  <div class="caixote" id="painel" role="region" aria-label="Agatha Signer">
+  <div class="caixote" id="painel" role="region" aria-label="Viva Surdo — sinalizar texto">
     <div class="barra">
-      <strong>Agatha Signer — apontar para sinalizar</strong>
-      <button class="btn" type="button" id="aponta" aria-pressed="false">Apontar a um texto</button>
+      <strong>Viva Surdo — texto escolhido por ti</strong>
+      <button class="btn" type="button" id="aponta" aria-pressed="false">Sinalizar um texto</button>
       <button class="btn" type="button" id="selec">Sinalizar a selecção</button>
-      <button class="btn x" type="button" id="fecha" aria-label="Fechar o painel do Agatha Signer">×</button>
+      <button class="btn x" type="button" id="fecha" aria-label="Fechar o painel Viva Surdo">×</button>
     </div>
-    <p class="recado" id="recado" hidden></p>
-    <p class="recado">Glosa de estudo feita com o glossário do Pamosii, ainda <strong>A validar</strong> pela
-      comunidade surda angolana. Não é tradução automática e nada do que apontas é enviado para um servidor.</p>
+    <div class="status" id="status" hidden>
+      <p class="recado" id="recado" role="status" aria-live="polite"></p>
+      <div class="ajuda" id="ajuda" hidden>
+        <button class="btn" type="button" id="tenta">Tentar novamente</button>
+        <a href="${WIDGET}" target="_blank" rel="noopener noreferrer">Abrir painel local</a>
+      </div>
+    </div>
+    <p class="nota">Glosa de estudo <strong>por validar</strong>, não tradução. Usa Reproduzir para iniciar.</p>
+    <details class="privacidade">
+      <summary>Privacidade e acesso</summary>
+      <p>O mesmo leitor web está incluído na extensão e renderiza localmente. Só o trecho que escolhes é passado ao painel, em memória; não é guardado nem enviado a servidores.</p>
+      <p>Não lê campos de formulário, conteúdo editável ou texto oculto. A instalação pede acesso aos sites HTTP/HTTPS abrangidos.</p>
+    </details>
     <div class="leito" id="leito"></div>
   </div>
 </div>`;
     botao = sombra.querySelector('.fab');
     caixote = sombra.getElementById('painel');
     painel = sombra.getElementById('leito');
-    const reca = sombra.getElementById('recado');
 
-    sombra.querySelector('.fab').addEventListener('click', alternar);
+    botao.addEventListener('click', alternar);
     sombra.getElementById('fecha').addEventListener('click', fecharPainel);
     sombra.getElementById('aponta').addEventListener('click', () => { estado.aponta ? apontarDesligar() : apontarLigar(); });
-    sombra.getElementById('selec').addEventListener('click', mandarSeleccao);
+    const selec = sombra.getElementById('selec');
+    /* Evita perder a selecção ou esconder o foco num campo antes de a verificar. */
+    selec.addEventListener('pointerdown', (ev) => { if (ev.button === 0) ev.preventDefault(); });
+    selec.addEventListener('click', mandarSeleccao);
+    sombra.getElementById('tenta').addEventListener('click', tentarNovamente);
     document.body.appendChild(host);
-
-    setTimeout(() => {
-      if (!estado.pronto) {
-        reca.hidden = false;
-        reca.innerHTML = 'O painel ainda não respondeu. Precisa de rede para falar com o site do Pamosii — '
-          + 'ou o site está indisponível. Podes abrir <a href="' + SITE + '/#/pamosii" target="_blank" rel="noopener">o Pamosii numa janela</a>.';
-      }
-    }, 9000);
   }
 
   function abrirPainel() {
+    estado.aberto = true;
     caixote.classList.add('on');
     botao.setAttribute('aria-expanded', 'true');
     if (!iframe) carregarIframe();
+    else if (!estado.pronto) esperarPronto();
+    else enviarPendente();
   }
   function fecharPainel() {
+    estado.aberto = false;
     apontarDesligar();
+    pararPrazos();
     caixote.classList.remove('on');
     botao.setAttribute('aria-expanded', 'false');
+    if (document.activeElement === host) botao.focus({ preventScroll: true });
   }
   function alternar() {
-    estado.aberto = !estado.aberto;
-    estado.aberto ? abrirPainel() : fecharPainel();
+    estado.aberto ? fecharPainel() : abrirPainel();
+  }
+
+  function pararPrazos() {
+    clearTimeout(prazoPronto);
+    clearTimeout(prazoAck);
+    prazoPronto = prazoAck = null;
+  }
+
+  function esperarPronto() {
+    if (!estado.aberto || estado.pronto || estado.falhaPronto || prazoPronto !== null) return;
+    aviso('A carregar o painel local. O texto escolhido aguarda que o painel esteja pronto.');
+    prazoPronto = setTimeout(() => {
+      prazoPronto = null;
+      estado.falhaPronto = true;
+      aviso('O painel local não ficou pronto. Verifica o pacote da extensão ou se o site bloqueia a incorporação. A última escolha continua pendente; tenta novamente.', true);
+    }, PRAZO_PRONTO);
   }
 
   function carregarIframe() {
+    pararPrazos();
+    estado.pronto = false;
+    estado.falhaPronto = false;
+    if (iframe) iframe.remove();
     iframe = document.createElement('iframe');
-    iframe.setAttribute('title', 'Agatha Signer');
-    iframe.setAttribute('src', WIDGET + '#/pamosii');
+    iframe.setAttribute('title', 'Viva Surdo — glosa de estudo por validar');
+    iframe.setAttribute('src', WIDGET);
     iframe.setAttribute('allow', 'fullscreen');
-    iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+    iframe.setAttribute('referrerpolicy', 'no-referrer');
     painel.appendChild(iframe);
+    esperarPronto();
   }
 
-  /* ---------- 2. mandar texto para o painel ---------- */
+  /* ---------- 2. texto em memória: a última escolha substitui a anterior ---------- */
   function mandar(texto) {
-    const limpo = String(texto || '').replace(/\u0000/g, '').trim().slice(0, MAX_TEXTO);
+    const limpo = String(texto || '').replace(/\u0000/g, '').replace(/\s+/g, ' ').trim().slice(0, MAX_TEXTO);
     if (limpo.length < 2) { aviso('Não havia texto suficiente nesse ponto.'); return; }
-    if (!estado.aberto) { estado.aberto = true; abrirPainel(); }
-    if (!estado.pronto) { estado.espera = limpo; return; }
-    try { iframe.contentWindow.postMessage({ tipo: 'pamosii-sinalizar', texto: limpo }, SITE); }
-    catch (e) { estado.espera = limpo; }
+    clearTimeout(prazoAck);
+    prazoAck = null;
+    estado.espera = { id: `signer-${sessao}-${++sequencia}`, texto: limpo, tentativas: 0, aguardaAck: false, falhou: false };
+    abrirPainel();
+    if (estado.falhaPronto) aviso('O painel não está pronto. A última escolha continua pendente; tenta novamente.', true);
+  }
+
+  function vigiarAck(pendente) {
+    if (!estado.aberto || prazoAck !== null) return;
+    prazoAck = setTimeout(() => {
+      prazoAck = null;
+      if (estado.espera !== pendente) return;
+      pendente.aguardaAck = false;
+      if (pendente.tentativas < MAX_ENVIOS) enviarPendente();
+      else falharEnvio(pendente, 'O painel não confirmou o texto após três tentativas. A última escolha continua pendente; tenta novamente.');
+    }, PRAZO_ACK);
+  }
+
+  function falharEnvio(pendente, texto) {
+    pendente.aguardaAck = false;
+    pendente.falhou = true;
+    aviso(texto, true);
+  }
+
+  function enviarPendente() {
+    const pendente = estado.espera;
+    if (!estado.aberto || !estado.pronto || !pendente || pendente.falhou) return;
+    if (pendente.aguardaAck) { vigiarAck(pendente); return; }
+    if (pendente.tentativas >= MAX_ENVIOS) return;
+    pendente.tentativas++;
+    pendente.aguardaAck = true;
+    aviso('A aguardar confirmação do texto pelo painel.');
+    try {
+      iframe.contentWindow.postMessage({ tipo: 'pamosii-sinalizar', id: pendente.id, texto: pendente.texto }, DESTINO);
+    } catch (_) {
+      /* Conta também falhas de envio; o prazo permite apenas MAX_ENVIOS tentativas. */
+    }
+    if (estado.espera === pendente && pendente.aguardaAck) vigiarAck(pendente);
+  }
+
+  function tentarNovamente() {
+    if (estado.espera) {
+      estado.espera.tentativas = 0;
+      estado.espera.aguardaAck = false;
+      estado.espera.falhou = false;
+    }
+    /* Recria o iframe também após falta de ack; pode ter navegado ou perdido o receptor. */
+    carregarIframe();
   }
 
   function mandarSeleccao() {
-    const t = String(window.getSelection() || '').trim();
-    if (!t) { aviso('Primeiro marca um texto na página, depois carrega em “Sinalizar a selecção”.'); return; }
+    const t = textoDaSeleccao().trim();
+    if (!t) { aviso('Marca texto da página, fora dos campos de formulário, e carrega em “Sinalizar a selecção”.'); return; }
     apontarDesligar();
     mandar(t);
   }
 
-  function aviso(texto) {
-    const r = sombra.getElementById('recado');
-    if (!r) return;
-    r.hidden = false;
-    r.textContent = texto;
+  function aviso(texto, repetir = false) {
+    if (!sombra) return;
+    sombra.getElementById('status').hidden = false;
+    sombra.getElementById('recado').textContent = texto;
+    sombra.getElementById('ajuda').hidden = !repetir;
   }
 
   window.addEventListener('message', (ev) => {
-    if (!ev.data || ev.data.tipo !== 'pamosii-signer-pronto') return;
-    if (ev.origin !== new URL(SITE).origin) return;
-    estado.pronto = true;
-    const r = sombra.getElementById('recado');
-    if (r) r.hidden = true;
-    if (estado.espera) { const t = estado.espera; estado.espera = ''; mandar(t); }
+    if (!iframe || ev.source !== iframe.contentWindow || ev.origin !== ORIGEM) return;
+    const dados = ev.data;
+    if (!dados || typeof dados !== 'object') return;
+    if (dados.tipo === 'pamosii-signer-pronto') {
+      if (estado.pronto) return;
+      estado.pronto = true;
+      estado.falhaPronto = false;
+      clearTimeout(prazoPronto);
+      prazoPronto = null;
+      if (!estado.aponta) aviso('Painel pronto. Escolhe um texto; depois usa Play no painel.');
+      enviarPendente();
+      return;
+    }
+    const pendente = estado.espera;
+    if (dados.tipo !== 'pamosii-signer-recebido' || !pendente || dados.id !== pendente.id
+        || pendente.tentativas === 0 || typeof dados.ok !== 'boolean') return;
+    clearTimeout(prazoAck);
+    prazoAck = null;
+    if (!dados.ok) {
+      falharEnvio(pendente, 'O painel recusou o texto. A última escolha continua pendente; tenta novamente ou escolhe outro trecho.');
+      return;
+    }
+    /* Só a confirmação positiva com o mesmo id liberta o texto; nunca o mostramos no recado. */
+    estado.espera = null;
+    aviso('Texto recebido. O rig está em pausa: escolhe Play no painel para iniciar.');
   });
 
-  /* ---------- 3. modo apontar na página da pessoa ---------- */
-  function blocosPagina() {
-    return Array.from(document.querySelectorAll(BLOCOS))
-      .filter(e => !e.closest('#pamosii-signer-host') && !e.matches(INTERACTIVO)
-        && !e.querySelector(BLOCOS) && (e.textContent || '').trim().length > 2);
+  /* ---------- 3. leitura apenas de texto público, visível e escolhido ---------- */
+  function elementoDe(no) {
+    return no && (no.nodeType === Node.ELEMENT_NODE ? no : no.parentElement);
   }
 
-  function textoDoBloco(el) {
+  function campoEmFoco() {
+    let el = document.activeElement;
+    while (el && el.shadowRoot && el.shadowRoot.activeElement) el = el.shadowRoot.activeElement;
+    return document.designMode === 'on' || !!(el && (el.isContentEditable || el.closest(CAMPOS)));
+  }
+
+  function textoIgnorado(no) {
+    let el = elementoDe(no);
+    if (!el || el.closest(IGNORAR_TEXTO) || el.isContentEditable || document.designMode === 'on') return true;
+    /* Também exclui conteúdo oculto por CSS, inclusive em antepassados do bloco. */
+    for (; el; el = el.parentElement) {
+      const css = getComputedStyle(el);
+      if (css.display === 'none' || css.visibility === 'hidden' || css.visibility === 'collapse'
+          || css.contentVisibility === 'hidden' || css.opacity === '0') return true;
+    }
+    return false;
+  }
+
+  function textoDoBloco(el, intervalo = null) {
     const partes = [];
     let s = '';
-    const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+    if (!el || textoIgnorado(el)) return { s, partes };
+    const aceitar = (no) => !textoIgnorado(no) && (!intervalo || intervalo.intersectsNode(no));
+    const juntar = (no) => {
+      if (no.nodeType === Node.TEXT_NODE) {
+        const inicio = intervalo && no === intervalo.startContainer ? intervalo.startOffset : 0;
+        const fim = intervalo && no === intervalo.endContainer ? intervalo.endOffset : no.length;
+        const t = no.nodeValue.slice(inicio, fim);
+        if (t) { partes.push({ no, len: t.length }); s += t; }
+      } else if (no.nodeName === 'BR' || (s && no.matches(BLOCOS))) {
+        partes.push({ no: null, len: 1 }); s += '\n';
+      }
+    };
+    /* FILTER_REJECT poda campos/zonas privadas inteiras, não apenas o primeiro nó. */
+    const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, {
+      acceptNode: no => aceitar(no) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT
+    });
+    if (aceitar(el)) juntar(el);
     let n;
-    while ((n = w.nextNode())) {
-      if (n.nodeType === 3) { const t = n.nodeValue || ''; if (t.length) { partes.push({ no: n, len: t.length }); s += t; } }
-      else if (n.nodeName === 'BR') { partes.push({ no: null, len: 1 }); s += ' '; }
-    }
+    while ((n = w.nextNode())) juntar(n);
     return { s, partes };
+  }
+
+  function textoDaSeleccao() {
+    if (campoEmFoco()) return '';
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed) return '';
+    const trechos = [];
+    for (let i = 0; i < sel.rangeCount; i++) {
+      const r = sel.getRangeAt(i);
+      trechos.push(textoDoBloco(r.commonAncestorContainer, r).s);
+    }
+    return trechos.join('\n');
+  }
+
+  /* ---------- 4. modo apontar na página da pessoa ---------- */
+  function blocoElegivel(el) {
+    return !!el && !el.closest(INTERACTIVO) && !textoIgnorado(el)
+      && textoDoBloco(el).s.trim().length > 2
+      && !Array.from(el.querySelectorAll(BLOCOS)).some(filho => !filho.closest(INTERACTIVO)
+        && !textoIgnorado(filho) && textoDoBloco(filho).s.trim().length > 2);
+  }
+
+  function blocosPagina() {
+    return Array.from(document.querySelectorAll(BLOCOS)).filter(blocoElegivel);
   }
 
   function frasesDoTexto(s) {
@@ -213,8 +364,8 @@
   function trechoApontado(el, x, y) {
     const { s, partes } = textoDoBloco(el);
     const sel = window.getSelection();
-    const marcada = sel ? String(sel).trim() : '';
-    const dentro = sel && sel.anchorNode && el.contains(sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentNode : sel.anchorNode);
+    const marcada = textoDaSeleccao().trim();
+    const dentro = sel && sel.rangeCount && el.contains(sel.getRangeAt(0).commonAncestorContainer);
     if (marcada.length > 2 && dentro) {
       const i = s.indexOf(marcada);
       if (i >= 0) {
@@ -226,6 +377,7 @@
       }
       return marcada;
     }
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return s;
     const frases = frasesDoTexto(s);
     if (!frases.length) return s;
     let idx = -1;
@@ -253,33 +405,33 @@
 
   function onMousemove(e) {
     if (!estado.aponta) return;
-    const el = e.target && e.target.closest && e.target.closest(BLOCOS);
-    if (!el || el.closest('#pamosii-signer-host') || el.matches(INTERACTIVO)) return;
-    if (el.querySelector(BLOCOS)) return;
-    marcar(el);
+    const origem = elementoDe(e.target);
+    const el = origem && !origem.closest(INTERACTIVO) && !textoIgnorado(origem) && origem.closest(BLOCOS);
+    marcar(blocoElegivel(el) ? el : null);
   }
 
   function onClick(e) {
-    if (!estado.aponta) return;
-    if (e.button && e.button !== 0) return;
-    if (e.target && e.target.closest && e.target.closest('#pamosii-signer-host')) return;
-    /* links e botões continuam a ser links e botões */
-    if (e.target && e.target.closest && e.target.closest(INTERACTIVO)) return;
-    const el = e.target && e.target.closest && e.target.closest(BLOCOS);
-    if (!el || el.querySelector(BLOCOS)) { aviso('Aí não havia texto. Carrega em cima de uma frase ou parágrafo.'); return; }
-    e.preventDefault();
-    e.stopPropagation();
+    if (!estado.aponta || e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+    const origem = elementoDe(e.target);
+    /* Não cancela cliques nem a propagação: links, botões e acções do site mantêm-se. */
+    if (!origem || origem.closest(INTERACTIVO) || textoIgnorado(origem)) return;
+    const el = origem.closest(BLOCOS);
+    if (!blocoElegivel(el)) { aviso('Aí não havia texto. Carrega em cima de uma frase ou parágrafo.'); return; }
     const t = trechoApontado(el, e.clientX, e.clientY);
     apontarDesligar();
     mandar(t);
   }
 
   function onTecla(e) {
-    if (!estado.aponta) return;
+    if (!estado.aponta || e.defaultPrevented || e.isComposing || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+    const origem = elementoDe(e.target);
+    /* Não rouba setas, Enter ou Escape de formulários, controlos ou do próprio painel. */
+    if (campoEmFoco() || !origem || origem.closest(INTERACTIVO) || textoIgnorado(origem)) return;
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); apontarDesligar(); return; }
+    if (!['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'Enter'].includes(e.key)) return;
     const lista = blocosPagina();
-    if (!lista.length) return;
-    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    if (!lista.length) { marcar(null); return; }
+    if (e.key !== 'Enter') {
       e.preventDefault(); e.stopPropagation();
       const passo = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1 : -1;
       const actual = lista.indexOf(estado.alvo);
@@ -287,13 +439,12 @@
       marcar(lista[prox]);
       return;
     }
-    if (e.key === 'Enter' && estado.alvo) {
+    if (lista.includes(estado.alvo)) {
       e.preventDefault(); e.stopPropagation();
-      const r = estado.alvo.getBoundingClientRect();
-      const t = trechoApontado(estado.alvo, r.left + Math.min(20, r.width / 2), r.top + Math.min(12, r.height / 2));
+      const t = trechoApontado(estado.alvo);
       apontarDesligar();
       mandar(t);
-    }
+    } else marcar(null);
   }
 
   function apontarLigar() {

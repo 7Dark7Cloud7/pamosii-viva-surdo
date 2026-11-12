@@ -1,25 +1,40 @@
 {
   "manifest_version": 3,
-  "name": "Agatha Signer — Língua Gestual Angolana",
-  "version": "0.2.0",
-  "description": "Aponta para qualquer texto de uma página e vê a sequência de sinais de Língua Gestual Angolana (glosa de estudo a partir do glossário do Pamosii, ainda «A validar» pela comunidade surda angolana).",
-  "homepage_url": "https://7dark7cloud7.github.io/pamosii-viva-surdo/",
+  "name": "Viva Surdo — Língua Gestual Angolana",
+  "version": "0.3.0",
+  "description": "Escolhe texto da página para explorar uma glosa de estudo em Língua Gestual Angolana, renderizada localmente e por validar.",
   "minimum_chrome_version": "111",
   "icons": {
     "192": "icon-192.png",
     "512": "icon-512.png"
   },
   "action": {
-    "default_title": "Agatha Signer — ligar/desligar o painel",
+    "default_title": "Viva Surdo — ligar/desligar o painel",
     "default_icon": { "192": "icon-192.png" }
   },
   "background": {
     "service_worker": "background.js"
   },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icon-192.png",
+        "widget/index.html",
+        "widget/styles.css",
+        "widget/app.js",
+        "widget/dados.js",
+        "widget/maos.js",
+        "widget/theme.js",
+        "widget/manifest.webmanifest",
+        "widget/assets/vivasurdo-logo-icon-512.png",
+        "widget/assets/vivasurdo-logo-maskable-512.png"
+      ],
+      "matches": ["http://*/*", "https://*/*"]
+    }
+  ],
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
-      "exclude_matches": ["https://7dark7cloud7.github.io/pamosii-viva-surdo/*"],
       "js": ["content.js"],
       "css": ["signer.css"],
       "run_at": "document_idle",

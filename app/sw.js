@@ -4,7 +4,7 @@
    Não guarda: o vídeo que a pessoa abre (fica no aparelho dela e não sai de lá).
    Ao publicar, o `?v=` do index.html e o VERSAO abaixo mudam juntos. */
 
-const VERSAO = 'vs95';
+const VERSAO = 'vs97';
 const CASULO = 'casulo-' + VERSAO;
 const EXTERNO = 'externo-' + VERSAO;
 
@@ -16,10 +16,9 @@ const FICHEIROS = [
   './maos.js?v=' + VERSAO,
   './app.js?v=' + VERSAO,
   './manifest.webmanifest',
-  './assets/logo-mark.svg',
-  './assets/icon-192.png',
-  './assets/icon-512.png',
-  './assets/icon-maskable-512.png',
+  './theme.js?v=' + VERSAO,
+  './assets/vivasurdo-logo-icon-512.png',
+  './assets/vivasurdo-logo-maskable-512.png',
 ];
 
 const eExterno = u => /^(fonts\.googleapis\.com|fonts\.gstatic\.com)$/.test(new URL(u).hostname);

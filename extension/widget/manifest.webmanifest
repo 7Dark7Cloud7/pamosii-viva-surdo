@@ -1,0 +1,23 @@
+{
+  "name": "Agatha Viva Surdo — Língua Gestual Angolana",
+  "short_name": "Agatha",
+  "description": "Glosa de estudo e dicionário de sinais em Língua Gestual Angolana, por validar.",
+  "lang": "pt-AO",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#f3f6fb",
+  "theme_color": "#2155a3",
+  "categories": ["education", "accessibility"],
+  "icons": [
+    { "src": "assets/vivasurdo-logo-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/vivasurdo-logo-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Sinalizar", "url": "./#/", "description": "Explorar a glosa de um texto." },
+    { "name": "Dicionário", "url": "./#/dicionario", "description": "Procurar uma palavra." }
+  ]
+}

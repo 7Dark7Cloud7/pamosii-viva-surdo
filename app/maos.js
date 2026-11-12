@@ -839,10 +839,10 @@ const PALCO = {
 
 const PALCO_DEFS = `<defs>
   <linearGradient id="pc-parede" x1="0" y1="0" x2=".75" y2="1">
-    <stop offset="0" stop-color="#1A4741"/><stop offset=".55" stop-color="#113230"/><stop offset="1" stop-color="#08191A"/>
+    <stop offset="0" stop-color="#173863"/><stop offset=".55" stop-color="#0E2443"/><stop offset="1" stop-color="#071528"/>
   </linearGradient>
   <radialGradient id="pc-halo" cx=".30" cy=".10" r=".72">
-    <stop offset="0" stop-color="#7FD6C2" stop-opacity=".26"/><stop offset=".55" stop-color="#2C7E70" stop-opacity=".08"/><stop offset="1" stop-color="#000" stop-opacity="0"/>
+    <stop offset="0" stop-color="#9FC2FF" stop-opacity=".26"/><stop offset=".55" stop-color="#3C6FB8" stop-opacity=".09"/><stop offset="1" stop-color="#000" stop-opacity="0"/>
   </radialGradient>
   <radialGradient id="pc-vinheta" cx=".5" cy=".44" r=".78">
     <stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".42"/>
@@ -860,7 +860,7 @@ const PALCO_DEFS = `<defs>
     <stop offset="0" stop-color="#A5704B"/><stop offset="1" stop-color="#6B432C"/>
   </linearGradient>
   <linearGradient id="pc-faixa" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0" stop-color="#061415" stop-opacity="0"/><stop offset=".35" stop-color="#051213" stop-opacity=".72"/><stop offset="1" stop-color="#04100F" stop-opacity=".94"/>
+    <stop offset="0" stop-color="#061226" stop-opacity="0"/><stop offset=".35" stop-color="#05101F" stop-opacity=".72"/><stop offset="1" stop-color="#040C18" stop-opacity=".94"/>
   </linearGradient>
   <radialGradient id="pc-luz">
     <stop offset="0" stop-color="#F0C89E" stop-opacity=".32"/><stop offset=".5" stop-color="#EEC49A" stop-opacity=".11"/><stop offset="1" stop-color="#EEC49A" stop-opacity="0"/>
@@ -940,7 +940,7 @@ function palcoPresente(rotulo) {
   </g>`;
 
   const selo = `<g class="selo">
-    <rect x="852" y="26" width="82" height="26" rx="13" fill="#04100F" opacity=".55"/>
+    <rect x="852" y="26" width="82" height="26" rx="13" fill="#040C18" opacity=".55"/>
     <circle cx="867" cy="39" r="4" fill="#F7C948"/>
     <text x="878" y="43.5" font-family="'Inter', system-ui, sans-serif" font-size="11" letter-spacing="1.8" fill="#DCE9E4">LGA</text>
   </g>`;
@@ -985,7 +985,7 @@ function maoFigura(forma) {
   const vistaFig = { cx: 160, cy: 262, esc: 360 };
   const pecas = maoTransformar(maoPecas(forma, false), { forma, pos: [0, 0, 0], rot: [0, 0, 0] }, 'D');
   const { sombra, d } = maoDesenhar(pecas, vistaFig);
-  const fundo = `<rect width="320" height="320" rx="26" fill="#F7F2E7"/>`;
+  const fundo = `<rect width="320" height="320" rx="26" fill="#EEF4FC"/>`;
   return `<svg class="mao-fig" viewBox="${MAO_VB_FIG}" aria-hidden="true" focusable="false">${fundo}${sombra}${d}</svg>`;
 }
 
